@@ -1,4 +1,5 @@
 [build-system]
+# use setuptools as the PEP 517 build backend
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -11,12 +12,17 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Ryan Holt", email = "ryan@ryanholt.net" }
 ]
+# Python support
+requires-python = ">=3.9"
+
+# runtime deps
 dependencies = [
   "fastapi>=0.95",
   "uvicorn[standard]>=0.22",
   "python-can>=4.0",
   "pydantic>=1.10",
 ]
+
 keywords = ["can", "rv-c", "websocket", "fastapi"]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -28,5 +34,14 @@ classifiers = [
 "Homepage"   = "https://github.com/carpenike/rvc2api"
 "Repository" = "https://github.com/carpenike/rvc2api"
 
+[project.optional-dependencies]
+# dev dependencies for testing and linting
+dev = [
+  "pytest>=7.2",
+  "mypy>=1.5",
+  "flake8>=6.0",
+]
+
 [tool.setuptools.packages.find]
+# your code lives under src/
 where = ["src"]
