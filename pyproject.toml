@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rvc2api"
+version = "0.1.0"
+description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Ryan Holt", email = "ryan@ryanholt.net" }
+]
+dependencies = [
+  "fastapi>=0.95",
+  "uvicorn[standard]>=0.22",
+  "python-can>=4.0",
+  "pydantic>=1.10",
+]
+keywords = ["can", "rv-c", "websocket", "fastapi"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+]
+
+[project.urls]
+"Homepage"   = "https://github.com/carpenike/rvc2api"
+"Repository" = "https://github.com/carpenike/rvc2api"
+
+[tool.setuptools.packages.find]
+where = ["src"]
