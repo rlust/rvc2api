@@ -1,5 +1,5 @@
 import pytest
-from rvc_decoder.decode import get_bits, decode_payload, load_config_data
+from rvc_decoder import get_bits, decode_payload, load_config_data
 
 def test_get_bits_simple():
     data = bytes([0b10110010] + [0]*7)
@@ -17,7 +17,7 @@ def test_decode_payload_with_sample_entry():
 
 @pytest.fixture
 def decoder_map():
-    # Use the bundled rvc.json and device_mapping.yml via the defaults
+    # no args → loads src/rvc_decoder/config/rvc.json and device_mapping.yml
     dm, *_ = load_config_data()
     return dm
 
