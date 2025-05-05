@@ -7,11 +7,10 @@
 
   outputs = { self, nixpkgs, ... }:
   let
-    # Two separate package sets, one for Linux and one for macOS
-    pkgs_x86_64 = import nixpkgs { system = "x86_64-linux"; };
-    pkgs_aarch64 = import nixpkgs { system = "aarch64-darwin"; };
+    pkgs_x86_64   = import nixpkgs { system = "x86_64-linux"; };
+    pkgs_aarch64  = import nixpkgs { system = "aarch64-darwin"; };
 
-    commonDeps = xs: [ 
+    commonDeps = xs: [
       xs.python39
       xs.python39Packages.setuptools
       xs.python39Packages.wheel
@@ -25,22 +24,24 @@
     ];
   in {
     devShells = {
-      # Linux dev shell
-      "x86_64-linux" = pkgs_x86_64.mkShell {
-        buildInputs = commonDeps pkgs_x86_64;
-        shellHook = ''
-          export PYTHONPATH=$PWD/src:$PYTHONPATH
-          echo "🐚 rvc2api devShell (x86_64-linux)"
-        '';
+      "x86_64-linux" = {
+        default = pkgs_x86_64.mkShell {
+          buildInputs = commonDeps pkgs_x86_64;
+          shellHook = ''
+            export PYTHONPATH=$PWD/src:$PYTHONPATH
+            echo "🐚 rvc2api devShell (x86_64-linux)"
+          '';
+        };
       };
 
-      # macOS (Apple Silicon) dev shell
-      "aarch64-darwin" = pkgs_aarch64.mkShell {
-        buildInputs = commonDeps pkgs_aarch64;
-        shellHook = ''
-          export PYTHONPATH=$PWD/src:$PYTHONPATH
-          echo "🐚 rvc2api devShell (aarch64-darwin)"
-        '';
+      "aarch64-darwin" = {
+        default = pkgs_aarch64.mkShell {
+          buildInputs = commonDeps pkgs_aarch64;
+          shellHook = ''
+            export PYTHONPATH=$PWD/src:$PYTHONPATH
+            echo "🐚 rvc2api devShell (aarch64-darwin)"
+          '';
+        };
       };
     };
   };
