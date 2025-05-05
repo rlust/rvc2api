@@ -1,5 +1,5 @@
 {
-  description = "DevShell for rvc2api (Python 3.13)";
+  description = "DevShell for rvc2api (Python 3.12)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -11,10 +11,10 @@
     pkgs_x86_64   = import nixpkgs { system = "x86_64-linux"; };
     pkgs_aarch64  = import nixpkgs { system = "aarch64-darwin"; };
 
-    # Helper to build a Python 3.13 shell
+    # Helper to build a Python 3.12 shell
     mkPyShell = pkgs: let
-      py     = pkgs.python313;
-      pyPkgs = pkgs.python313Packages;
+      py     = pkgs.python312;
+      pyPkgs = pkgs.python312Packages;
     in pkgs.mkShell {
       buildInputs = with pkgs; [
         py
@@ -30,6 +30,7 @@
         pyPkgs.pytest
         pyPkgs.mypy
         pyPkgs.flake8
+        pyPkgs.future # Add future explicitly if needed, though it might be a transitive dep
       ];
       shellHook = ''
         export PYTHONPATH=$PWD/src:$PYTHONPATH
