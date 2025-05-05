@@ -21,6 +21,7 @@ dependencies = [
   "uvicorn[standard]>=0.22",
   "python-can>=4.0",
   "pydantic>=1.10",
+  "PyYAML>=6.0",
 ]
 
 keywords = ["can", "rv-c", "websocket", "fastapi"]
