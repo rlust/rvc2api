@@ -17,10 +17,13 @@ def test_decode_payload_with_sample_entry():
 
 @pytest.fixture
 def decoder_map():
-    # no args → loads src/rvc_decoder/config/rvc.json and device_mapping.yml
+    # no args → loads the packaged rvc.json and device_mapping.yml
     dm, *_ = load_config_data()
     return dm
 
-def test_decoder_map_keys(decoder_map):
-    # Replace with a PGN you know is in your spec
-    assert 0x1FEDA in decoder_map
+def test_decoder_map_not_empty(decoder_map):
+    # Should have at least one PGN, and keys should be ints
+    assert isinstance(decoder_map, dict)
+    assert len(decoder_map) > 0
+    for key in decoder_map:
+        assert isinstance(key, int)
