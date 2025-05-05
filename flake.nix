@@ -26,7 +26,7 @@
         pyPkgs.uvicorn
         pyPkgs.python-can
         pyPkgs.pydantic
-        pyPkgs.PyYAML
+        pyPkgs.pyyaml
         # dev deps
         pyPkgs.pytest
         pyPkgs.mypy
