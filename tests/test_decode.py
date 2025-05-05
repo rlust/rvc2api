@@ -17,7 +17,8 @@ def test_decode_payload_with_sample_entry():
 
 @pytest.fixture
 def decoder_map():
-    dm, *_ = load_config_data("rvc-spec.json", "device_mapping.yaml")
+    # Use the bundled rvc.json and device_mapping.yml via the defaults
+    dm, *_ = load_config_data()
     return dm
 
 def test_decoder_map_keys(decoder_map):
