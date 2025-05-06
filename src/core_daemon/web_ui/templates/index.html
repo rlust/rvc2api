@@ -88,7 +88,11 @@
       socket.onmessage = (event) => {
         const payload = JSON.parse(event.data);
         if (!payload.entity_id) return;
-        lightStates[payload.entity_id] = payload;
+        // Merge new payload with existing state to preserve all fields
+        lightStates[payload.entity_id] = { 
+          ...(lightStates[payload.entity_id] || {}), 
+          ...payload 
+        };
         renderGroupedLights();
       };
 
