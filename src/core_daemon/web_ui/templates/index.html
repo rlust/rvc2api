@@ -250,6 +250,33 @@
       body.theme-catppuccin-latte .text-blue-400 { color: var(--ctp-latte-blue); }
       body.theme-catppuccin-latte .hover\\:text-white:hover { color: var(--ctp-latte-text); } /* Hover text on light bg */
 
+      /* Light card specific styles for on/off state */
+      .entity-card.light-on {
+        /* Default theme ON state - more prominent */
+        border-left-width: 4px;
+        border-left-color: var(--ctp-mocha-green, #48bb78 /* Tailwind green-500 as fallback */);
+      }
+      body.theme-default .entity-card.light-on { background-color: #2d3748; /* gray-800 slightly lighter */ border-left-color: #68d391;}
+      body.theme-dark .entity-card.light-on { background-color: #2c3440; border-left-color: #58b082;}
+      body.theme-light .entity-card.light-on { background-color: #f0f4f8; border-left-color: #48bb78;}
+      body.theme-catppuccin-mocha .entity-card.light-on { background-color: var(--ctp-mocha-surface0); border-left-color: var(--ctp-mocha-green);}
+      body.theme-catppuccin-latte .entity-card.light-on { background-color: var(--ctp-latte-surface0); border-left-color: var(--ctp-latte-green);}
+
+      .entity-card.light-off {
+        /* Default theme OFF state - more subdued */
+        opacity: 0.75;
+      }
+      body.theme-default .entity-card.light-off { background-color: #1a202c; opacity: 0.7;}
+      body.theme-dark .entity-card.light-off { background-color: #1f2937; opacity: 0.65;}
+      body.theme-light .entity-card.light-off { background-color: #e2e8f0; opacity: 0.8;}
+      body.theme-catppuccin-mocha .entity-card.light-off { background-color: var(--ctp-mocha-base); opacity: 0.7;}
+      body.theme-catppuccin-latte .entity-card.light-off { background-color: var(--ctp-latte-base); opacity: 0.75;}
+
+      .entity-card {
+        cursor: pointer; /* Indicate the card is clickable */
+        transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out, border-color 0.2s ease-in-out;
+      }
+
     </style>
   </head>
   <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
@@ -558,40 +585,51 @@
       // WebSocket for entity updates
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
 
-      // Helper function to call light services
-      function callLightService(entityId, action, data = {}) {
-        let path;
-        let body = {}; 
+      // Helper function to call light services (or any entity control)
+      function callLightService(entityId, command, data = {}) {
+        const path = `${apiBasePath}/entities/${entityId}/control`;
+        let body = { command: command };
 
-        if (action === 'turn_on') {
-            path = `${apiBasePath}/lights/${entityId}/on`;
-            if (data.brightness !== undefined) {
-                body.brightness = data.brightness;
-            }
-        } else if (action === 'turn_off') {
-            path = `${apiBasePath}/lights/${entityId}/off`;
+        if (command === 'set') {
+          if (data.state !== undefined) {
+            body.state = data.state;
+          }
+          if (data.brightness !== undefined) { // Brightness is 0-100 for the API
+            body.brightness = data.brightness;
+          }
+        } else if (command === 'toggle') {
+          // No additional body params needed for toggle
+        } else if (command === 'brightness_up' || command === 'brightness_down') {
+          // No additional body params needed for these specific commands if your API supports them directly
+          // If not, these would need to be translated to a 'set' with calculated brightness here.
+          // For now, assuming the API handles these command strings directly if they are used.
         } else {
-            console.error('Unknown light action for service call:', action);
-            return Promise.reject('Unknown light action');
+          console.error('Unknown command for service call:', command);
+          return Promise.reject('Unknown command');
         }
         
         return fetch(path, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: Object.keys(body).length ? JSON.stringify(body) : null 
+          body: JSON.stringify(body)
         })
         .then(response => {
           if (!response.ok) {
-            return response.json().then(err => { throw new Error(`HTTP error ${response.status}: ${err.detail || response.statusText}`) });
+            return response.json().then(err => { 
+              const errorMsg = `HTTP error ${response.status}: ${err.detail || response.statusText}`;
+              console.error(`Service call for ${entityId} (${command}) failed:`, errorMsg, err);
+              throw new Error(errorMsg);
+            });
           }
           return response.json();
         })
         .then(responseData => {
-          console.log(`Action ${action} for ${entityId} successful:`, responseData);
+          console.log(`Command ${command} for ${entityId} successful:`, responseData);
           // UI should update via WebSocket message triggering renderGroupedLights()
+          // Or, if optimistic updates are desired, handle here.
         })
         .catch(error => {
-          console.error(`Action ${action} for ${entityId} failed:`, error);
+          console.error(`Command ${command} for ${entityId} failed:`, error);
           alert(`Failed to control ${entityId}: ${error.message}`);
         });
       }
@@ -599,40 +637,51 @@
       // Function to render a single light card
       function renderCard(entity) {
         const card = document.createElement('div');
-        card.className = 'bg-gray-800 p-4 rounded-lg shadow-md space-y-3 entity-card'; // Added entity-card for easier selection
-        card.dataset.entityId = entity.entity_id; // Store entity_id for updates
+        card.className = 'p-4 rounded-lg shadow-md space-y-3 entity-card'; // Base classes
+        card.dataset.entityId = entity.entity_id;
 
         const friendlyName = entity.friendly_name || entity.entity_id;
-        let state = entity.state || 'unknown';
+        let state = entity.state || 'unknown'; // 'on' or 'off'
         const attributes = entity.attributes || {};
         const capabilities = entity.capabilities || [];
 
-        let cardContent = `
-          <h3 class="text-lg font-semibold">${friendlyName}</h3>
-          <p class="text-sm">
-            State: <span class="font-medium state-text">${state.toUpperCase()}</span>
-          </p>
-        `;
-
-        const hasOnOff = capabilities.includes('on_off');
-        const hasBrightness = capabilities.includes('brightness');
-
-        if (hasOnOff) {
-          cardContent += `
-            <div class="flex space-x-2">
-              <button data-entity-id="${entity.entity_id}" data-action="turn_on" class="light-control-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm">ON</button>
-              <button data-entity-id="${entity.entity_id}" data-action="turn_off" class="light-control-btn flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm">OFF</button>
-            </div>
-          `;
+        // Apply on/off class for styling
+        if (state.toLowerCase() === 'on') {
+          card.classList.add('light-on');
+          card.classList.remove('light-off');
+        } else {
+          card.classList.add('light-off');
+          card.classList.remove('light-on');
         }
 
+        let cardContent = `<h3 class="text-lg font-semibold">${friendlyName}</h3>`;
+
+        // const hasOnOff = capabilities.includes('on_off'); // Not needed for separate buttons anymore
+        const hasBrightness = capabilities.includes('brightness');
+
         if (hasBrightness) {
-          const currentBrightness = attributes.brightness !== undefined ? attributes.brightness : (state.toLowerCase() === 'on' ? 255 : 0);
+          // Brightness is 0-255 from attributes, but API and slider might use 0-100 or 0-255.
+          // The API's _send_light_can_command expects 0-100 for target_brightness_ui.
+          // The raw.operating_status is 0-200 (0xC8 for 100%).
+          // Let's assume attributes.brightness is the CAN level (0-200 or 0-255 based on device).
+          // For UI slider (0-100), we'll convert.
+          let currentBrightnessPercent = 0;
+          if (state.toLowerCase() === 'on') {
+            if (attributes.brightness !== undefined) { // This is often the 0-255 or 0-200 value
+                // Assuming attributes.brightness is the value that corresponds to the CAN level (e.g. 0-200 where 200 is 100%)
+                // We need to map this to a 0-100 scale for the slider and API call.
+                // Max CAN brightness for 100% is 0xC8 (200). Let's use this as the scale.
+                currentBrightnessPercent = Math.min(Math.round((parseInt(attributes.brightness, 10) / 200) * 100), 100);
+            } else {
+                currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
+            }
+          }
+
           cardContent += `
-            <div class="brightness-control space-y-1">
-              <label for="br-${entity.entity_id}" class="text-sm">Brightness:</label>
+            <div class="brightness-control space-y-1 pt-2">
+              <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
               <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" 
-                     min="0" max="255" value="${currentBrightness}" 
+                     min="1" max="100" value="${currentBrightnessPercent}" 
                      class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider">
             </div>
           `;
@@ -640,22 +689,33 @@
         
         card.innerHTML = cardContent;
 
-        card.querySelectorAll('.light-control-btn').forEach(button => {
-          button.addEventListener('click', (e) => {
-            const entityId = e.target.dataset.entityId;
-            const action = e.target.dataset.action;
-            callLightService(entityId, action);
-          });
+        // Make the entire card clickable to toggle on/off
+        card.addEventListener('click', (e) => {
+          // Prevent toggle if the click was on the slider itself or its label
+          if (e.target.closest('.brightness-control')) {
+            return;
+          }
+          const entityId = card.dataset.entityId;
+          // Determine current state for toggle logic if needed, or just send 'toggle'
+          // const currentLightState = lightStates[entityId]?.state || 'off'; 
+          // callLightService(entityId, 'set', { state: currentLightState === 'on' ? 'off' : 'on' });
+          callLightService(entityId, 'toggle'); 
         });
 
         if (hasBrightness) {
           const slider = card.querySelector('.brightness-slider');
+          const brightnessValueDisplay = card.querySelector(`#br-val-${entity.entity_id}`);
           if (slider) {
             slider.addEventListener('input', (e) => {
-              // Debounce or throttle this if updates are too frequent
+              const brightness = parseInt(e.target.value, 10); // 0-100
+              if (brightnessValueDisplay) brightnessValueDisplay.textContent = `${brightness}%`;
+            });
+            slider.addEventListener('change', (e) => { // 'change' event fires when user releases mouse
               const entityId = e.target.dataset.entityId;
-              const brightness = parseInt(e.target.value, 10);
-              callLightService(entityId, 'turn_on', { brightness: brightness });
+              const brightness = parseInt(e.target.value, 10); // 0-100
+              // When setting brightness, the light should be 'on'. 
+              // The API's /control endpoint handles this: if brightness is set, state 'on' is implied or can be sent.
+              callLightService(entityId, 'set', { state: 'on', brightness: brightness });
             });
           }
         }
