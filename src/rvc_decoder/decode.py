@@ -54,12 +54,14 @@ def decode_payload(entry: dict, data_bytes: bytes):
 
         # enum lookup if present
         if 'enum' in sig:
-            formatted = sig['enum'].get(str(raw), f"UNKNOWN ({raw})")
-        # floats or non‑1 scale/offset get 2‑decimals
+            formatted = sig['enum'].get(str(raw))
+            if formatted is None:
+                formatted = f"UNKNOWN ({raw})"
         elif sig.get('scale', 1) != 1 or sig.get('offset', 0) != 0 or isinstance(val, float):
             formatted = f"{val:.2f}{unit}"
         else:
             formatted = f"{int(val)}{unit}"
+
 
         decoded[sig['name']] = formatted
 
