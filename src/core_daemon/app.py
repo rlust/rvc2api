@@ -292,7 +292,7 @@ async def get_history(
 
 @app.get("/lights", response_model=Dict[str, Entity])
 async def list_lights(
-    state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
+    state_filter:  Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
     capability:    Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
     area:          Optional[str] = Query(None),
 ):
@@ -313,8 +313,8 @@ async def list_lights(
         if capability and capability not in caps:
             continue
         if state_filter:
-            val = ent["value"].get("OnOff") or ent["value"].get("on_off") or ent["value"].get("state")
-            if not val or val.lower() != state_filter.lower():
+            val = ent.get("state")
+            if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
         results[eid] = ent
     return results
