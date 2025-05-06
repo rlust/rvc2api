@@ -96,6 +96,8 @@ def load_config_data(
         default_spec, default_map = _default_paths()
         rvc_spec_path = rvc_spec_path or default_spec
         device_mapping_path = device_mapping_path or default_map
+    logging.info(f"Using RVC Spec Path: {rvc_spec_path}")
+    logging.info(f"Using Device Mapping Path: {device_mapping_path}")
 
     # 1) Load spec
     if not os.path.exists(rvc_spec_path) or not os.access(rvc_spec_path, os.R_OK):
@@ -118,6 +120,7 @@ def load_config_data(
             continue
         entry['dgn_hex'] = f"{(dec_id >> 8) & 0x3FFFF:X}"
         decoder_map[dec_id] = entry
+    logging.info(f"Loaded {len(decoder_map)} spec entries.")
 
     # 2) Load device mapping
     device_mapping: dict = {}
@@ -163,6 +166,15 @@ def load_config_data(
                                 'instance': int(inst_str),
                                 'interface': merged.get('interface')
                             }
+        logging.info(f"Loaded {len(device_lookup)} device_lookup entries.")
+        logging.info(f"Loaded {len(status_lookup)} status_lookup entries.")
+        status_keys_to_log = list(status_lookup.keys())
+        if len(status_keys_to_log) > 50:
+            logging.info(f"status_lookup keys (first 50): {status_keys_to_log[:50]}")
+        else:
+            logging.info(f"status_lookup keys: {status_keys_to_log}")
+    else:
+        logging.error(f"Device mapping file NOT FOUND: {device_mapping_path}")
 
     return (
         decoder_map,

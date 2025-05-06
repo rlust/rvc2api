@@ -100,27 +100,28 @@ async def start_can_readers():
 
                 instance_str = str(instance_raw)
                 lookup_key = (dgn_hex.upper(), instance_str)
+                logging.debug(f"Attempting lookup with key: {lookup_key}") # +++ ADD LOGGING
 
                 # Try specific instance in status_lookup first
                 device = status_lookup.get(lookup_key)
+                logging.debug(f"  -> status_lookup specific result: {'Found' if device else 'Not Found'}") # +++ ADD LOGGING
 
                 # Fallback 1: Try 'default' instance in status_lookup
                 if not device:
                     default_key = (dgn_hex.upper(), 'default')
                     device = status_lookup.get(default_key)
-                    # if device: # Optional: log if default was used
-                    #     logging.debug(f"Using default status mapping for {lookup_key}")
+                    logging.debug(f"  -> status_lookup default result: {'Found' if device else 'Not Found'}") # +++ ADD LOGGING
 
                 # Fallback 2: Try specific instance in device_lookup (less common for status)
                 if not device:
                     device = device_lookup.get(lookup_key)
+                    logging.debug(f"  -> device_lookup specific result: {'Found' if device else 'Not Found'}") # +++ ADD LOGGING
 
                 # Fallback 3: Try 'default' instance in device_lookup
                 if not device:
                     default_key = (dgn_hex.upper(), 'default')
                     device = device_lookup.get(default_key)
-                    # if device: # Optional: log if default was used
-                    #     logging.debug(f"Using default device mapping for {lookup_key}")
+                    logging.debug(f"  -> device_lookup default result: {'Found' if device else 'Not Found'}") # +++ ADD LOGGING
 
                 # --- MODIFICATION END ---
 
