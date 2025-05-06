@@ -100,9 +100,21 @@ for eid in light_entity_ids:
         if entry["dgn_hex"].upper() == format(info["dgn"], "X")
     )
     decoded, raw = decode_payload(spec_entry, bytes([0] * 8))
-    payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": now}
+
+    # Add human-readable state
+    brightness = raw.get("operating status (brightness)", 0)
+    human_state = "on" if brightness > 0 else "off"
+
+    payload = {
+        "entity_id": eid,
+        "value": decoded,
+        "raw": raw,
+        "state": human_state,
+        "timestamp": now
+    }
     state[eid] = payload
     history[eid].append(payload)
+
 ENTITY_COUNT.set(len(state))
 for eid in history:
     HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(history[eid]))
@@ -115,6 +127,7 @@ class Entity(BaseModel):
     entity_id: str
     value: Dict[str, str]
     raw: Dict[str, int]
+    state: str
     timestamp: float
 
 class ControlCommand(BaseModel):
@@ -196,7 +209,17 @@ async def start_can_readers():
 
                 eid = device["entity_id"]
                 ts = time.time()
-                payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": ts}
+                # Determine human-readable state
+                raw_brightness = raw.get("operating_status", 0)
+                state_str = "on" if raw_brightness > 0 else "off"
+
+                payload = {
+                    "entity_id": eid,
+                    "value": decoded,
+                    "raw": raw,
+                    "state": state_str,  # 👈 new field
+                    "timestamp": ts
+                }
 
                 # --- Custom Metrics ---
                 pgn = msg.arbitration_id & 0x3FFFF
