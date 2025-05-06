@@ -36,6 +36,11 @@ FRAME_LATENCY       = Histogram("rvc2api_frame_latency_seconds", "Time spent dec
 HTTP_REQUESTS       = Counter("rvc2api_http_requests_total", "Total HTTP requests", ["method", "endpoint", "status_code"])
 HTTP_LATENCY        = Histogram("rvc2api_http_request_latency_seconds", "HTTP request latency in seconds", ["method", "endpoint"])
 
+# Suggested by RV-C spec:
+PGN_USAGE_COUNTER    = Counter("rvc2api_pgn_usage_total", "PGN usage by frame count", ["pgn"])
+INST_USAGE_COUNTER   = Counter("rvc2api_instance_usage_total", "Instance usage by DGN", ["dgn", "instance"])
+DGN_TYPE_GAUGE       = Gauge("rvc2api_dgn_type_present", "Number of DGNs seen per type/class", ["device_type"])
+
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
 mapping_override = os.getenv("CAN_MAP_PATH")
@@ -177,6 +182,13 @@ async def start_can_readers():
                 eid = device["entity_id"]
                 ts = time.time()
                 payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": ts}
+
+                # --- Custom Metrics ---
+                pgn = msg.arbitration_id & 0x3FFFF
+                PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
+                INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
+                device_type = device.get("device_type", "unknown")
+                DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
 
                 # update state
                 state[eid] = payload
