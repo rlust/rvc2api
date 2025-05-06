@@ -225,13 +225,33 @@
       const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
       const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
       const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
-      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
+      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+
+      const SIDEBAR_EXPANDED_WIDTH_REM = 16; // Corresponds to md:w-64 (16rem)
+      const SIDEBAR_COLLAPSED_WIDTH_REM = 4; // Corresponds to md:w-16 (4rem)
+      const MD_BREAKPOINT_PX = 768;
+
+      function getRootFontSize() {
+        // Get the root font size in pixels
+        return parseFloat(getComputedStyle(document.documentElement).fontSize);
+      }
 
       function setPinnedLogsState(isOpen, height) {
         localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
         if (isOpen && height) {
           localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
           currentExpandedLogsHeight = height;
+        }
+
+        const rootFontSize = getRootFontSize();
+        const sidebarCurrentWidthPx = sidebar.classList.contains('md:w-64') 
+            ? SIDEBAR_EXPANDED_WIDTH_REM * rootFontSize 
+            : SIDEBAR_COLLAPSED_WIDTH_REM * rootFontSize;
+
+        if (window.innerWidth >= MD_BREAKPOINT_PX) {
+            pinnedLogsContainer.style.left = `${sidebarCurrentWidthPx}px`;
+        } else {
+            pinnedLogsContainer.style.left = '0px';
         }
 
         if (isOpen) {
@@ -274,14 +294,16 @@
       const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
       const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
       if (savedHeight) currentExpandedLogsHeight = savedHeight;
+      
       // Set initial state without animation for page load
       const originalTransition = pinnedLogsContainer.style.transition;
       pinnedLogsContainer.style.transition = 'none';
-      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
-      // Restore transition after initial setup
-      // Use a timeout to ensure the no-transition style is applied before restoring it
+      // Initial positioning of pinned logs will be handled by setDesktopSidebarVisible call later,
+      // and also by the setPinnedLogsState itself now.
+      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight); 
+      
       setTimeout(() => {
-        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out'; 
+        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out, left 0.3s ease-in-out'; 
       }, 50);
 
       // WebSocket for entity updates
@@ -741,19 +763,27 @@
 
       function setDesktopSidebarVisible(visible) {
         localStorage.setItem(desktopSidebarVisibleKey, visible);
+        const rootFontSize = getRootFontSize();
+
         if (visible) { // EXPANDING
-          sidebar.classList.remove('md:w-16'); // Remove collapsed width
-          sidebar.classList.add('md:w-64');    // Add expanded width
+          sidebar.classList.remove('md:w-16');
+          sidebar.classList.add('md:w-64');
           mainContent.classList.remove('md:ml-16');
           mainContent.classList.add('md:ml-64');
+          if (window.innerWidth >= MD_BREAKPOINT_PX) {
+            pinnedLogsContainer.style.left = `${SIDEBAR_EXPANDED_WIDTH_REM * rootFontSize}px`;
+          }
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
           if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
         } else { // COLLAPSING
-          sidebar.classList.remove('md:w-64');  // Remove expanded width
-          sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
+          sidebar.classList.remove('md:w-64');
+          sidebar.classList.add('md:w-16');
           mainContent.classList.remove('md:ml-64');
-          mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
-          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
+          mainContent.classList.add('md:ml-16');
+          if (window.innerWidth >= MD_BREAKPOINT_PX) {
+            pinnedLogsContainer.style.left = `${SIDEBAR_COLLAPSED_WIDTH_REM * rootFontSize}px`;
+          }
+          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>';
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
         }
       }
@@ -790,6 +820,20 @@
       } else { // null, 'true', or any other value defaults to visible
         setDesktopSidebarVisible(true);
       }
+
+      window.addEventListener('resize', () => {
+        const rootFontSize = getRootFontSize();
+        if (window.innerWidth < MD_BREAKPOINT_PX) { 
+            pinnedLogsContainer.style.left = '0px';
+        } else {
+            const isDesktopSidebarVisible = localStorage.getItem(desktopSidebarVisibleKey) !== 'false';
+            if (isDesktopSidebarVisible) {
+                pinnedLogsContainer.style.left = `${SIDEBAR_EXPANDED_WIDTH_REM * rootFontSize}px`;
+            } else {
+                pinnedLogsContainer.style.left = `${SIDEBAR_COLLAPSED_WIDTH_REM * rootFontSize}px`;
+            }
+        }
+      });
 
       // Close mobile sidebar when a nav link is clicked
       document.querySelectorAll('#sidebar .nav-link').forEach(link => {
