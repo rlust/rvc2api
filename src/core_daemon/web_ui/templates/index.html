@@ -22,6 +22,8 @@
           <nav class="space-y-2">
             <button data-view="lights" class="nav-link w-full text-left text-gray-300 hover:text-white">Lights</button>
             <button data-view="logs" class="nav-link w-full text-left text-gray-300 hover:text-white">Logs</button>
+            <button data-view="mapping" class="nav-link w-full text-left text-gray-300 hover:text-white">device_mapping.yml</button>
+            <button data-view="spec" class="nav-link w-full text-left text-gray-300 hover:text-white">rvc.json</button>
           </nav>
         </div>
         <div class="border-t border-gray-700 pt-4 text-center">
@@ -47,6 +49,7 @@
           </div>
           <div id="light-grid" class="space-y-8"></div>
         </section>
+
         <section id="logs-view" class="view-section hidden">
           <h1 class="text-3xl font-bold mb-6">Live Logs</h1>
           <div class="mb-4 flex flex-wrap gap-4">
@@ -63,91 +66,42 @@
           </div>
           <pre id="log-stream" class="bg-black text-green-400 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
         </section>
+
+        <section id="mapping-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
+          <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+        </section>
+
+        <section id="spec-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Current rvc.json</h1>
+          <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+        </section>
       </main>
     </div>
 
     <script>
-      let isLogPaused = false;
-      let logBuffer = [];
-      const logStream = document.getElementById('log-stream');
-      const logLevelSelect = document.getElementById('log-level');
-      const logSearch = document.getElementById('log-search');
-      const pauseBtn = document.getElementById('log-pause');
-      const resumeBtn = document.getElementById('log-resume');
+      document.querySelectorAll('.nav-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const view = btn.getAttribute('data-view');
+          document.querySelectorAll('.view-section').forEach(sec => {
+            sec.classList.add('hidden');
+          });
+          document.getElementById(`${view}-view`).classList.remove('hidden');
 
-      const logSocket = new WebSocket(`ws://${location.host}/logs/ws`);
-      logSocket.onmessage = (event) => {
-        const line = event.data;
-        if (!line) return;
-
-        const selectedLevel = logLevelSelect.value;
-        const searchTerm = logSearch.value.toLowerCase();
-        const matchesLevel = line.includes(selectedLevel);
-        const matchesSearch = searchTerm === '' || line.toLowerCase().includes(searchTerm);
-
-        if (matchesLevel && matchesSearch) {
-          if (isLogPaused) {
-            logBuffer.push(line);
-          } else {
-            logStream.innerHTML += colorizeLog(line) + '<br/>';
-            logStream.scrollTop = logStream.scrollHeight;
-          }
-        }
-      };
-
-      function colorizeLog(line) {
-        let color = 'text-gray-400';
-        if (line.includes('DEBUG')) color = 'text-blue-400';
-        else if (line.includes('INFO')) color = 'text-green-400';
-        else if (line.includes('WARNING')) color = 'text-yellow-400';
-        else if (line.includes('ERROR')) color = 'text-red-500';
-        else if (line.includes('CRITICAL')) color = 'text-pink-500';
-
-        const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-        const timestampMatch = escaped.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}/);
-        const timestamp = timestampMatch ? `<span class="text-gray-500">${timestampMatch[0]}</span>` : '';
-        const content = escaped.replace(timestampMatch?.[0] || '', '').trim();
-
-        return `${timestamp} <span class="${color}">${content}</span>`;
-      }
-
-      logLevelSelect.addEventListener('change', () => {
-        logStream.textContent = '';
-      });
-
-      logSearch.addEventListener('input', () => {
-        logStream.textContent = '';
-      });
-
-      pauseBtn.addEventListener('click', () => {
-        isLogPaused = true;
-        pauseBtn.disabled = true;
-        resumeBtn.disabled = false;
-      });
-
-      resumeBtn.addEventListener('click', () => {
-        isLogPaused = false;
-        pauseBtn.disabled = false;
-        resumeBtn.disabled = true;
-        logBuffer.forEach(line => {
-          if (line.includes(logLevelSelect.value) && (logSearch.value === '' || line.toLowerCase().includes(logSearch.value.toLowerCase()))) {
-            logStream.innerHTML += colorizeLog(line) + '<br/>';
+          if (view === 'mapping') {
+            fetch('/static/device_mapping.yml')
+              .then(res => res.text())
+              .then(text => {
+                document.getElementById('mapping-content').textContent = text;
+              });
+          } else if (view === 'spec') {
+            fetch('/static/rvc.json')
+              .then(res => res.text())
+              .then(text => {
+                document.getElementById('spec-content').textContent = text;
+              });
           }
         });
-        logBuffer = [];
-        logStream.scrollTop = logStream.scrollHeight;
-      });
-
-      const toggleSidebarBtn = document.getElementById('toggleSidebar');
-      const sidebar = document.getElementById('sidebar');
-
-      toggleSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('w-64');
-        sidebar.classList.toggle('w-0');
-        sidebar.classList.toggle('p-4');
-        toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-left');
-        toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-right');
-        toggleSidebarBtn.innerHTML = sidebar.classList.contains('w-0') ? '<i class="mdi mdi-chevron-right"></i> Expand' : '<i class="mdi mdi-chevron-left"></i> Collapse';
       });
     </script>
   </body>

@@ -6,6 +6,7 @@ import threading
 import time
 import logging
 import coloredlogs
+import shutil
 from typing import Dict, Any, Optional, List
 from collections import deque
 
@@ -128,6 +129,25 @@ history: Dict[str, deque[Dict[str, Any]]] = {
     eid: deque() for eid in entity_id_lookup
 }
 unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entries
+
+# ── Copy Configs to WebUI  ───────────────────────────────────────────────────
+@app.on_event("startup")
+async def copy_config_files():
+    static_dir = os.path.join(web_ui_dir, "static")
+    os.makedirs(static_dir, exist_ok=True)
+
+    default_map_path = "/etc/nixos/files/device_mapping.yml"
+    default_spec_path = "/etc/nixos/files/rvc.json"
+
+    map_src = mapping_override or default_map_path
+    spec_src = spec_override or default_spec_path
+
+    try:
+        shutil.copyfile(map_src, os.path.join(static_dir, "device_mapping.yml"))
+        shutil.copyfile(spec_src, os.path.join(static_dir, "rvc.json"))
+        logger.info(f"Copied mapping: {map_src}, spec: {spec_src} to static directory")
+    except Exception as e:
+        logger.warning(f"Failed to copy mapping or spec file to static directory: {e}")
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
 buses: Dict[str, can.Bus] = {}
