@@ -660,6 +660,9 @@
           sidebar.classList.add('md:w-64');    // Add expanded width
           mainContent.classList.remove('md:ml-16');
           mainContent.classList.add('md:ml-64');
+          if (window.innerWidth >= MD_BREAKPOINT_PX) {
+            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
+          }
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
           if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
         } else { // COLLAPSING
@@ -667,6 +670,9 @@
           sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
           mainContent.classList.remove('md:ml-64');
           mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
+          if (window.innerWidth >= MD_BREAKPOINT_PX) {
+            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
+          }
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
         }
@@ -741,6 +747,82 @@
         // Any other initializations that need to happen after DOM is ready
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews(); 
+      });
+
+      const PINNED_LOGS_OPEN_KEY = 'pinnedLogsOpen';
+      const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
+      const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
+      const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
+      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+
+      // Constants for sidebar and breakpoint
+      const SIDEBAR_EXPANDED_WIDTH_CSS = '16rem'; // Tailwind md:w-64
+      const SIDEBAR_COLLAPSED_WIDTH_CSS = '4rem';  // Tailwind md:w-16
+      const MD_BREAKPOINT_PX = 768; // Tailwind 'md' breakpoint
+
+      function setPinnedLogsState(isOpen, height) {
+        localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
+        if (isOpen && height) {
+          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
+          currentExpandedLogsHeight = height;
+        }
+
+        // Adjust left position of pinnedLogsContainer based on sidebar state and window width
+        if (window.innerWidth >= MD_BREAKPOINT_PX) {
+          if (sidebar.classList.contains('md:w-64')) { // Check if sidebar is expanded
+            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
+          } else {
+            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
+          }
+        } else {
+          pinnedLogsContainer.style.left = '0px';
+        }
+
+        if (isOpen) {
+          pinnedLogsContainer.style.height = height;
+          pinnedLogsContainer.classList.add('expanded');
+        } else {
+          pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
+          pinnedLogsContainer.classList.remove('expanded');
+        }
+      }
+
+      // Initialize pinned logs state from localStorage
+      const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
+      const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
+      if (savedHeight) currentExpandedLogsHeight = savedHeight;
+      
+      const originalTransition = pinnedLogsContainer.style.transition;
+      pinnedLogsContainer.style.transition = 'none'; // Disable transition for initial setup
+      
+      // Call setPinnedLogsState to apply initial height AND left position
+      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
+      
+      // Restore transition after initial setup
+      setTimeout(() => {
+        // Ensure 'left' is part of the transition properties
+        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out, left 0.3s ease-in-out'; 
+      }, 50);
+
+      window.addEventListener('resize', () => {
+        // Adjust pinnedLogsContainer left position on resize
+        if (window.innerWidth >= MD_BREAKPOINT_PX) {
+          if (sidebar.classList.contains('md:w-64')) { // Check if sidebar is expanded
+            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
+          } else {
+            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
+          }
+        } else {
+          pinnedLogsContainer.style.left = '0px';
+        }
+        // Mobile sidebar visibility on resize (existing logic)
+        if (window.innerWidth >= 768) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.add('translate-x-0');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+          sidebar.classList.remove('translate-x-0');
+        }
       });
     </script>
   </body>
