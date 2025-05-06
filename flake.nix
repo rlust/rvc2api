@@ -16,18 +16,21 @@
       let
         # Overlay to fix fastapi-cli dependency issue if present in current unstable
         fixFastapiCliOverlay = final: super: {
-          python3Packages = super.python3Packages.overrideScope (pyfinal: pysuper: { # Corrected: overrideScope' -> overrideScope
+          python3Packages = super.python3Packages.overrideScope (pyfinal: pysuper: {
             fastapi-cli = pysuper.fastapi-cli.overridePythonAttrs (old: {
-              # Remove the problematic dependency on uvicorn.optional-dependencies
-              # Use tryEval to handle cases where the attribute might not exist
-              propagatedBuildInputs = builtins.filter 
-                (p: 
-                  let 
-                    uvicornStandardDep = builtins.tryEval pyfinal.uvicorn.optional-dependencies.standard;
-                  in
-                    if uvicornStandardDep.success then p != uvicornStandardDep.value else true
-                ) 
-                (old.propagatedBuildInputs or []); # Ensure old.propagatedBuildInputs is a list
+              # Redefine propagatedBuildInputs completely to avoid evaluating the original problematic expression
+              propagatedBuildInputs = with pyfinal; [ 
+                click
+                fastapi
+                jinja2
+                pydantic
+                python-multipart
+                pyyaml
+                shellingham
+                toml
+                typer
+                uvicorn
+              ];
             });
           });
         };
