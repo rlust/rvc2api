@@ -95,6 +95,7 @@ class Entity(BaseModel):
     device_type: Optional[str] = "unknown"
     capabilities: Optional[List[str]] = []
     friendly_name: Optional[str] = None # Added friendly_name
+    location_type: Optional[str] = None # New field for interior/exterior
 
 class ControlCommand(BaseModel):
     command: str
@@ -116,6 +117,13 @@ class UnmappedEntryModel(BaseModel):
     last_seen_timestamp: float
     count: int
     suggestions: Optional[List[SuggestedMapping]] = None # Added for suggestions
+
+class BulkLightControlResponse(BaseModel):
+    status: str
+    action: str
+    lights_processed: int
+    lights_commanded: int
+    errors: List[str] = []
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
 FRAME_COUNTER       = Counter("rvc2api_frames_total", "Total CAN frames received")
@@ -250,7 +258,8 @@ for eid in light_entity_ids:
         "suggested_area": lookup.get("suggested_area", "Unknown"),
         "device_type": lookup.get("device_type", "unknown"),
         "capabilities": lookup.get("capabilities", []),
-        "friendly_name": lookup.get("friendly_name") # Ensure friendly_name is included
+        "friendly_name": lookup.get("friendly_name"), # Ensure friendly_name is included
+        "location_type": lookup.get("location_type") # Add location_type
     }
     state[eid] = payload
     history[eid].append(payload)
@@ -474,7 +483,8 @@ async def start_can_readers():
                         "suggested_area": lookup.get("suggested_area", "Unknown"),
                         "device_type": lookup.get("device_type", "unknown"),
                         "capabilities": lookup.get("capabilities", []),
-                        "friendly_name": lookup.get("friendly_name") # Add friendly_name
+                        "friendly_name": lookup.get("friendly_name"), # Add friendly_name
+                        "location_type": lookup.get("location_type") # Add location_type
                     }
                     # Custom Metrics
                     pgn = msg.arbitration_id & 0x3FFFF
@@ -587,6 +597,7 @@ async def list_lights(
             "device_type": cfg.get("device_type", "unknown"),
             "capabilities": cfg.get("capabilities", []),
             "friendly_name": cfg.get("friendly_name", None),
+            "location_type": cfg.get("location_type", None), # Add location_type
         }
     return results
 
@@ -633,6 +644,14 @@ async def metadata():
     # Ensure all keys are included
     for key in ["type", "area", "capability", "command"]:
         out.setdefault(key, [])
+    # Add location_type to meta if you want to filter by it directly in the future
+    location_types = set()
+    for cfg in entity_id_lookup.values():
+        lt = cfg.get("location_type")
+        if lt:
+            location_types.add(lt)
+    out["location_type"] = sorted(location_types)
+
 
     return out
 
@@ -764,7 +783,99 @@ async def websocket_logs(ws: WebSocket):
         log_ws_clients.discard(ws)
         logger.error(f"Log WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
 
-@app.post("/entities/{entity_id}/control") # Removed /api/ prefix
+async def _send_light_can_command(
+    entity_id: str,
+    target_brightness_ui: int, # 0-100
+    action_description: str
+) -> bool:
+    """
+    Helper function to construct, send a CAN command for a light, and perform optimistic update.
+    Returns True if the command was successfully queued, False otherwise.
+    """
+    if entity_id not in light_command_info:
+        logger.error(f"Control Error: {entity_id} not found in light_command_info for action '{action_description}'.")
+        return False
+
+    info = light_command_info[entity_id]
+    pgn = info["dgn"]
+    instance = info["instance"]
+    interface = info["interface"]
+
+    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8 as per RV-C for 100%)
+    brightness_can_level = min(target_brightness_ui * 2, 0xC8)
+
+    prio = 6
+    sa = 0xF9
+    dp = (pgn >> 16) & 1
+    pf = (pgn >> 8) & 0xFF
+    da = 0xFF
+
+    if (pf < 0xF0):
+        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (da << 8) | sa
+    else:
+        ps = pgn & 0xFF
+        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (ps << 8) | sa
+
+    payload_data = bytes([
+        instance,
+        0x7C, # Group Mask
+        brightness_can_level,
+        0x00, # Command: SetLevel
+        0x00, # Duration: Instantaneous
+        0xFF, 0xFF, 0xFF
+    ])
+
+    logger.info(f"CAN CMD OUT (Helper): entity_id={entity_id}, arbitration_id=0x{arbitration_id:08X}, data={payload_data.hex().upper()}, instance={instance}, action='{action_description}'")
+
+    try:
+        msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
+        with CAN_TX_ENQUEUE_LATENCY.time():
+            await can_tx_queue.put((msg, interface))
+            CAN_TX_ENQUEUE_TOTAL.inc()
+        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
+        logger.info(f"CAN CMD Queued (Helper): '{action_description}' for {entity_id} (CAN Lvl: {brightness_can_level}) -> {interface}")
+
+        # Optimistic State Update
+        optimistic_state_str = "on" if target_brightness_ui > 0 else "off"
+        optimistic_raw_val = {"operating_status": brightness_can_level, "instance": instance, "group": 0x7C}
+        optimistic_value_val = {"operating_status": str(brightness_can_level), "instance": str(instance), "group": str(0x7C)}
+        ts = time.time()
+        lookup = entity_id_lookup.get(entity_id, {})
+        
+        current_payload = state.get(entity_id, {}).copy() # Get current state to preserve other fields
+        current_payload.update({
+            "entity_id": entity_id, # Ensure entity_id is present
+            "value": optimistic_value_val,
+            "raw": optimistic_raw_val,
+            "state": optimistic_state_str,
+            "timestamp": ts,
+            # Preserve existing fields if not updated by this command type
+            "suggested_area": lookup.get("suggested_area", current_payload.get("suggested_area", "Unknown")),
+            "device_type": lookup.get("device_type", current_payload.get("device_type", "light")),
+            "capabilities": lookup.get("capabilities", current_payload.get("capabilities", [])),
+            "friendly_name": lookup.get("friendly_name", current_payload.get("friendly_name")),
+            "location_type": lookup.get("location_type", current_payload.get("location_type"))
+        })
+        state[entity_id] = current_payload # Update state with the merged payload
+
+        if entity_id in history: # Ensure history deque exists
+            history[entity_id].append(current_payload)
+            cutoff = ts - HISTORY_DURATION
+            while history[entity_id] and history[entity_id][0]["timestamp"] < cutoff:
+                history[entity_id].popleft()
+            HISTORY_SIZE_GAUGE.labels(entity_id=entity_id).set(len(history[entity_id]))
+        else: # Should not happen if pre-seeded correctly
+            logger.warning(f"History deque not found for {entity_id} during optimistic update.")
+
+        ENTITY_COUNT.set(len(state))
+        text = json.dumps(current_payload)
+        await broadcast_to_clients(text)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to enqueue or optimistically update CAN control for {entity_id} (Action: '{action_description}'): {e}", exc_info=True)
+        return False
+
+@app.post("/entities/{entity_id}/control")
 async def control_entity(
     entity_id: str,
     cmd: ControlCommand = Body(..., examples={
@@ -877,91 +988,84 @@ async def control_entity(
     else:
         raise HTTPException(status_code=400, detail=f"Invalid command: {cmd.command}")
 
-    # --- Construct and Send CAN Message ---
-    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8 as per RV-C for 100%)
-    brightness_can_level = min(target_brightness_ui * 2, 0xC8)
-
-    # RV-C CAN ID Construction (Priority, PGN, Source Address)
-    prio = 6
-    sa = 0xF9 # Source Address for commands from this controller
-    # pgn here is the DGN value from light_command_info (e.g., 0x1FEDB)
-
-    # Correct CAN ID construction based on PDU format (mimicking rvc-console.py)
-    dp = (pgn >> 16) & 1      # Data Page bit
-    pf = (pgn >> 8) & 0xFF   # PDU Format
-    da = 0xFF                # Destination Address for PDU1 commands
-
-    if (pf < 0xF0): # PDU1 format (DA is destination)
-        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (da << 8) | sa
-    else: # PDU2 format (PS is part of PGN)
-        ps = pgn & 0xFF      # PDU Specific (lower 8 bits of DGN)
-        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (ps << 8) | sa
-
-    # RV-C Payload for DC_DIMMER_COMMAND_2 (DGN 0x1FEDB)
-    # byte 0: Instance
-    # byte 1: Group Mask (0x7C for "All Instances of this DGN at this SA that support this command")
-    # byte 2: Desired Level (0-200, 0xC8 = 100%)
-    # byte 3: Command (0x00 = SetLevel)
-    # byte 4: Duration (0x00 = Instantaneous)
-    # byte 5-7: Reserved (0xFF)
-    payload_data = bytes([
-        instance,
-        0x7C, # Group Mask (changed from 0xFF to 0x7C to match logs/rvc-console behavior)
-        brightness_can_level, 
-        0x00, # Command: SetLevel
-        0x00, # Duration: Instantaneous
-        0xFF, 0xFF, 0xFF # Reserved
-    ])
-
-    logger.info(f"CAN CMD OUT: entity_id={entity_id}, arbitration_id=0x{arbitration_id:08X}, data={payload_data.hex().upper()}, instance={instance}, action={action}")
-    logger.debug(f"CAN CMD: entity={entity_id}, ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Inst={instance}, Iface={interface}, TargetUIBrightness={target_brightness_ui}%, CANLevel={brightness_can_level}, Action: {action}")
-    try:
-        msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
-        # Enqueue once. The can_writer task handles sending it twice.
-        with CAN_TX_ENQUEUE_LATENCY.time():
-            await can_tx_queue.put((msg, interface))
-            CAN_TX_ENQUEUE_TOTAL.inc()
-        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize()) # Update gauge after successful enqueue
-        logger.info(f"CAN CMD Queued: {action} for {entity_id} (CAN Lvl: {brightness_can_level}) -> {interface}")
-
-        # --- Optimistic State Update (like rvc-console.py) ---
-        optimistic_state = "on" if target_brightness_ui > 0 else "off"
-        optimistic_raw = {"operating_status": brightness_can_level, "instance": instance, "group": 124}
-        optimistic_value = {"operating_status": str(brightness_can_level), "instance": str(instance), "group": "124"}
-        ts = time.time()
-        lookup = entity_id_lookup.get(entity_id, {})
-        payload = {
-            "entity_id": entity_id,
-            "value": optimistic_value,
-            "raw": optimistic_raw,
-            "state": optimistic_state,
-            "timestamp": ts,
-            "suggested_area": lookup.get("suggested_area", "Unknown"),
-            "device_type": lookup.get("device_type", "unknown"),
-            "capabilities": lookup.get("capabilities", []),
-            "friendly_name": lookup.get("friendly_name") # Add friendly_name
-        }
-        state[entity_id] = payload
-        history[entity_id].append(payload)
-        cutoff = ts - HISTORY_DURATION
-        while history[entity_id] and history[entity_id][0]["timestamp"] < cutoff:
-            history[entity_id].popleft()
-        ENTITY_COUNT.set(len(state))
-        HISTORY_SIZE_GAUGE.labels(entity_id=entity_id).set(len(history[entity_id]))
-        text = json.dumps(payload)
-        await broadcast_to_clients(text)
-        # --- End Optimistic State Update ---
-    except Exception as e:
-        logger.error(f"Failed to enqueue CAN control for {entity_id} (Action: {action}): {e}")
-        raise HTTPException(status_code=500, detail="CAN send failed")
+    # --- Use Helper to Send CAN Message and Update State ---
+    if not await _send_light_can_command(entity_id, target_brightness_ui, action):
+        raise HTTPException(status_code=500, detail=f"Failed to send CAN command for {entity_id} (Action: {action})")
 
     return {
-        "status": "sent",
+        "status": "sent", # Or "queued"
         "entity_id": entity_id,
         "command": cmd.command,
-        "brightness": target_brightness_ui, # Return the target UI brightness
+        "brightness": target_brightness_ui,
         "action": action,
     }
+
+# --- Bulk Light Control Endpoints ---
+async def _bulk_control_lights(
+    location_filter: Optional[str], # "interior", "exterior", or None for "all"
+    target_state_on: bool, # True for ON, False for OFF
+    action_name: str
+) -> BulkLightControlResponse:
+    lights_processed = 0
+    lights_commanded = 0
+    errors = []
+    
+    target_brightness_ui = 100 if target_state_on else 0
+    action_verb = "ON" if target_state_on else "OFF"
+
+    for eid in light_entity_ids:
+        device_config = entity_id_lookup.get(eid, {})
+        if device_config.get("device_type") != "light":
+            continue # Skip non-light devices
+
+        lights_processed += 1
+        
+        if location_filter:
+            if device_config.get("location_type") != location_filter:
+                continue # Skip if location doesn't match
+
+        action_description = f"Bulk: {action_name} {action_verb} - {eid}"
+        if eid not in light_command_info:
+            logger.warning(f"{action_description}: Skipped, not in light_command_info.")
+            errors.append(f"{eid}: Not controllable (missing command info)")
+            continue
+
+        if await _send_light_can_command(eid, target_brightness_ui, action_description):
+            lights_commanded += 1
+        else:
+            errors.append(f"{eid}: Failed to send command")
+            
+    return BulkLightControlResponse(
+        status="completed",
+        action=f"{action_name} {action_verb}",
+        lights_processed=lights_processed,
+        lights_commanded=lights_commanded,
+        errors=errors
+    )
+
+@app.post("/lights/all/on", response_model=BulkLightControlResponse)
+async def lights_all_on():
+    return await _bulk_control_lights(None, True, "All Lights")
+
+@app.post("/lights/all/off", response_model=BulkLightControlResponse)
+async def lights_all_off():
+    return await _bulk_control_lights(None, False, "All Lights")
+
+@app.post("/lights/interior/on", response_model=BulkLightControlResponse)
+async def lights_interior_on():
+    return await _bulk_control_lights("interior", True, "Interior Lights")
+
+@app.post("/lights/interior/off", response_model=BulkLightControlResponse)
+async def lights_interior_off():
+    return await _bulk_control_lights("interior", False, "Interior Lights")
+
+@app.post("/lights/exterior/on", response_model=BulkLightControlResponse)
+async def lights_exterior_on():
+    return await _bulk_control_lights("exterior", True, "Exterior Lights")
+
+@app.post("/lights/exterior/off", response_model=BulkLightControlResponse)
+async def lights_exterior_off():
+    return await _bulk_control_lights("exterior", False, "Exterior Lights")
 
 @app.get("/queue", response_model=dict) # Removed /api/ prefix
 async def get_queue_status():
