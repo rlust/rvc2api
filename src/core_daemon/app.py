@@ -115,9 +115,9 @@ class Entity(BaseModel):
     timestamp: float
 
 class ControlCommand(BaseModel):
-    command: str
-    state: Optional[str] = None     # "on" or "off"
-    brightness: Optional[int] = None  # 0–100
+    command: str  # "set", "toggle", "dim_up", "dim_down"
+    state: Optional[str] = None        # "on" or "off", required for "set"
+    brightness: Optional[int] = None   # 0-100, optional for "set"
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
@@ -292,17 +292,18 @@ async def list_lights(
 async def metadata():
     """
     Expose groupable dimensions:
-    - type      (device_type)
-    - area      (suggested_area)
-    - capability (e.g. 'on_off', 'brightness', etc.)
+    - type        (device_type)
+    - area        (suggested_area)
+    - capability  (e.g. 'on_off', 'brightness', 'toggle', etc.)
     """
     mapping = {
         "type":       "device_type",
         "area":       "suggested_area",
-        "capability": "capabilities",
     }
+
     out: Dict[str, List[str]] = {}
 
+    # Populate type and area from config
     for public, internal in mapping.items():
         values = set()
         for cfg in entity_id_lookup.values():
@@ -313,8 +314,18 @@ async def metadata():
                 values.add(val)
         out[public] = sorted(values)
 
+    # Build full capability set
+    capability_set = set()
+    for eid, cfg in entity_id_lookup.items():
+        caps = set(cfg.get("capabilities", []))
+        if eid in light_command_info:
+            caps.update(["set", "toggle", "dim_up", "dim_down"])
+        capability_set.update(caps)
+
+    out["capability"] = sorted(capability_set)
+
     # Ensure all keys are included even if empty
-    for key in mapping:
+    for key in ["type", "area", "capability"]:
         out.setdefault(key, [])
 
     return out
@@ -368,39 +379,61 @@ async def control_entity(entity_id: str, cmd: ControlCommand):
     inst = info["instance"]
     interface = info["interface"]
 
-    # Build CAN data
-    brightness = 0x00
-    duration = 0x00  # Instant
+    current = state.get(entity_id, {}).get("raw", {})
+    current_brightness = current.get("operating status (brightness)", 0) // 2
+    current_on = current_brightness > 0
+
+    # Default: no change
+    brightness_ui = current_brightness
+    action = ""
 
     if cmd.command == "set":
+        if cmd.state not in {"on", "off"}:
+            raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set")
         if cmd.state == "on":
             brightness_ui = cmd.brightness if cmd.brightness is not None else 100
-            brightness = min(brightness_ui * 2, 0xC8)  # scale 0–100 to 0–200 (limit to 200)
-        elif cmd.state == "off":
-            brightness = 0
+            action = f"Turn ON to {brightness_ui}%"
         else:
-            raise HTTPException(status_code=400, detail="State must be 'on' or 'off'")
+            brightness_ui = 0
+            action = "Turn OFF"
+
+    elif cmd.command == "toggle":
+        brightness_ui = 0 if current_on else 100
+        action = "Toggle OFF" if current_on else "Toggle ON"
+
+    elif cmd.command == "dim_up":
+        brightness_ui = min(current_brightness + 10, 100)
+        action = f"Dim UP to {brightness_ui}%"
+
+    elif cmd.command == "dim_down":
+        brightness_ui = max(current_brightness - 10, 0)
+        action = f"Dim DOWN to {brightness_ui}%"
+
     else:
-        raise HTTPException(status_code=400, detail="Unknown command")
+        raise HTTPException(status_code=400, detail="Invalid command")
 
-    # Frame to send
+    brightness = min(brightness_ui * 2, 0xC8)
     data = [brightness] + [0xFF] * 7
-    arbitration_id = 0x18EF0000 | (0xDA << 8) | inst  # PGN 0x1FED9, priority 6
-    msg = can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True)
+    arbitration_id = 0x18EF0000 | (0xDA << 8) | inst  # PGN 0x1FED9
 
-    # Send on correct CAN interface
     try:
         bus = can.interface.Bus(channel=interface, bustype=os.getenv("CAN_BUSTYPE", "socketcan"))
-        bus.send(msg)
-        await asyncio.sleep(0.05)  # 50ms delay
-        bus.send(msg)
-        logging.info(f"Sent control to {entity_id}: brightness={brightness}")
+        bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
+        # Optional: resend once to ensure delivery
+        time.sleep(0.05)
+        bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
+        logging.info(f"{action} → sent brightness={brightness_ui}% to {entity_id}")
     except Exception as e:
         logging.error(f"Failed to send CAN control to {entity_id}: {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
 
-    return {"status": "sent", "entity_id": entity_id, "brightness": brightness}
-
+    return {
+        "status": "sent",
+        "entity_id": entity_id,
+        "command": cmd.command,
+        "brightness": brightness_ui,
+        "action": action,
+    }
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
