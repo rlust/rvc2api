@@ -84,6 +84,17 @@ logger.info(f"Core logic attempting to load CAN spec from: {spec_override_env or
     device_mapping_path_override=mapping_override_env,
 )
 
+# Create a map from PGN hex string to PGN name for unmapped entry enrichment
+pgn_hex_to_name_map: Dict[str, str] = {}
+if decoder_map:
+    for spec_entry in decoder_map.values(): # spec_entry is a dict from rvc.json, value in decoder_map
+        pgn_val_int = spec_entry.get("pgn") # Integer PGN value, e.g., 65228 for 0xFECC
+        pgn_name_str = spec_entry.get("name")   # PGN Name, e.g., "GENERATOR_COMMAND"
+        if pgn_val_int is not None and pgn_name_str:
+            current_pgn_hex_key = f"{pgn_val_int:X}".upper() # e.g., "FECC"
+            if current_pgn_hex_key not in pgn_hex_to_name_map:
+                pgn_hex_to_name_map[current_pgn_hex_key] = pgn_name_str
+
 # ── Pydantic Models for API responses ────────────────────────────────────────
 class Entity(BaseModel):
     entity_id: str
@@ -109,6 +120,7 @@ class SuggestedMapping(BaseModel):
 
 class UnmappedEntryModel(BaseModel):
     pgn_hex: str
+    pgn_name: Optional[str] = Field(None, description="The human-readable name of the PGN, if known from the spec.")
     dgn_hex: str
     instance: str
     last_data_hex: str
@@ -137,6 +149,12 @@ HISTORY_SIZE_GAUGE  = Gauge("rvc2api_history_size", "Number of stored historical
 FRAME_LATENCY       = Histogram("rvc2api_frame_latency_seconds", "Time spent decoding & dispatching frames")
 HTTP_REQUESTS       = Counter("rvc2api_http_requests_total", "Total HTTP requests", ["method", "endpoint", "status_code"])
 HTTP_LATENCY        = Histogram("rvc2api_http_request_latency_seconds", "HTTP request latency in seconds", ["method", "endpoint"])
+
+# Generator-specific message counters
+GENERATOR_COMMAND_COUNTER = Counter("rvc2api_generator_command_total", "Total GENERATOR_COMMAND messages received")
+GENERATOR_STATUS_1_COUNTER = Counter("rvc2api_generator_status_1_total", "Total GENERATOR_STATUS_1 messages received")
+GENERATOR_STATUS_2_COUNTER = Counter("rvc2api_generator_status_2_total", "Total GENERATOR_STATUS_2 messages received")
+GENERATOR_DEMAND_COMMAND_COUNTER = Counter("rvc2api_generator_demand_command_total", "Total GENERATOR_DEMAND_COMMAND messages received")
 
 # Suggested by RV-C spec:
 PGN_USAGE_COUNTER    = Counter("rvc2api_pgn_usage_total", "PGN usage by frame count", ["pgn"])
@@ -352,6 +370,16 @@ async def start_can_readers():
                 if msg is None:
                     continue
 
+                # Increment generator-specific counters
+                if msg.arbitration_id == 536861658: # GENERATOR_COMMAND
+                    GENERATOR_COMMAND_COUNTER.inc()
+                elif msg.arbitration_id == 436198557: # GENERATOR_STATUS_1
+                    GENERATOR_STATUS_1_COUNTER.inc()
+                elif msg.arbitration_id == 536861659: # GENERATOR_STATUS_2
+                    GENERATOR_STATUS_2_COUNTER.inc()
+                elif msg.arbitration_id == 536870895: # GENERATOR_DEMAND_COMMAND
+                    GENERATOR_DEMAND_COMMAND_COUNTER.inc()
+
                 FRAME_COUNTER.inc()
                 start_time = time.perf_counter()
                 decoded_payload_for_unmapped: Optional[Dict[str, Any]] = None # Variable to hold decoded data
@@ -363,11 +391,13 @@ async def start_can_readers():
                         # Store unmapped entry for unknown PGN
                         unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}" # Ensure unique key for PGN unknown
                         now_ts = time.time()
-                        pgn_hex_val = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}"
+                        pgn_hex_val = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                        retrieved_pgn_name = pgn_hex_to_name_map.get(pgn_hex_val)
 
                         if unmapped_key_str not in unmapped_entries:
                             unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
                                 pgn_hex=pgn_hex_val,
+                                pgn_name=retrieved_pgn_name,
                                 dgn_hex=f"{msg.arbitration_id:X}", # Use full Arb ID as DGN placeholder
                                 instance="N/A",
                                 last_data_hex=msg.data.hex().upper(),
@@ -381,6 +411,8 @@ async def start_can_readers():
                             current_unmapped.last_data_hex = msg.data.hex().upper()
                             current_unmapped.last_seen_timestamp = now_ts
                             current_unmapped.count += 1
+                            if retrieved_pgn_name and not current_unmapped.pgn_name:
+                                current_unmapped.pgn_name = retrieved_pgn_name
                         continue # Skip further processing
                     
                     # PGN is known, attempt to decode
@@ -430,7 +462,12 @@ async def start_can_readers():
                     logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
 
                     unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
-                    pgn_from_entry = entry.get("pgn_hex", f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}")
+                    # pgn_from_entry was used for pgn_hex field, ensure it's the PGN part of ArbID
+                    # entry.get("pgn_hex") might be defined in spec, otherwise fallback to ArbID PGN part
+                    # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
+                    pgn_hex_for_model = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                    pgn_name_from_spec = entry.get('name') # Get PGN name directly from the spec entry
+
                     now_ts = time.time()
 
                     # Generate suggestions
@@ -446,7 +483,8 @@ async def start_can_readers():
 
                     if unmapped_key_str not in unmapped_entries:
                         unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                            pgn_hex=pgn_from_entry,
+                            pgn_hex=pgn_hex_for_model, # Use PGN from ArbID
+                            pgn_name=pgn_name_from_spec, # Use PGN name from spec
                             dgn_hex=dgn.upper(),
                             instance=str(inst),
                             last_data_hex=msg.data.hex().upper(),
@@ -462,6 +500,8 @@ async def start_can_readers():
                         current_unmapped.decoded_signals = decoded_payload_for_unmapped # Update decoded signals
                         current_unmapped.last_seen_timestamp = now_ts
                         current_unmapped.count += 1
+                        if pgn_name_from_spec and not current_unmapped.pgn_name:
+                             current_unmapped.pgn_name = pgn_name_from_spec
                         # Update suggestions if they weren't there or if logic changes (optional)
                         if not current_unmapped.suggestions and suggestions_list:
                             current_unmapped.suggestions = suggestions_list
