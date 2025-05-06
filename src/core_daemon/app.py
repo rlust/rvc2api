@@ -6,6 +6,7 @@ import threading
 import time
 import logging
 from typing import Dict, Any, Optional, List
+from collections import deque
 
 import can
 from can.exceptions import CanInterfaceNotImplementedError
@@ -45,14 +46,19 @@ mapping_override = os.getenv("CAN_MAP_PATH")
     device_mapping_path_override=mapping_override,
 )
 
-# ── FastAPI ─────────────────────────────────────────────────────────────────
+# ── FastAPI setup ──────────────────────────────────────────────────────────
 app = FastAPI(
     title="rvc2api",
     servers=[{"url": "http://localhost:8000", "description": "Holtel"}],
 )
 
-# In‑memory state: entity_id → payload
+# ── In‑memory state + history ────────────────────────────────────────────────
 state: Dict[str, Dict[str, Any]] = {}
+# history buffer per entity (time‑based, 24 h retention)
+HISTORY_DURATION = 24 * 3600  # seconds
+history: Dict[str, deque[Dict[str, Any]]] = {
+    eid: deque() for eid in entity_id_lookup
+}
 
 # ── Pre‑seed lights (off state) ───────────────────────────────────────────────
 now = time.time()
@@ -60,21 +66,21 @@ for eid in light_entity_ids:
     info = light_command_info.get(eid)
     if not info:
         continue
-    # find the spec entry for this DGN
     spec_entry = next(
         entry for entry in decoder_map.values()
         if entry["dgn_hex"].upper() == format(info["dgn"], "X")
     )
-    # default 8‑byte off payload (all zeros)
-    decoded, raw = decode_payload(spec_entry, bytes([0]*8))
-    state[eid] = {
+    decoded, raw = decode_payload(spec_entry, bytes([0] * 8))
+    payload = {
         "entity_id": eid,
         "value": decoded,
         "raw": raw,
         "timestamp": now,
     }
+    state[eid] = payload
+    history[eid].append(payload)
 
-# Active WebSocket clients
+# ── Active WebSocket clients ────────────────────────────────────────────────
 clients: set[WebSocket] = set()
 
 # ── Models ──────────────────────────────────────────────────────────────────
@@ -93,6 +99,7 @@ async def broadcast_to_clients(text: str):
         except Exception:
             clients.discard(ws)
     WS_CLIENTS.set(len(clients))
+
 
 # ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -152,7 +159,17 @@ async def start_can_readers():
                 eid = device["entity_id"]
                 ts = time.time()
                 payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": ts}
+
+                # update state
                 state[eid] = payload
+
+                # record into time‑based history
+                hq = history[eid]
+                hq.append(payload)
+                cutoff = ts - HISTORY_DURATION
+                while hq and hq[0]["timestamp"] < cutoff:
+                    hq.popleft()
+
                 text = json.dumps(payload)
                 loop.call_soon_threadsafe(lambda t=text: loop.create_task(broadcast_to_clients(t)))
 
@@ -194,6 +211,20 @@ async def get_entity(entity_id: str):
     return ent
 
 
+@app.get("/entities/{entity_id}/history", response_model=List[Entity])
+async def get_history(
+    entity_id: str,
+    since: Optional[float] = Query(None, description="Unix timestamp; only entries newer than this"),
+    limit: Optional[int] = Query(1000, ge=1, description="Max number of points to return"),
+):
+    if entity_id not in history:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    entries = list(history[entity_id])
+    if since is not None:
+        entries = [e for e in entries if e["timestamp"] > since]
+    return entries[-limit:]
+
+
 @app.get("/lights", response_model=Dict[str, Entity])
 async def list_lights(
     state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
@@ -210,22 +241,17 @@ async def list_lights(
     for eid, ent in state.items():
         if eid not in light_entity_ids:
             continue
-
         cfg = entity_id_lookup.get(eid, {})
         if area and cfg.get("suggested_area") != area:
             continue
-
         caps = cfg.get("capabilities", [])
         if capability and capability not in caps:
             continue
-
         if state_filter:
             val = ent["value"].get("OnOff") or ent["value"].get("on_off") or ent["value"].get("state")
             if not val or val.lower() != state_filter.lower():
                 continue
-
         results[eid] = ent
-
     return results
 
 
@@ -249,14 +275,13 @@ async def metadata():
             for cfg in entity_id_lookup.values()
             if cfg.get(internal)
         }
-        # Flatten for lists of lists:
-        flat = []
+        flat: List[str] = []
         for v in vals:
             if isinstance(v, list):
                 flat.extend(v)
             else:
                 flat.append(v)
-        out[public] = sorted(set(flat))  # type: ignore[list]
+        out[public] = sorted(set(flat))
     return out
 
 
