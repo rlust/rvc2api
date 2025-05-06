@@ -746,7 +746,7 @@
 
         const friendlyName = entity.friendly_name || entity.entity_id;
         let state = entity.state || 'unknown'; // 'on' or 'off'
-        const attributes = entity.attributes || {};
+        const raw_attrs = entity.raw || {}; // Use entity.raw for raw CAN values
         const capabilities = entity.capabilities || [];
 
         // Apply on/off class for styling
@@ -764,18 +764,15 @@
         const hasBrightness = capabilities.includes('brightness');
 
         if (hasBrightness) {
-          // Brightness is 0-255 from attributes, but API and slider might use 0-100 or 0-255.
-          // The API's _send_light_can_command expects 0-100 for target_brightness_ui.
-          // The raw.operating_status is 0-200 (0xC8 for 100%).
-          // Let's assume attributes.brightness is the CAN level (0-200 or 0-255 based on device).
-          // For UI slider (0-100), we'll convert.
+          // Brightness is determined from entity.raw.operating_status (typically 0-200 from CAN).
+          // This needs to be converted to a 0-100% scale for the UI slider.
           let currentBrightnessPercent = 0;
           if (state.toLowerCase() === 'on') {
-            if (attributes.brightness !== undefined) { // This is often the 0-255 or 0-200 value
-                // Assuming attributes.brightness is the value that corresponds to the CAN level (e.g. 0-200 where 200 is 100%)
-                // We need to map this to a 0-100 scale for the slider and API call.
-                // Max CAN brightness for 100% is 0xC8 (200). Let's use this as the scale.
-                currentBrightnessPercent = Math.min(Math.round((parseInt(attributes.brightness, 10) / 200) * 100), 100);
+            if (raw_attrs.operating_status !== undefined) {
+                // raw_attrs.operating_status is the CAN level (e.g. 0-200 where 200 is 100%)
+                // Map this to a 0-100 scale for the slider.
+                // Max CAN brightness for 100% is 0xC8 (200).
+                currentBrightnessPercent = Math.min(Math.round((parseInt(raw_attrs.operating_status, 10) / 200) * 100), 100);
             } else {
                 currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
             }
@@ -785,8 +782,8 @@
             <div class="brightness-control space-y-1 pt-2">
               <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
               <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" 
-                     min="1" max="100" value="${currentBrightnessPercent}" 
-                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider">
+                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider" 
+                     min="0" max="100" value="${currentBrightnessPercent}" ${state.toLowerCase() !== 'on' ? 'disabled' : ''}>
             </div>
           `;
         }
