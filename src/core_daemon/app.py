@@ -20,7 +20,7 @@ from rvc_decoder import load_config_data, decode_payload
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
