@@ -29,6 +29,29 @@ coloredlogs.install(
 
 logger.info("rvc2api starting up...")
 
+# ── Pydantic Models for API responses ────────────────────────────────────────
+class Entity(BaseModel):
+    entity_id: str
+    value: Dict[str, str]
+    raw: Dict[str, int]
+    state: str
+    timestamp: float
+
+class ControlCommand(BaseModel):
+    command: str
+    state: Optional[str] = Field(None, description="Target state: 'on' or 'off'. Required only for 'set' command.")
+    brightness: Optional[int] = Field(None, ge=0, le=100, description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'.")
+
+class UnmappedEntryModel(BaseModel):
+    pgn_hex: str
+    dgn_hex: str
+    instance: str
+    last_data_hex: str
+    decoded_signals: Optional[Dict[str, Any]] = None
+    first_seen_timestamp: float
+    last_seen_timestamp: float
+    count: int
+
 # ── Metrics ─────────────────────────────────────────────────────────────────
 FRAME_COUNTER       = Counter("rvc2api_frames_total", "Total CAN frames received")
 DECODE_ERRORS       = Counter("rvc2api_decode_errors_total", "Total decode errors")
@@ -170,38 +193,6 @@ for eid in history:
 
 # ── Active WebSocket clients ────────────────────────────────────────────────
 clients: set[WebSocket] = set()
-
-# ── Models ──────────────────────────────────────────────────────────────────
-class Entity(BaseModel):
-    entity_id: str
-    value: Dict[str, str]
-    raw: Dict[str, int]
-    state: str
-    timestamp: float
-
-class ControlCommand(BaseModel):
-    command: str  # One of: "set", "toggle", "brightness_up", "brightness_down"
-    state: Optional[str] = Field(
-        default=None,
-        description="Target state: 'on' or 'off'. Required only for 'set' command."
-    )
-
-    brightness: Optional[int] = Field(
-        default=None,
-        ge=0,
-        le=100,
-        description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'."
-    )
-
-class UnmappedEntryModel(BaseModel):
-    pgn_hex: str
-    dgn_hex: str
-    instance: str
-    last_data_hex: str
-    decoded_signals: Optional[Dict[str, Any]] = None # Added field for decoded signals
-    first_seen_timestamp: float
-    last_seen_timestamp: float
-    count: int
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
@@ -596,11 +587,11 @@ async def control_entity(
     current_raw_values = current_state_data.get("raw", {})
     # The reader thread in app.py uses "Operating Status (Brightness)" to determine its "state" field.
     # We rely on that key for the current raw brightness value.
+    # Assuming raw 0-200 maps to UI 0-100%
     current_brightness_raw = current_raw_values.get("Operating Status (Brightness)", 0) # Default to 0 if key not found
     
     current_brightness_ui = 0
     # Ensure raw value is treated as a number, scale it to UI percentage (0-100)
-    # Assuming raw 0-200 maps to UI 0-100%
     if isinstance(current_brightness_raw, (int, float)):
         current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
     
