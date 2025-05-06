@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>rvc2api UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
   </head>
   <body class="bg-gray-900 text-gray-100 min-h-screen">
     <main class="p-6">
       <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
-      <div id="light-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <!-- Lights will be injected here -->
+      <label class="block mb-4">
+        <span class="text-sm text-gray-300">Filter by Area:</span>
+        <select id="area-filter" class="mt-1 block w-full bg-gray-800 text-gray-100 border border-gray-700 rounded p-2">
+          <option value="All">All</option>
+        </select>
+      </label>
+      <div id="light-grid" class="space-y-8">
+        <!-- Grouped lights will be injected here -->
       </div>
     </main>
 
     <script>
       const socket = new WebSocket(`ws://${location.host}/ws`);
       const grid = document.getElementById('light-grid');
+      const filter = document.getElementById('area-filter');
       const lightStates = {};
 
       function getCardColor(brightness, isOn) {
@@ -25,19 +33,24 @@
         return `bg-[rgba(234,179,8,${alpha.toFixed(2)})] text-black`;
       }
 
+      function prettifyName(name) {
+        return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      }
+
       function renderCard(entity) {
         const { entity_id, state, value, raw, capabilities = [] } = entity;
         const brightness = raw?.operating_status ?? 0;
         const brightnessUI = Math.round(brightness / 2);
         const isOn = state === 'on';
         const colorClass = getCardColor(brightnessUI, isOn);
+        const prettyName = prettifyName(entity_id);
 
         const card = document.createElement('div');
         card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass}`;
         card.style.cursor = 'pointer';
         card.id = entity_id;
         card.innerHTML = `
-          <h2 class="text-xl font-semibold mb-2">${entity_id}</h2>
+          <h2 class="text-xl font-semibold mb-2">${prettyName}</h2>
           <p class="mb-2">State: <strong>${state}</strong></p>
           <p class="mb-2">Brightness: ${brightnessUI}%</p>
           ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
@@ -67,29 +80,61 @@
         return card;
       }
 
-      function updateCard(entity) {
-        const existing = document.getElementById(entity.entity_id);
-        const updated = renderCard(entity);
-        if (existing) {
-          grid.replaceChild(updated, existing);
-        } else {
-          grid.appendChild(updated);
+      function renderGroupedLights() {
+        grid.innerHTML = '';
+        const selected = filter.value;
+        const grouped = {};
+
+        for (const entity of Object.values(lightStates)) {
+          const area = entity?.value?.suggested_area || 'Unknown';
+          if (selected !== 'All' && selected !== area) continue;
+          if (!grouped[area]) grouped[area] = [];
+          grouped[area].push(entity);
+        }
+
+        const sortedAreas = Object.keys(grouped).sort();
+        for (const area of sortedAreas) {
+          const section = document.createElement('div');
+          section.innerHTML = `
+            <h2 class="text-2xl font-bold mb-2">${area}</h2>
+            <h3 class="text-xl font-semibold mb-4 flex items-center"><i class="mdi mdi-lightbulb-outline mr-2"></i>Lights</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+          `;
+          const sectionGrid = section.querySelector('div.grid');
+
+          grouped[area].sort((a, b) => a.entity_id.localeCompare(b.entity_id)).forEach(entity => {
+            sectionGrid.appendChild(renderCard(entity));
+          });
+
+          grid.appendChild(section);
         }
       }
+
+      filter.addEventListener('change', renderGroupedLights);
 
       socket.onmessage = (event) => {
         const payload = JSON.parse(event.data);
         if (!payload.entity_id) return;
         lightStates[payload.entity_id] = payload;
-        updateCard(payload);
+        renderGroupedLights();
       };
 
       fetch('/lights')
         .then((res) => res.json())
         .then((data) => {
-          for (const entity_id in data) {
-            updateCard(data[entity_id]);
+          for (const entity of Object.values(data)) {
+            lightStates[entity.entity_id] = entity;
           }
+
+          const areas = new Set(Object.values(lightStates).map(e => e?.value?.suggested_area || 'Unknown'));
+          for (const area of [...areas].sort()) {
+            const opt = document.createElement('option');
+            opt.value = area;
+            opt.textContent = area;
+            filter.appendChild(opt);
+          }
+
+          renderGroupedLights();
         });
     </script>
   </body>
