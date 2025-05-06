@@ -87,10 +87,46 @@ async def start_can_readers():
                     continue
 
                 decoded, raw = decode_payload(entry, msg.data)
-                key = (entry["dgn_hex"], str(entry.get("instance", 0)))
-                device = status_lookup.get(key) or device_lookup.get(key)
+                dgn_hex = entry.get("dgn_hex") # Get DGN from the spec entry
+
+                # --- MODIFICATION START ---
+                # Get instance from the RAW decoded payload, not the static spec entry
+                instance_raw = raw.get("instance")
+
+                if dgn_hex is None or instance_raw is None:
+                    # Cannot proceed without DGN or Instance from payload
+                    logging.debug(f"Skipping message 0x{msg.arbitration_id:X}: Missing DGN ('{dgn_hex}') or Instance ('{instance_raw}') in decoded payload.")
+                    continue
+
+                instance_str = str(instance_raw)
+                lookup_key = (dgn_hex.upper(), instance_str)
+
+                # Try specific instance in status_lookup first
+                device = status_lookup.get(lookup_key)
+
+                # Fallback 1: Try 'default' instance in status_lookup
                 if not device:
-                    logging.warning(f"No device found for key (DGN, instance): {key} from arbitration ID 0x{msg.arbitration_id:X}")
+                    default_key = (dgn_hex.upper(), 'default')
+                    device = status_lookup.get(default_key)
+                    # if device: # Optional: log if default was used
+                    #     logging.debug(f"Using default status mapping for {lookup_key}")
+
+                # Fallback 2: Try specific instance in device_lookup (less common for status)
+                if not device:
+                    device = device_lookup.get(lookup_key)
+
+                # Fallback 3: Try 'default' instance in device_lookup
+                if not device:
+                    default_key = (dgn_hex.upper(), 'default')
+                    device = device_lookup.get(default_key)
+                    # if device: # Optional: log if default was used
+                    #     logging.debug(f"Using default device mapping for {lookup_key}")
+
+                # --- MODIFICATION END ---
+
+                if not device:
+                    # Log only if no device config found after all fallbacks
+                    logging.warning(f"No device config found for key (DGN, instance): {lookup_key} (from 0x{msg.arbitration_id:X}) after checking status/device lookups (specific and default).")
                     continue
 
                 eid = device["entity_id"]
@@ -100,6 +136,10 @@ async def start_can_readers():
                     "value": decoded,
                     "raw": raw,
                     "timestamp": ts,
+                    # Optionally add mapping info for debugging clients
+                    # "mapping_config": device,
+                    # "received_dgn": dgn_hex,
+                    # "received_instance": instance_str,
                 }
                 state[eid] = payload
 
