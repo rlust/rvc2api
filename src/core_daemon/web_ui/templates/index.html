@@ -231,9 +231,9 @@
           const currentLogLevel = logLevelFilter.value.toUpperCase();
           const searchTerm = logSearchInput.value.toLowerCase();
 
-          // Apply log level filter (assuming log format "TIMESTAMP LEVEL NAME: MESSAGE")
-          // A more robust parsing might be needed if format varies significantly
-          const levelMatch = logEntry.match(/\S+\s+(\w+)/);
+          // Apply log level filter 
+          // Assumes log format like: "YYYY-MM-DD HH:MM:SS,ms LEVELNAME LOGGER_NAME: Message"
+          const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/); // Corrected regex
           const entryLogLevel = levelMatch ? levelMatch[1].toUpperCase() : "UNKNOWN";
           
           const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
