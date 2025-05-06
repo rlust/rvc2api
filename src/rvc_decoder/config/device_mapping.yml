@@ -53,7 +53,7 @@ templates:
   # Interior Lights (Moved from 1FEDA)
   25:
     - entity_id: bedroom_ceiling_light
-      friendly_name: Bedroom Ceiling Light
+      friendly_name: Ceiling Light
       suggested_area: Bedroom
       interface: can1
       status_dgn: '1FEDA'
@@ -63,7 +63,7 @@ templates:
       <<: *dimmable_light
   27:
     - entity_id: bedroom_accent_light
-      friendly_name: Bedroom Accent Light
+      friendly_name: Accent Light
       suggested_area: Bedroom
       interface: can1
       status_dgn: '1FEDA'
@@ -73,7 +73,7 @@ templates:
       <<: *dimmable_light
   28:
     - entity_id: bedroom_vanity_light
-      friendly_name: Bedroom Vanity Light
+      friendly_name: Vanity Light
       suggested_area: Bedroom
       interface: can1
       status_dgn: '1FEDA'
@@ -83,7 +83,7 @@ templates:
       <<: *dimmable_light
   29:
     - entity_id: bedroom_reading_light
-      friendly_name: Bedroom Reading Light
+      friendly_name: Reading Light
       suggested_area: Bedroom
       interface: can1
       status_dgn: '1FEDA'
@@ -93,7 +93,7 @@ templates:
       <<: *dimmable_light
   30:
     - entity_id: master_bath_ceiling_light
-      friendly_name: Master Bathroom Ceiling Light
+      friendly_name: Ceiling Light
       suggested_area: Master Bathroom
       interface: can1
       status_dgn: '1FEDA'
