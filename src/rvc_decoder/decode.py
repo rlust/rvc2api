@@ -66,7 +66,10 @@ def decode_payload(entry: dict, data_bytes: bytes):
     return decoded, raw_values
 
 
-def load_config_data():
+def load_config_data(
+    rvc_spec_path_override: str | None = None,    # Renamed parameter
+    device_mapping_path_override: str | None = None, # Renamed parameter
+):
     """
     Load and parse:
       1. RVC spec JSON → decoder_map (PGN→spec entry, adds 'dgn_hex')
@@ -77,7 +80,7 @@ def load_config_data():
          • light_entity_ids (set of IDs)
          • light_command_info (id→{dgn,instance,interface})
 
-    Uses bundled config files.
+    Uses override paths if provided and valid, otherwise falls back to bundled files.
 
     Returns:
       decoder_map: dict[int,dict],
@@ -88,10 +91,33 @@ def load_config_data():
       entity_id_lookup: dict[str,dict],
       light_command_info: dict[str,dict]
     """
-    # Determine default paths
-    rvc_spec_path, device_mapping_path = _default_paths()
-    logging.info(f"Using RVC Spec Path: {rvc_spec_path}")
-    logging.info(f"Using Device Mapping Path: {device_mapping_path}")
+    # --- MODIFICATION START: Path selection logic ---
+    default_spec_path, default_mapping_path = _default_paths()
+
+    # Determine final spec path
+    rvc_spec_path = default_spec_path # Default
+    if rvc_spec_path_override:
+        if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
+            rvc_spec_path = rvc_spec_path_override
+            logging.info(f"Using overridden RVC Spec Path: {rvc_spec_path}")
+        else:
+            logging.warning(f"Override RVC Spec Path invalid or unreadable: {rvc_spec_path_override}. Falling back to default.")
+            logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
+    else:
+        logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
+
+    # Determine final mapping path
+    device_mapping_path = default_mapping_path # Default
+    if device_mapping_path_override:
+        if os.path.exists(device_mapping_path_override) and os.access(device_mapping_path_override, os.R_OK):
+            device_mapping_path = device_mapping_path_override
+            logging.info(f"Using overridden Device Mapping Path: {device_mapping_path}")
+        else:
+            logging.warning(f"Override Device Mapping Path invalid or unreadable: {device_mapping_path_override}. Falling back to default.")
+            logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
+    else:
+        logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
+    # --- MODIFICATION END ---
 
     # 1) Load spec
     if not os.path.exists(rvc_spec_path) or not os.access(rvc_spec_path, os.R_OK):
