@@ -30,6 +30,7 @@
             pydantic
             pyyaml
             prometheus_client
+            coloredlogs # Added coloredlogs
           ];
           format = "pyproject";
 
@@ -61,6 +62,7 @@
             pyPkgs.python-can
             pyPkgs.pydantic
             pyPkgs.pyyaml
+            pyPkgs.coloredlogs # Added coloredlogs
             # dev deps
             pyPkgs.pytest
             pyPkgs.mypy
