@@ -6,7 +6,7 @@ import threading
 import time
 import logging
 import coloredlogs
-import shutil
+import shutil # Keep for now, though copy_config_files is removed
 from typing import Dict, Any, Optional, List
 from collections import deque
 
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from rvc_decoder import load_config_data, decode_payload
-from rvc_decoder.decode import _default_paths # Add this import
+from rvc_decoder.decode import _default_paths
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
@@ -33,6 +33,55 @@ coloredlogs.install(
 logger.setLevel(logging.DEBUG) # Ensure this logger processes DEBUG messages for its handlers
 
 logger.info("rvc2api starting up...")
+
+# ── Determine actual config paths for core logic and UI display ────────────────
+spec_override_env = os.getenv("CAN_SPEC_PATH")
+mapping_override_env = os.getenv("CAN_MAP_PATH")
+
+_decoder_default_spec_path, _decoder_default_map_path = _default_paths()
+
+# Determine actual spec path that will be used by load_config_data and for UI
+actual_spec_path_for_ui = _decoder_default_spec_path
+if spec_override_env:
+    if os.path.exists(spec_override_env) and os.access(spec_override_env, os.R_OK):
+        actual_spec_path_for_ui = spec_override_env
+    else:
+        logger.warning(
+            f"Override RVC Spec Path '{spec_override_env}' is missing or unreadable. "
+            f"Core logic will attempt to use bundled default: '{_decoder_default_spec_path}'"
+        )
+        # actual_spec_path_for_ui remains _decoder_default_spec_path for UI consistency if override fails for core logic
+
+# Determine actual mapping path that will be used by load_config_data and for UI
+actual_map_path_for_ui = _decoder_default_map_path
+if mapping_override_env:
+    if os.path.exists(mapping_override_env) and os.access(mapping_override_env, os.R_OK):
+        actual_map_path_for_ui = mapping_override_env
+    else:
+        logger.warning(
+            f"Override Device Mapping Path '{mapping_override_env}' is missing or unreadable. "
+            f"Core logic will attempt to use bundled default: '{_decoder_default_map_path}'"
+        )
+        # actual_map_path_for_ui remains _decoder_default_map_path for UI consistency if override fails for core logic
+
+logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
+logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
+
+# ── Load spec & mappings for core logic ──────────────────────────────────────
+# load_config_data will perform its own logging regarding path resolution
+logger.info(f"Core logic attempting to load CAN spec from: {spec_override_env or '(default)'}, mapping from: {mapping_override_env or '(default)'}")
+(
+    decoder_map,
+    raw_device_mapping,
+    device_lookup,
+    status_lookup,
+    light_entity_ids,
+    entity_id_lookup,
+    light_command_info,
+) = load_config_data(
+    rvc_spec_path_override=spec_override_env,
+    device_mapping_path_override=mapping_override_env,
+)
 
 # ── Pydantic Models for API responses ────────────────────────────────────────
 class Entity(BaseModel):
@@ -84,31 +133,24 @@ CAN_TX_QUEUE_LENGTH = Gauge("rvc2api_can_tx_queue_length", "Number of pending me
 CAN_TX_ENQUEUE_TOTAL = Counter("rvc2api_can_tx_enqueue_total", "Total number of messages enqueued to the CAN transmit queue")
 CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "Latency for enqueueing CAN control messages")
 
-# ── Load spec & mappings ─────────────────────────────────────────────────────
-spec_override    = os.getenv("CAN_SPEC_PATH")
-mapping_override = os.getenv("CAN_MAP_PATH") # Define mapping_override here
-logger.info(f"Loading CAN spec from: {spec_override or 'default'}, mapping from: {mapping_override or 'default'}")
-(
-    decoder_map,
-    raw_device_mapping,
-    device_lookup,
-    status_lookup,
-    light_entity_ids,
-    entity_id_lookup,
-    light_command_info,
-) = load_config_data(
-    rvc_spec_path_override=spec_override,
-    device_mapping_path_override=mapping_override,
-)
-
 # ── FastAPI setup ──────────────────────────────────────────────────────────
 app = FastAPI(
     title="Holtel rvc2api",
     servers=[{"url": "/", "description": "Holtel de Assfire"}],
 )
 web_ui_dir = os.path.join(os.path.dirname(__file__), "web_ui")
+# Mount static files (if any other static assets are used, otherwise this can be removed too)
+# For now, keep it and ensure the directory exists.
 app.mount("/static", StaticFiles(directory=os.path.join(web_ui_dir, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(web_ui_dir, "templates"))
+
+@app.on_event("startup")
+async def ensure_static_dir_exists():
+    # Ensures the /static directory for FastAPI's StaticFiles mount exists.
+    # This was previously done by copy_config_files.
+    static_dir_for_mount = os.path.join(web_ui_dir, "static")
+    os.makedirs(static_dir_for_mount, exist_ok=True)
+    logger.info(f"Ensured static directory for mount exists: {static_dir_for_mount}")
 
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
 @app.middleware("http")
@@ -132,65 +174,6 @@ history: Dict[str, deque[Dict[str, Any]]] = {
     eid: deque() for eid in entity_id_lookup
 }
 unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entries
-
-# ── Copy Configs to WebUI  ───────────────────────────────────────────────────
-@app.on_event("startup")
-async def copy_config_files():
-    static_dir = os.path.join(os.path.dirname(__file__), "web_ui", "static")
-    os.makedirs(static_dir, exist_ok=True)
-
-    decoder_default_spec_path, decoder_default_map_path = _default_paths()
-
-    map_src_to_copy = None
-    if mapping_override and os.path.exists(mapping_override):
-        map_src_to_copy = mapping_override
-        logger.info(f"Using mapping file from CAN_MAP_PATH for UI copy: {map_src_to_copy}")
-    elif os.path.exists(decoder_default_map_path):
-        map_src_to_copy = decoder_default_map_path
-        logger.info(f"Using decoder's default mapping file for UI copy: {map_src_to_copy}")
-    else:
-        logger.warning(
-            f"Cannot find a source for device_mapping.yml for UI copy. "
-            f"Checked CAN_MAP_PATH ('{mapping_override}') and decoder default ('{decoder_default_map_path}')."
-        )
-
-    spec_src_to_copy = None
-    if spec_override and os.path.exists(spec_override):
-        spec_src_to_copy = spec_override
-        logger.info(f"Using RVC spec file from CAN_SPEC_PATH for UI copy: {spec_src_to_copy}")
-    elif os.path.exists(decoder_default_spec_path):
-        spec_src_to_copy = decoder_default_spec_path
-        logger.info(f"Using decoder's default RVC spec file for UI copy: {spec_src_to_copy}")
-    else:
-        logger.warning(
-            f"Cannot find a source for rvc.json for UI copy. "
-            f"Checked CAN_SPEC_PATH ('{spec_override}') and decoder default ('{decoder_default_spec_path}')."
-        )
-
-    dest_map_path = os.path.join(static_dir, "device_mapping.yml")
-    dest_spec_path = os.path.join(static_dir, "rvc.json")
-
-    try:
-        if map_src_to_copy:
-            if os.path.exists(map_src_to_copy):
-                shutil.copyfile(map_src_to_copy, dest_map_path)
-                logger.info(f"Copied for UI: {map_src_to_copy} -> {dest_map_path}")
-            else:
-                logger.warning(f"Source file for device_mapping.yml NOT FOUND at {map_src_to_copy} during copy attempt.")
-        else:
-            logger.warning(f"device_mapping.yml was not copied to static dir as no suitable source was identified.")
-
-        if spec_src_to_copy:
-            if os.path.exists(spec_src_to_copy):
-                shutil.copyfile(spec_src_to_copy, dest_spec_path)
-                logger.info(f"Copied for UI: {spec_src_to_copy} -> {dest_spec_path}")
-            else:
-                logger.warning(f"Source file for rvc.json NOT FOUND at {spec_src_to_copy} during copy attempt.")
-        else:
-            logger.warning(f"rvc.json was not copied to static dir as no suitable source was identified.")
-
-    except Exception as e:
-        logger.error(f"Error copying config files to static directory for UI: {e}", exc_info=True)
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
 buses: Dict[str, can.Bus] = {}
@@ -623,6 +606,34 @@ def metrics():
     """Prometheus metrics endpoint."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+@app.get("/api/config/device_mapping", response_class=PlainTextResponse)
+async def get_device_mapping_config_content_api():
+    # Serves the content of the device mapping file that the application is effectively using.
+    if os.path.exists(actual_map_path_for_ui):
+        try:
+            with open(actual_map_path_for_ui, 'r') as f:
+                return PlainTextResponse(f.read())
+        except Exception as e:
+            logger.error(f"API Error: Could not read device mapping from '{actual_map_path_for_ui}': {e}")
+            raise HTTPException(status_code=500, detail=f"Error reading device mapping file: {str(e)}")
+    else:
+        logger.error(f"API Error: Device mapping file not found for UI display at '{actual_map_path_for_ui}'")
+        raise HTTPException(status_code=404, detail="Device mapping file not found.")
+
+@app.get("/api/config/rvc_spec", response_class=PlainTextResponse)
+async def get_rvc_spec_config_content_api():
+    # Serves the content of the RVC spec file that the application is effectively using.
+    if os.path.exists(actual_spec_path_for_ui):
+        try:
+            with open(actual_spec_path_for_ui, 'r') as f:
+                return PlainTextResponse(f.read())
+        except Exception as e:
+            logger.error(f"API Error: Could not read RVC spec from '{actual_spec_path_for_ui}': {e}")
+            raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
+    else:
+        logger.error(f"API Error: RVC spec file not found for UI display at '{actual_spec_path_for_ui}'")
+        raise HTTPException(status_code=404, detail="RVC spec file not found.")
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
