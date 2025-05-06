@@ -23,7 +23,7 @@
           buildInputs = with pkgs.python3Packages; [ setuptools wheel ];
 
           # Runtime dependencies (Nix usually gets these from pyproject.toml)
-          # propagatedBuildInputs = with pkgs.python3Packages; [ fastapi uvicorn python-can pydantic pyyaml ];
+          propagatedBuildInputs = with pkgs.python3Packages; [ fastapi uvicorn python-can pydantic pyyaml ];
 
           format = "pyproject";
 
