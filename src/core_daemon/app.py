@@ -529,7 +529,8 @@ async def control_entity(
     else:
         destination = 0xFF
 
-    arbitration_id = (command_dgn << 8) | destination
+    src = 0xDA  # or configurable via env
+    arbitration_id = (command_dgn << 8) | src
     logging.debug(f"Sending to entity={entity_id} via DGN=0x{command_dgn:X}, dest=0x{destination:X}")
 
     try:
