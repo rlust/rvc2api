@@ -45,7 +45,15 @@ mapping_override = os.getenv("CAN_MAP_PATH")
     device_mapping_path_override=mapping_override,
 )
 
-app = FastAPI(title="rvc2api")
+app = FastAPI(
+    title="Holtel rvc2api",
+    servers=[
+        {
+            "url": "http://localhost:8000",
+            "description": "Holtel"
+        }
+    ]
+)
 
 # In‑memory state: entity_id → last payload
 state: Dict[str, Dict[str, Any]] = {}
