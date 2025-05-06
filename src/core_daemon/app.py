@@ -249,7 +249,7 @@ async def start_can_readers():
                 inst = raw.get("instance")
                 if not dgn or inst is None:
                     LOOKUP_MISSES.inc()
-                    logger.warning(f"DGN or instance missing for PGN 0x{msg.arbitration_id:X}. DGN: {dgn}, Instance: {inst}")
+                    logger.debug(f"DGN or instance missing for PGN 0x{msg.arbitration_id:X}. DGN: {dgn}, Instance: {inst}") # Changed to debug
                     continue
 
                 key = (dgn.upper(), str(inst))
@@ -261,7 +261,7 @@ async def start_can_readers():
                 )
                 if not device:
                     LOOKUP_MISSES.inc()
-                    logger.info(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
+                    logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})") # Changed to debug
                     continue
 
                 eid = device["entity_id"]
