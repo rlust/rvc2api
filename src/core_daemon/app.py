@@ -189,7 +189,8 @@ for eid in light_entity_ids:
         "value": decoded,
         "raw": raw,
         "state": human_state,
-        "timestamp": now
+        "timestamp": now,
+        "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
     }
     state[eid] = payload
     history[eid].append(payload)
@@ -340,8 +341,9 @@ async def start_can_readers():
                     "entity_id": eid,
                     "value": decoded,
                     "raw": raw,
-                    "state": state_str,  # 👈 new field
-                    "timestamp": ts
+                    "state": state_str,
+                    "timestamp": ts,
+                    "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
                 }
 
                 # --- Custom Metrics ---

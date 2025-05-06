@@ -26,7 +26,7 @@
       }
 
       function renderCard(entity) {
-        const { entity_id, state, value, raw } = entity;
+        const { entity_id, state, value, raw, capabilities = [] } = entity;
         const brightness = raw?.operating_status ?? 0;
         const brightnessUI = Math.round(brightness / 2);
         const isOn = state === 'on';
@@ -40,7 +40,7 @@
           <h2 class="text-xl font-semibold mb-2">${entity_id}</h2>
           <p class="mb-2">State: <strong>${state}</strong></p>
           <p class="mb-2">Brightness: ${brightnessUI}%</p>
-          ${'brightness' in value ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
+          ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
         `;
 
         card.addEventListener('click', (e) => {
