@@ -10,6 +10,8 @@ import yaml
 import logging
 from importlib import resources
 
+logger = logging.getLogger(__name__) # Added named logger
+
 
 def _default_paths():
     """
@@ -101,35 +103,35 @@ def load_config_data(
     if rvc_spec_path_override:
         if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
             rvc_spec_path = rvc_spec_path_override
-            logging.info(f"Using overridden RVC Spec Path: {rvc_spec_path}")
+            logger.info(f"Using overridden RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
         else:
-            logging.warning(
+            logger.warning( # Changed to logger.warning
                 f"Provided override path for RVC spec is missing or unreadable: {rvc_spec_path_override}. "
                 f"Attempting to use bundled default: {default_spec_path}"
             )
-            logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
+            logger.info(f"Using default RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
     else:
-        logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
+        logger.info(f"Using default RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
 
     # Determine final mapping path
     device_mapping_path = default_mapping_path # Default
     if device_mapping_path_override:
         if os.path.exists(device_mapping_path_override) and os.access(device_mapping_path_override, os.R_OK):
             device_mapping_path = device_mapping_path_override
-            logging.info(f"Using overridden Device Mapping Path: {device_mapping_path}")
+            logger.info(f"Using overridden Device Mapping Path: {device_mapping_path}") # Changed to logger.info
         else:
-            logging.warning(
+            logger.warning( # Changed to logger.warning
                 f"Provided override path for device mapping is missing or unreadable: {device_mapping_path_override}. "
                 f"Attempting to use bundled default: {default_mapping_path}"
             )
-            logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
+            logger.info(f"Using default Device Mapping Path: {device_mapping_path}") # Changed to logger.info
     else:
-        logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
+        logger.info(f"Using default Device Mapping Path: {device_mapping_path}") # Changed to logger.info
     # --- MODIFICATION END ---
 
     # 1) Load spec
     if not os.path.exists(rvc_spec_path) or not os.access(rvc_spec_path, os.R_OK):
-        logging.error(f"Cannot read RVC spec: {rvc_spec_path}")
+        logger.error(f"Cannot read RVC spec: {rvc_spec_path}") # Changed to logger.error
         sys.exit(1)
     with open(rvc_spec_path) as f:
         spec_content = json.load(f)
@@ -139,16 +141,16 @@ def load_config_data(
     for entry in specs:
         sid = entry.get('id')
         if sid is None:
-            logging.warning(f"Skipping spec without 'id': {entry}")
+            logger.warning(f"Skipping spec without 'id': {entry}") # Changed to logger.warning
             continue
         try:
             dec_id = sid if isinstance(sid, int) else int(sid, 16)
         except ValueError:
-            logging.warning(f"Invalid 'id' in spec: {sid}")
+            logger.warning(f"Invalid 'id' in spec: {sid}") # Changed to logger.warning
             continue
         entry['dgn_hex'] = f"{(dec_id >> 8) & 0x3FFFF:X}"
         decoder_map[dec_id] = entry
-    logging.info(f"Loaded {len(decoder_map)} spec entries.")
+    logger.info(f"Loaded {len(decoder_map)} spec entries.") # Changed to logger.info
 
     # 2) Load device mapping
     device_mapping: dict = {}
@@ -194,15 +196,15 @@ def load_config_data(
                                 'instance': int(inst_str),
                                 'interface': merged.get('interface')
                             }
-        logging.info(f"Loaded {len(device_lookup)} device_lookup entries.")
-        logging.info(f"Loaded {len(status_lookup)} status_lookup entries.")
+        logger.info(f"Loaded {len(device_lookup)} device_lookup entries.") # Changed to logger.info
+        logger.info(f"Loaded {len(status_lookup)} status_lookup entries.") # Changed to logger.info
         status_keys_to_log = list(status_lookup.keys())
         if len(status_keys_to_log) > 50:
-            logging.info(f"status_lookup keys (first 50): {status_keys_to_log[:50]}")
+            logger.info(f"status_lookup keys (first 50): {status_keys_to_log[:50]}") # Changed to logger.info
         else:
-            logging.info(f"status_lookup keys: {status_keys_to_log}")
+            logger.info(f"status_lookup keys: {status_keys_to_log}") # Changed to logger.info
     else:
-        logging.error(f"Device mapping file NOT FOUND: {device_mapping_path}")
+        logger.error(f"Device mapping file NOT FOUND: {device_mapping_path}") # Changed to logger.error
 
     return (
         decoder_map,

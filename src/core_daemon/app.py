@@ -26,6 +26,7 @@ coloredlogs.install(
     logger=logger,
     fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 )
+logger.propagate = False # Prevent logs from propagating to the root logger
 
 logger.info("rvc2api starting up...")
 
