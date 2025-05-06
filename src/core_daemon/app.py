@@ -101,6 +101,11 @@ class ControlCommand(BaseModel):
     state: Optional[str] = Field(None, description="Target state: 'on' or 'off'. Required only for 'set' command.")
     brightness: Optional[int] = Field(None, ge=0, le=100, description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'.")
 
+class SuggestedMapping(BaseModel):
+    instance: str
+    name: str
+    suggested_area: Optional[str] = None
+
 class UnmappedEntryModel(BaseModel):
     pgn_hex: str
     dgn_hex: str
@@ -110,6 +115,7 @@ class UnmappedEntryModel(BaseModel):
     first_seen_timestamp: float
     last_seen_timestamp: float
     count: int
+    suggestions: Optional[List[SuggestedMapping]] = None # Added for suggestions
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
 FRAME_COUNTER       = Counter("rvc2api_frames_total", "Total CAN frames received")
@@ -418,6 +424,17 @@ async def start_can_readers():
                     pgn_from_entry = entry.get("pgn_hex", f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}")
                     now_ts = time.time()
 
+                    # Generate suggestions
+                    suggestions_list = []
+                    if raw_device_mapping and isinstance(raw_device_mapping.get("devices"), list):
+                        for device_config in raw_device_mapping["devices"]:
+                            if device_config.get("dgn_hex", "").upper() == dgn.upper() and str(device_config.get("instance")) != str(inst):
+                                suggestions_list.append(SuggestedMapping(
+                                    instance=str(device_config.get("instance")),
+                                    name=device_config.get("name", "Unknown Name"),
+                                    suggested_area=device_config.get("suggested_area")
+                                ))
+
                     if unmapped_key_str not in unmapped_entries:
                         unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
                             pgn_hex=pgn_from_entry,
@@ -427,7 +444,8 @@ async def start_can_readers():
                             decoded_signals=decoded_payload_for_unmapped, # Store the decoded signals
                             first_seen_timestamp=now_ts,
                             last_seen_timestamp=now_ts,
-                            count=1
+                            count=1,
+                            suggestions=suggestions_list if suggestions_list else None
                         )
                     else:
                         current_unmapped = unmapped_entries[unmapped_key_str]
@@ -435,6 +453,9 @@ async def start_can_readers():
                         current_unmapped.decoded_signals = decoded_payload_for_unmapped # Update decoded signals
                         current_unmapped.last_seen_timestamp = now_ts
                         current_unmapped.count += 1
+                        # Update suggestions if they weren't there or if logic changes (optional)
+                        if not current_unmapped.suggestions and suggestions_list:
+                            current_unmapped.suggestions = suggestions_list
                     continue
 
                 ts = time.time()
@@ -525,8 +546,10 @@ async def get_history(
 async def get_unmapped_entries():
     """
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
-    Stores the last seen data payload for each.
+    Stores the last seen data payload for each and provides suggestions based on existing mappings.
     """
+    # The suggestions are now added when the unmapped entry is first created or updated.
+    # So, we can just return the unmapped_entries dictionary as is.
     return unmapped_entries
 
 @app.get("/lights", response_model=Dict[str, Entity]) # Removed /api/ prefix
