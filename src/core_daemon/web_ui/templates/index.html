@@ -11,7 +11,9 @@
     <main class="p-6">
       <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
       <label class="block mb-4">
-        <span class="text-sm text-gray-300">Filter by Area:</span>
+        <span class="text-sm text-gray-300 flex items-center gap-1">
+          <i class="mdi mdi-filter-variant"></i> Filter by Area:
+        </span>
         <select id="area-filter" class="mt-1 block w-full bg-gray-800 text-gray-100 border border-gray-700 rounded p-2">
           <option value="All">All</option>
         </select>
@@ -46,13 +48,16 @@
         const prettyName = prettifyName(entity_id);
 
         const card = document.createElement('div');
-        card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass}`;
+        card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass} relative group`;
         card.style.cursor = 'pointer';
         card.id = entity_id;
         card.innerHTML = `
+          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <i class="mdi mdi-power text-yellow-400"></i>
+          </div>
           <h2 class="text-xl font-semibold mb-2">${prettyName}</h2>
-          <p class="mb-2">State: <strong>${state}</strong></p>
-          <p class="mb-2">Brightness: ${brightnessUI}%</p>
+          <p class="mb-2 flex items-center"><i class="mdi ${isOn ? 'mdi-lightbulb-on' : 'mdi-lightbulb-off'} mr-1"></i><strong>${state}</strong></p>
+          <p class="mb-2 flex items-center"><i class="mdi mdi-brightness-6 mr-1"></i>${brightnessUI}%</p>
           ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
         `;
 
