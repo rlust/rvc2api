@@ -2,21 +2,39 @@
   description = "rvc2api Python package and DevShell";
 
   inputs = {
-    # Pin nixpkgs to the same commit as rv-nixpi
-    nixpkgs.url     = "github:NixOS/nixpkgs/5b35d248e9206c1f3baf8de6a7683fee126364aa";
+    # Use nixos-unstable branch
+    nixpkgs.url     = "nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     poetry2nix = {
       url = "github:nix-community/poetry2nix";
-      inputs.nixpkgs.follows = "nixpkgs"; # Ensure poetry2nix also uses the pinned version
+      inputs.nixpkgs.follows = "nixpkgs"; # Ensure poetry2nix also uses unstable
     };
   };
 
   outputs = { self, nixpkgs, flake-utils, poetry2nix, ... }@inputs:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        # Overlay to fix fastapi-cli dependency issue if present in current unstable
+        fixFastapiCliOverlay = final: super: {
+          python3Packages = super.python3Packages.overrideScope' (pyfinal: pysuper: {
+            fastapi-cli = pysuper.fastapi-cli.overridePythonAttrs (old: {
+              # Remove the problematic dependency on uvicorn.optional-dependencies
+              # Use tryEval to handle cases where the attribute might not exist
+              propagatedBuildInputs = builtins.filter 
+                (p: 
+                  let 
+                    uvicornStandardDep = builtins.tryEval pyfinal.uvicorn.optional-dependencies.standard;
+                  in
+                    if uvicornStandardDep.success then p != uvicornStandardDep.value else true
+                ) 
+                (old.propagatedBuildInputs or []); # Ensure old.propagatedBuildInputs is a list
+            });
+          });
+        };
+
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ inputs.poetry2nix.overlays.default ]; # Use inputs.poetry2nix.overlays.default
+          overlays = [ inputs.poetry2nix.overlays.default fixFastapiCliOverlay ]; # Apply overlays
         };
       in {
         # Build your application entirely from pyproject.toml + poetry.lock
