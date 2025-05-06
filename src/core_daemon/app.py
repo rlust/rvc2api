@@ -42,6 +42,11 @@ PGN_USAGE_COUNTER    = Counter("rvc2api_pgn_usage_total", "PGN usage by frame co
 INST_USAGE_COUNTER   = Counter("rvc2api_instance_usage_total", "Instance usage by DGN", ["dgn", "instance"])
 DGN_TYPE_GAUGE       = Gauge("rvc2api_dgn_type_present", "Number of DGNs seen per type/class", ["device_type"])
 
+# Queue for CAN messages to be sent
+CAN_TX_QUEUE_LENGTH = Gauge("rvc2api_can_tx_queue_length", "Number of pending messages in the CAN transmit queue")
+CAN_TX_ENQUEUE_TOTAL = Counter("rvc2api_can_tx_enqueue_total", "Total number of messages enqueued to the CAN transmit queue")
+CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "Latency for enqueueing CAN control messages")
+
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
 mapping_override = os.getenv("CAN_MAP_PATH")
@@ -88,6 +93,42 @@ history: Dict[str, deque[Dict[str, Any]]] = {
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
 buses: Dict[str, can.Bus] = {}
+
+# ── CAN Transmit Queue ───────────────────────────────────────────────────────
+can_tx_queue: asyncio.Queue[tuple[can.Message, str]] = asyncio.Queue()
+
+async def can_writer():
+    bustype = os.getenv("CAN_BUSTYPE", "socketcan")
+    while True:
+        msg, interface = await can_tx_queue.get()
+        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
+
+        try:
+            bus = buses.get(interface)
+            if not bus:
+                try:
+                    bus = can.interface.Bus(channel=interface, bustype=bustype)
+                    buses[interface] = bus
+                except Exception as e:
+                    logging.error(f"Failed to initialize CAN bus '{interface}': {e}")
+                    can_tx_queue.task_done()
+                    continue
+
+            try:
+                bus.send(msg)
+                await asyncio.sleep(0.05)
+                bus.send(msg)
+            except Exception as e:
+                logging.error(f"CAN writer failed on {interface}: {e}")
+        except Exception as e:
+            logging.error(f"CAN writer failed on {interface}: {e}")
+        finally:
+            can_tx_queue.task_done()
+            CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
+
+@app.on_event("startup")
+async def start_can_writer():
+    asyncio.create_task(can_writer())
 
 # ── Pre‑seed lights (off state) ───────────────────────────────────────────────
 now = time.time()
@@ -484,20 +525,16 @@ async def control_entity(
     arbitration_id = 0x18EF0000 | (0xDA << 8) | inst  # PGN 0x1FED9
 
     try:
-        bus = can.interface.Bus(channel=interface, bustype=os.getenv("CAN_BUSTYPE", "socketcan"))
-        bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
-        time.sleep(0.05)
-        bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
-        logging.info(f"{action} → sent brightness={brightness_ui}% to {entity_id}")
+        msg = can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True)
+        await can_tx_queue.put((msg, interface))
+        with CAN_TX_ENQUEUE_LATENCY.time():
+            await can_tx_queue.put((msg, interface))
+            CAN_TX_ENQUEUE_TOTAL.inc()
+            CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
+        logging.info(f"{action} → enqueued brightness={brightness_ui}% to {entity_id}")
     except Exception as e:
         logging.error(f"Failed to send CAN control to {entity_id}: {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
-    finally:
-        try:
-            bus.shutdown()
-        except AttributeError:
-            # Fallback for bus types without shutdown()
-            bus.close()
 
     return {
         "status": "sent",
@@ -506,6 +543,17 @@ async def control_entity(
         "brightness": brightness_ui,
         "action": action,
     }
+
+@app.get("/queue", response_model=dict)
+async def get_queue_status():
+    """
+    Return the current status of the CAN transmit queue.
+    """
+    return {
+        "length": can_tx_queue.qsize(),
+        "maxsize": can_tx_queue.maxsize or "unbounded"
+    }
+
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
