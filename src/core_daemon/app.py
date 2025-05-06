@@ -85,7 +85,8 @@ async def start_can_readers():
 
                 entry = decoder_map.get(msg.arbitration_id)
                 if not entry:
-                    logging.warning(f"No decoder map entry found for arbitration ID: 0x{msg.arbitration_id:X}")
+                    # --- MODIFICATION: Change level to INFO ---
+                    logging.info(f"No decoder map entry found for arbitration ID: 0x{msg.arbitration_id:X}")
                     continue
 
                 decoded, raw = decode_payload(entry, msg.data)
@@ -128,8 +129,9 @@ async def start_can_readers():
                 # --- MODIFICATION END ---
 
                 if not device:
+                    # --- MODIFICATION: Change level to INFO ---
                     # Log only if no device config found after all fallbacks
-                    logging.warning(f"No device config found for key (DGN, instance): {lookup_key} (from 0x{msg.arbitration_id:X}) after checking status/device lookups (specific and default).")
+                    logging.info(f"No device config found for key (DGN, instance): {lookup_key} (from 0x{msg.arbitration_id:X}) after checking status/device lookups (specific and default).")
                     continue
 
                 eid = device["entity_id"]
