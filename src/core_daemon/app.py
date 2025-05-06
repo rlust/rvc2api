@@ -5,6 +5,7 @@ import json
 import threading
 import time
 import logging
+import coloredlogs
 from typing import Dict, Any, Optional, List
 from collections import deque
 
@@ -19,10 +20,14 @@ from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTEN
 from rvc_decoder import load_config_data, decode_payload
 
 # ── Logging ──────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s %(levelname)7s %(message)s",
+logger = logging.getLogger(__name__)
+coloredlogs.install(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    logger=logger,
+    fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 )
+
+logger.info("rvc2api starting up...")
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
 FRAME_COUNTER       = Counter("rvc2api_frames_total", "Total CAN frames received")
@@ -50,6 +55,7 @@ CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "La
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
 mapping_override = os.getenv("CAN_MAP_PATH")
+logger.info(f"Loading CAN spec from: {spec_override or 'default'}, mapping from: {mapping_override or 'default'}")
 (
     decoder_map,
     raw_device_mapping,
@@ -110,7 +116,7 @@ async def can_writer():
                     bus = can.interface.Bus(channel=interface, bustype=bustype)
                     buses[interface] = bus
                 except Exception as e:
-                    logging.error(f"Failed to initialize CAN bus '{interface}': {e}")
+                    logger.error(f"Failed to initialize CAN bus '{interface}' ({bustype}): {e}")
                     can_tx_queue.task_done()
                     continue
 
@@ -119,9 +125,9 @@ async def can_writer():
                 await asyncio.sleep(0.05)
                 bus.send(msg)
             except Exception as e:
-                logging.error(f"CAN writer failed on {interface}: {e}")
+                logger.error(f"CAN writer failed to send message on {interface}: {e}")
         except Exception as e:
-            logging.error(f"CAN writer failed on {interface}: {e}")
+            logger.error(f"CAN writer encountered an unexpected error for {interface}: {e}")
         finally:
             can_tx_queue.task_done()
             CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
@@ -129,6 +135,7 @@ async def can_writer():
 @app.on_event("startup")
 async def start_can_writer():
     asyncio.create_task(can_writer())
+    logger.info("CAN writer task started.")
 
 # ── Pre‑seed lights (off state) ───────────────────────────────────────────────
 now = time.time()
@@ -203,6 +210,7 @@ async def start_can_readers():
     interfaces = [i.strip() for i in raw_ifaces.split(",") if i.strip()]
     bustype = os.getenv("CAN_BUSTYPE", "socketcan")
     bitrate = int(os.getenv("CAN_BITRATE", "500000"))
+    logger.info(f"Preparing CAN readers for interfaces: {interfaces}, bustype: {bustype}, bitrate: {bitrate}")
 
     for iface in interfaces:
         def reader(iface=iface):
@@ -210,10 +218,13 @@ async def start_can_readers():
                 bus = can.interface.Bus(channel=iface, bustype=bustype, bitrate=bitrate)
                 buses[iface] = bus
             except CanInterfaceNotImplementedError as e:
-                logging.error(f"Cannot open CAN bus '{iface}' ({bustype}): {e}")
+                logger.error(f"Cannot open CAN bus '{iface}' ({bustype}, {bitrate}bps): {e}")
+                return
+            except Exception as e:
+                logger.error(f"Failed to initialize CAN bus '{iface}' ({bustype}, {bitrate}bps) due to an unexpected error: {e}")
                 return
 
-            logging.info(f"Started CAN reader on {iface} via {bustype} @ {bitrate}bps")
+            logger.info(f"Started CAN reader on {iface} via {bustype} @ {bitrate}bps")
             while True:
                 msg = bus.recv(timeout=1.0)
                 if msg is None:
@@ -238,6 +249,7 @@ async def start_can_readers():
                 inst = raw.get("instance")
                 if not dgn or inst is None:
                     LOOKUP_MISSES.inc()
+                    logger.warning(f"DGN or instance missing for PGN 0x{msg.arbitration_id:X}. DGN: {dgn}, Instance: {inst}")
                     continue
 
                 key = (dgn.upper(), str(inst))
@@ -249,7 +261,7 @@ async def start_can_readers():
                 )
                 if not device:
                     LOOKUP_MISSES.inc()
-                    logging.info(f"No device config for {key}, PGN 0x{msg.arbitration_id:X}")
+                    logger.info(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
                     continue
 
                 eid = device["entity_id"]
@@ -439,12 +451,18 @@ async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     clients.add(ws)
     WS_CLIENTS.set(len(clients))
+    logger.info(f"WebSocket client connected: {ws.client.host}:{ws.client.port}")
     try:
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
         clients.discard(ws)
         WS_CLIENTS.set(len(clients))
+        logger.info(f"WebSocket client disconnected: {ws.client.host}:{ws.client.port}")
+    except Exception as e:
+        clients.discard(ws)
+        WS_CLIENTS.set(len(clients))
+        logger.error(f"WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
 
 @app.post("/entities/{entity_id}/control")
 async def control_entity(
@@ -478,9 +496,11 @@ async def control_entity(
 ):
     device = entity_id_lookup.get(entity_id)
     if not device:
+        logger.debug(f"Control command for unknown entity_id: {entity_id}")
         raise HTTPException(status_code=404, detail="Entity not found")
 
     if entity_id not in light_command_info:
+        logger.debug(f"Control command for non-controllable entity_id: {entity_id}")
         raise HTTPException(status_code=400, detail="Entity is not controllable")
 
     info = light_command_info[entity_id]
@@ -495,6 +515,8 @@ async def control_entity(
     current_on_str = current_state_data.get("state", "off") # Default to "off" if not found
     current_on = current_on_str.lower() == "on"
 
+    logger.debug(f"Control for {entity_id}: current_on_str='{current_on_str}', current_on={current_on}")
+
     # Determine current_brightness_ui using the likely correct signal name
     current_raw_values = current_state_data.get("raw", {})
     # The reader thread in app.py uses "Operating Status (Brightness)" to determine its "state" field.
@@ -506,6 +528,8 @@ async def control_entity(
     # Assuming raw 0-200 maps to UI 0-100%
     if isinstance(current_brightness_raw, (int, float)):
         current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+    
+    logger.debug(f"Control for {entity_id}: current_brightness_raw='{current_brightness_raw}', current_brightness_ui={current_brightness_ui}%")
     
     # --- Determine Target State ---
     target_brightness_ui = current_brightness_ui # Default: no change in brightness if already on
@@ -587,8 +611,7 @@ async def control_entity(
         0xFF, 0xFF, 0xFF # Reserved
     ])
 
-    logging.debug(f"Preparing CAN message for entity={entity_id}: ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Instance={instance}, Interface={interface}, TargetUIBrightness={target_brightness_ui}%, CANLevel={brightness_can_level}")
-    # ... (rest of try/except block for sending remains the same) ...
+    logger.debug(f"CAN CMD: entity={entity_id}, ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Inst={instance}, Iface={interface}, TargetUIBrightness={target_brightness_ui}%, CANLevel={brightness_can_level}, Action: {action}")
     try:
         msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
         # Enqueue once. The can_writer task handles sending it twice.
@@ -596,9 +619,9 @@ async def control_entity(
             await can_tx_queue.put((msg, interface))
             CAN_TX_ENQUEUE_TOTAL.inc()
         CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize()) # Update gauge after successful enqueue
-        logging.info(f"Action: {action} for {entity_id} (CAN Level: {brightness_can_level}) → enqueued to {interface}")
+        logger.info(f"CAN CMD Queued: {action} for {entity_id} (CAN Lvl: {brightness_can_level}) -> {interface}")
     except Exception as e:
-        logging.error(f"Failed to enqueue CAN control for {entity_id}: {e}")
+        logger.error(f"Failed to enqueue CAN control for {entity_id} (Action: {action}): {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
 
     return {
@@ -619,6 +642,9 @@ async def get_queue_status():
         "maxsize": can_tx_queue.maxsize or "unbounded"
     }
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("rvc2api shutting down...")
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
