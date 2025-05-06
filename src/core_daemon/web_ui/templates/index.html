@@ -1,93 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RV-C Light Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-  <script src="https://unpkg.com/alpinejs@3.x.x" defer></script>
-</head>
-<body class="bg-gray-900 text-white font-sans">
-  <div class="container mx-auto px-4 py-6">
-    <h1 class="text-3xl font-bold mb-6">RV-C Light Dashboard</h1>
-    <div id="lights" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Light controls will be dynamically populated here -->
-    </div>
-  </div>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rvc2api UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-900 text-gray-100 min-h-screen">
+    <main class="p-6">
+      <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
+      <div id="light-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <!-- Lights will be injected here -->
+      </div>
+    </main>
 
-  <script>
-    const socket = new WebSocket(`ws://${location.host}/ws`);
-    const lightsContainer = document.getElementById('lights');
-    const lightState = {};
+    <script>
+      const socket = new WebSocket(`ws://${location.host}/ws`);
+      const grid = document.getElementById('light-grid');
+      const lightStates = {};
 
-    socket.addEventListener('message', event => {
-      const data = JSON.parse(event.data);
-      if (!data.entity_id || !data.raw?.hasOwnProperty('operating_status')) return;
+      function getCardColor(brightness, isOn) {
+        if (!isOn) return 'bg-gray-800';
+        const alpha = brightness / 100;
+        return `bg-[rgba(234,179,8,${alpha.toFixed(2)})] text-black`;
+      }
 
-      lightState[data.entity_id] = data;
-      renderLights();
-    });
+      function renderCard(entity) {
+        const { entity_id, state, value, raw } = entity;
+        const brightness = raw?.operating_status ?? 0;
+        const brightnessUI = Math.round(brightness / 2);
+        const isOn = state === 'on';
+        const colorClass = getCardColor(brightnessUI, isOn);
 
-    async function toggleLight(entityId) {
-      const current = lightState[entityId];
-      const command = {
-        command: 'toggle'
-      };
-      await fetch(`/entities/${entityId}/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(command)
-      });
-    }
-
-    async function setBrightness(entityId, brightness) {
-      const command = {
-        command: 'set',
-        state: brightness > 0 ? 'on' : 'off',
-        brightness
-      };
-      await fetch(`/entities/${entityId}/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(command)
-      });
-    }
-
-    function renderLights() {
-      lightsContainer.innerHTML = '';
-      for (const [entityId, data] of Object.entries(lightState)) {
-        const brightness = Math.round((data.raw.operating_status || 0) / 2);
-        const isOn = brightness > 0;
-
-        const lightCard = document.createElement('div');
-        lightCard.className = 'bg-gray-800 p-4 rounded-xl shadow flex flex-col gap-3';
-
-        lightCard.innerHTML = `
-          <div class="flex justify-between items-center">
-            <div>
-              <h2 class="text-lg font-semibold">${entityId}</h2>
-              <p class="text-sm text-gray-400">${isOn ? 'On' : 'Off'} - ${brightness}%</p>
-            </div>
-            <button
-              class="px-4 py-1 rounded bg-${isOn ? 'red' : 'green'}-600 hover:bg-${isOn ? 'red' : 'green'}-700"
-              onclick="toggleLight('${entityId}')"
-            >
-              ${isOn ? 'Off' : 'On'}
-            </button>
-          </div>
-          <input
-            type="range"
-            min="0" max="100" step="1"
-            value="${brightness}"
-            oninput="setBrightness('${entityId}', this.value)"
-            class="w-full accent-yellow-500"
-          />
+        const card = document.createElement('div');
+        card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass}`;
+        card.style.cursor = 'pointer';
+        card.id = entity_id;
+        card.innerHTML = `
+          <h2 class="text-xl font-semibold mb-2">${entity_id}</h2>
+          <p class="mb-2">State: <strong>${state}</strong></p>
+          <p class="mb-2">Brightness: ${brightnessUI}%</p>
+          ${'brightness' in value ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
         `;
 
-        lightsContainer.appendChild(lightCard);
+        card.addEventListener('click', (e) => {
+          if (e.target.tagName === 'INPUT') return;
+          fetch(`/entities/${entity_id}/control`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'toggle' })
+          });
+        });
+
+        const slider = card.querySelector('input');
+        if (slider) {
+          slider.addEventListener('input', (e) => {
+            const level = parseInt(e.target.value);
+            fetch(`/entities/${entity_id}/control`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: 'set', state: 'on', brightness: level })
+            });
+          });
+        }
+
+        return card;
       }
-    }
-  </script>
-</body>
+
+      function updateCard(entity) {
+        const existing = document.getElementById(entity.entity_id);
+        const updated = renderCard(entity);
+        if (existing) {
+          grid.replaceChild(updated, existing);
+        } else {
+          grid.appendChild(updated);
+        }
+      }
+
+      socket.onmessage = (event) => {
+        const payload = JSON.parse(event.data);
+        if (!payload.entity_id) return;
+        lightStates[payload.entity_id] = payload;
+        updateCard(payload);
+      };
+
+      fetch('/lights')
+        .then((res) => res.json())
+        .then((data) => {
+          for (const entity_id in data) {
+            updateCard(data[entity_id]);
+          }
+        });
+    </script>
+  </body>
 </html>
