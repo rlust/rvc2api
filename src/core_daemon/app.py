@@ -137,6 +137,7 @@ CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "La
 app = FastAPI(
     title="Holtel rvc2api",
     servers=[{"url": "/", "description": "Holtel de Assfire"}],
+    openapi_prefix="/api" # Add openapi_prefix for Swagger UI
 )
 web_ui_dir = os.path.join(os.path.dirname(__file__), "web_ui")
 # Mount static files (if any other static assets are used, otherwise this can be removed too)
@@ -451,7 +452,7 @@ async def start_can_readers():
         threading.Thread(target=reader, daemon=True).start()
 
 # ── REST Endpoints ─────────────────────────────────────────────────────────
-@app.get("/entities", response_model=Dict[str, Entity])
+@app.get("/api/entities", response_model=Dict[str, Entity])
 async def list_entities(
     type: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
@@ -469,12 +470,12 @@ async def list_entities(
 
     return {eid: ent for eid, ent in state.items() if matches(eid)}
 
-@app.get("/entities/ids", response_model=List[str])
+@app.get("/api/entities/ids", response_model=List[str])
 async def list_entity_ids():
     """Return all known entity IDs."""
     return list(state.keys())
 
-@app.get("/entities/{entity_id}", response_model=Entity)
+@app.get("/api/entities/{entity_id}", response_model=Entity)
 async def get_entity(entity_id: str):
     """Return the latest value for one entity."""
     ent = state.get(entity_id)
@@ -482,7 +483,7 @@ async def get_entity(entity_id: str):
         raise HTTPException(status_code=404, detail="Entity not found")
     return ent
 
-@app.get("/entities/{entity_id}/history", response_model=List[Entity])
+@app.get("/api/entities/{entity_id}/history", response_model=List[Entity])
 async def get_history(
     entity_id: str,
     since: Optional[float] = Query(None, description="Unix timestamp; only entries newer than this"),
@@ -495,7 +496,7 @@ async def get_history(
         entries = [e for e in entries if e["timestamp"] > since]
     return entries[-limit:]
 
-@app.get("/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])
+@app.get("/api/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])
 async def get_unmapped_entries():
     """
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
@@ -503,7 +504,7 @@ async def get_unmapped_entries():
     """
     return unmapped_entries
 
-@app.get("/lights", response_model=Dict[str, Entity])
+@app.get("/api/lights", response_model=Dict[str, Entity])
 async def list_lights(
     state_filter:  Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
     capability:    Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
@@ -541,7 +542,7 @@ async def list_lights(
         }
     return results
 
-@app.get("/meta", response_model=Dict[str, List[str]])
+@app.get("/api/meta", response_model=Dict[str, List[str]])
 async def metadata():
     """
     Expose groupable dimensions:
@@ -587,12 +588,12 @@ async def metadata():
 
     return out
 
-@app.get("/healthz")
+@app.get("/api/healthz")
 async def healthz():
     """Liveness probe."""
     return JSONResponse(status_code=200, content={"status": "ok"})
 
-@app.get("/readyz")
+@app.get("/api/readyz")
 async def readyz():
     """
     Readiness probe: 200 once at least one frame decoded, else 503.
@@ -601,7 +602,7 @@ async def readyz():
     code = 200 if ready else 503
     return JSONResponse(status_code=code, content={"status": "ready" if ready else "pending", "entities": len(state)})
 
-@app.get("/metrics")
+@app.get("/api/metrics")
 def metrics():
     """Prometheus metrics endpoint."""
     data = generate_latest()
@@ -635,7 +636,7 @@ async def get_rvc_spec_config_content_api():
         logger.error(f"API Error: RVC spec file not found for UI display at '{actual_spec_path_for_ui}'")
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
 
-@app.websocket("/ws")
+@app.websocket("/api/ws")
 async def websocket_endpoint(ws: WebSocket):
     """
     WebSocket endpoint: push every new payload as JSON.
@@ -656,7 +657,7 @@ async def websocket_endpoint(ws: WebSocket):
         WS_CLIENTS.set(len(clients))
         logger.error(f"WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
 
-@app.websocket("/ws/logs")
+@app.websocket("/api/ws/logs")
 async def websocket_logs(ws: WebSocket):
     """
     WebSocket endpoint: stream all log messages in real time.
@@ -674,7 +675,7 @@ async def websocket_logs(ws: WebSocket):
         log_ws_clients.discard(ws)
         logger.error(f"Log WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
 
-@app.post("/entities/{entity_id}/control")
+@app.post("/api/entities/{entity_id}/control")
 async def control_entity(
     entity_id: str,
     cmd: ControlCommand = Body(..., examples={
@@ -873,7 +874,7 @@ async def control_entity(
         "action": action,
     }
 
-@app.get("/queue", response_model=dict)
+@app.get("/api/queue", response_model=dict)
 async def get_queue_status():
     """
     Return the current status of the CAN transmit queue.

@@ -103,7 +103,7 @@
       const lightsLoadingMessage = document.getElementById('lights-loading-message');
 
       // WebSocket for entity updates
-      const entitySocket = new WebSocket(`ws://${location.host}/ws`);
+      const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
 
       entitySocket.onmessage = (event) => {
         const payload = JSON.parse(event.data);
@@ -145,7 +145,7 @@
 
         card.addEventListener('click', (e) => {
           if (e.target.tagName === 'INPUT') return;
-          fetch(`/entities/${entity_id}/control`, {
+          fetch(`/api/entities/${entity_id}/control`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command: 'toggle' })
@@ -156,7 +156,7 @@
         if (slider) {
           slider.addEventListener('input', (e) => {
             const level = parseInt(e.target.value);
-            fetch(`/entities/${entity_id}/control`, {
+            fetch(`/api/entities/${entity_id}/control`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ command: 'set', state: 'on', brightness: level })
@@ -214,7 +214,7 @@
         if (logSocket && logSocket.readyState === WebSocket.OPEN) {
           return;
         }
-        logSocket = new WebSocket(`ws://${location.host}/ws/logs`);
+        logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
         logsWaitingMessage.classList.remove('hidden'); // Show waiting message
 
         logSocket.onopen = () => {
@@ -303,7 +303,7 @@
       });
 
 
-      fetch('/lights')
+      fetch('/api/lights')
         .then(res => {
           if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -351,7 +351,7 @@
           }
 
           if (view === 'mapping') {
-            fetch('/static/device_mapping.yml')
+            fetch('/api/config/device_mapping')
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.text();
@@ -364,7 +364,7 @@
                 document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
               });
           } else if (view === 'spec') {
-            fetch('/static/rvc.json')
+            fetch('/api/config/rvc_spec')
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.text();
