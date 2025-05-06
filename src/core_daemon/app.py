@@ -679,7 +679,7 @@ async def control_entity(
     # byte 5-7: Reserved (0xFF)
     payload_data = bytes([
         instance,
-        0x7C, 
+        0xFF, # Group Mask for specific instance addressing (was 0x7C)
         brightness_can_level, 
         0x00, # Command: SetLevel
         0x00, # Duration: Instantaneous
