@@ -80,28 +80,147 @@
     </div>
 
     <script>
+      const socket = new WebSocket(`ws://${location.host}/ws`);
+      const grid = document.getElementById('light-grid');
+      const filter = document.getElementById('area-filter');
+      const lightStates = {};
+
+      socket.onmessage = (event) => {
+        const payload = JSON.parse(event.data);
+        if (!payload.entity_id) return;
+        lightStates[payload.entity_id] = payload;
+        renderGroupedLights();
+      };
+
+      function getCardColor(brightness, isOn) {
+        if (!isOn) return 'bg-gray-800';
+        const alpha = brightness / 100;
+        return `bg-[rgba(234,179,8,${alpha.toFixed(2)})] text-black`;
+      }
+
+      function renderCard(entity) {
+        const { entity_id, state, value, raw, capabilities = [], friendly_name } = entity;
+        const brightness = raw?.operating_status ?? 0;
+        const brightnessUI = Math.round(brightness / 2);
+        const isOn = state === 'on';
+        const colorClass = getCardColor(brightnessUI, isOn);
+
+        const card = document.createElement('div');
+        card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass} relative group`;
+        card.style.cursor = 'pointer';
+        card.id = entity_id;
+        card.innerHTML = `
+          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <i class="mdi mdi-power text-yellow-400"></i>
+          </div>
+          <h2 class="text-xl font-semibold mb-2">${friendly_name || entity_id}</h2>
+          <p class="mb-2 flex items-center"><i class="mdi ${isOn ? 'mdi-lightbulb-on' : 'mdi-lightbulb-off'} mr-1"></i><strong>${state}</strong></p>
+          <p class="mb-2 flex items-center"><i class="mdi mdi-brightness-6 mr-1"></i>${brightnessUI}%</p>
+          ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
+        `;
+
+        card.addEventListener('click', (e) => {
+          if (e.target.tagName === 'INPUT') return;
+          fetch(`/entities/${entity_id}/control`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'toggle' })
+          });
+        });
+
+        const slider = card.querySelector('input');
+        if (slider) {
+          slider.addEventListener('input', (e) => {
+            const level = parseInt(e.target.value);
+            fetch(`/entities/${entity_id}/control`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: 'set', state: 'on', brightness: level })
+            });
+          });
+        }
+
+        return card;
+      }
+
+      function renderGroupedLights() {
+        grid.innerHTML = '';
+        const selected = filter.value;
+        const grouped = {};
+
+        for (const entity of Object.values(lightStates)) {
+          const area = entity?.suggested_area || 'Unknown';
+          if (selected !== 'All' && selected !== area) continue;
+          if (!grouped[area]) grouped[area] = [];
+          grouped[area].push(entity);
+        }
+
+        for (const area of Object.keys(grouped).sort()) {
+          const section = document.createElement('div');
+          section.innerHTML = `
+            <h2 class="text-2xl font-bold mb-1">${area}</h2>
+            <div class="border-t border-gray-600 my-2"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+          `;
+          const sectionGrid = section.querySelector('div.grid');
+
+          grouped[area].forEach(entity => {
+            sectionGrid.appendChild(renderCard(entity));
+          });
+
+          grid.appendChild(section);
+        }
+      }
+
+      filter.addEventListener('change', renderGroupedLights);
+
+      fetch('/lights')
+        .then(res => res.json())
+        .then(data => {
+          for (const entity of Object.values(data)) {
+            lightStates[entity.entity_id] = entity;
+          }
+
+          const areas = new Set(Object.values(lightStates).map(e => e?.suggested_area || 'Unknown'));
+          for (const area of [...areas].sort()) {
+            const opt = document.createElement('option');
+            opt.value = area;
+            opt.textContent = area;
+            filter.appendChild(opt);
+          }
+
+          renderGroupedLights();
+        });
+
       document.querySelectorAll('.nav-link').forEach(btn => {
         btn.addEventListener('click', () => {
           const view = btn.getAttribute('data-view');
-          document.querySelectorAll('.view-section').forEach(sec => {
-            sec.classList.add('hidden');
-          });
+          document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
           document.getElementById(`${view}-view`).classList.remove('hidden');
 
           if (view === 'mapping') {
-            fetch('/static/device_mapping.yml')
-              .then(res => res.text())
-              .then(text => {
-                document.getElementById('mapping-content').textContent = text;
-              });
+            fetch('/static/device_mapping.yml').then(res => res.text()).then(text => {
+              document.getElementById('mapping-content').textContent = text;
+            });
           } else if (view === 'spec') {
-            fetch('/static/rvc.json')
-              .then(res => res.text())
-              .then(text => {
-                document.getElementById('spec-content').textContent = text;
-              });
+            fetch('/static/rvc.json').then(res => res.text()).then(text => {
+              document.getElementById('spec-content').textContent = text;
+            });
           }
         });
+      });
+
+      document.getElementById('toggleSidebar').addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('w-64');
+        sidebar.classList.toggle('w-0');
+        sidebar.classList.toggle('p-4');
+        const icon = document.querySelector('#toggleSidebar i');
+        icon.classList.toggle('mdi-chevron-left');
+        icon.classList.toggle('mdi-chevron-right');
+        document.getElementById('toggleSidebar').innerHTML = sidebar.classList.contains('w-0')
+          ? '<i class="mdi mdi-chevron-right"></i> Expand'
+          : '<i class="mdi mdi-chevron-left"></i> Collapse';
       });
     </script>
   </body>
