@@ -193,7 +193,9 @@ for eid in light_entity_ids:
         "raw": raw,
         "state": human_state,
         "timestamp": now,
-        "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
+        "suggested_area": lookup.get("suggested_area", "Unknown"),
+        "device_type": lookup.get("device_type", "unknown"),
+        "capabilities": lookup.get("capabilities", [])
     }
     state[eid] = payload
     history[eid].append(payload)
@@ -355,7 +357,9 @@ async def start_can_readers():
                         "raw": raw,
                         "state": state_str,
                         "timestamp": ts,
-                        "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
+                        "suggested_area": lookup.get("suggested_area", "Unknown"),
+                        "device_type": lookup.get("device_type", "unknown"),
+                        "capabilities": lookup.get("capabilities", [])
                     }
                     # Custom Metrics
                     pgn = msg.arbitration_id & 0x3FFFF
@@ -723,7 +727,9 @@ async def control_entity(
             "raw": optimistic_raw,
             "state": optimistic_state,
             "timestamp": ts,
-            "capabilities": entity_id_lookup.get(entity_id, {}).get("capabilities", [])
+            "suggested_area": lookup.get("suggested_area", "Unknown"),
+            "device_type": lookup.get("device_type", "unknown"),
+            "capabilities": lookup.get("capabilities", [])
         }
         state[entity_id] = payload
         history[entity_id].append(payload)
