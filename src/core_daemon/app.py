@@ -487,43 +487,55 @@ async def control_entity(
     instance = info["instance"]
     interface = info["interface"]
 
+    # --- Read Current State ---
     current_state_data = state.get(entity_id, {})
-    current_raw_values = current_state_data.get("raw", {})
-    # Assuming 'operating status (brightness)' or a similar key holds the raw brightness value (0-200 or 0-250 range)
-    # Adjust this key if your decoder uses a different name for raw brightness
-    raw_brightness_key = next((k for k in ["operating status (brightness)", "operating_status", "brightness"] if k in current_raw_values), None)
-    current_brightness_raw = current_raw_values.get(raw_brightness_key, 0) if raw_brightness_key else 0
-    
-    # Convert raw CAN brightness (e.g., 0-200 for 0-100%) to UI brightness (0-100%)
-    # This assumes a scaling factor of 2 (e.g. CAN 200 = UI 100%). Adjust if different.
-    current_brightness_ui = min(current_brightness_raw // 2, 100) if isinstance(current_brightness_raw, int) else 0
-    current_on = current_brightness_ui > 0
+    # Use the 'state' field directly populated by the reader thread
+    current_on_str = current_state_data.get("state", "off")
+    current_on = current_on_str.lower() == "on"
 
-    # Default: no change
-    target_brightness_ui = current_brightness_ui
+    # Also get current brightness for brightness commands and restoring state
+    current_raw_values = current_state_data.get("raw", {})
+    # Use the specific key the reader uses to determine state: "operating_status"
+    raw_brightness_key = "operating_status"
+    current_brightness_raw = current_raw_values.get(raw_brightness_key, 0)
+    # Scale raw CAN value (e.g., 0-200) to UI brightness (0-100)
+    current_brightness_ui = 0
+    if isinstance(current_brightness_raw, int):
+        current_brightness_ui = min(current_brightness_raw // 2, 100) # Assuming 0-200 maps to 0-100%
+    elif isinstance(current_brightness_raw, float): # Handle potential float just in case
+        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+
+    # --- Determine Target State ---
+    target_brightness_ui = current_brightness_ui # Default: no change
     action = "No change"
 
     if cmd.command == "set":
         if cmd.state not in {"on", "off"}:
             raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set")
         if cmd.state == "on":
-            target_brightness_ui = cmd.brightness if cmd.brightness is not None else (current_brightness_ui if current_brightness_ui > 0 else 100)
+            # If brightness specified, use it. Else if currently on, keep current brightness. Else default 100.
+            target_brightness_ui = cmd.brightness if cmd.brightness is not None else (current_brightness_ui if current_on else 100)
             action = f"Set ON to {target_brightness_ui}%"
         else: # cmd.state == "off"
             target_brightness_ui = 0
             action = "Set OFF"
 
     elif cmd.command == "toggle":
-        if current_on:
+        if current_on: # Use the state derived from the 'state' field
             target_brightness_ui = 0
             action = "Toggle OFF"
         else:
-            target_brightness_ui = current_brightness_ui if current_brightness_ui > 0 else 100 # Restore or default to 100%
+            # Default to 100% when toggling ON from OFF state
+            # (Could potentially restore previous brightness if we stored it)
+            target_brightness_ui = 100
             action = f"Toggle ON to {target_brightness_ui}%"
 
-
     elif cmd.command == "brightness_up":
-        target_brightness_ui = min(current_brightness_ui + 10, 100)
+        # Ensure light turns on if increasing brightness from 0
+        if not current_on and current_brightness_ui == 0:
+             target_brightness_ui = 10 # Start at 10% if off
+        else:
+             target_brightness_ui = min(current_brightness_ui + 10, 100)
         action = f"Brightness UP to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_down":
@@ -533,33 +545,29 @@ async def control_entity(
     else:
         raise HTTPException(status_code=400, detail="Invalid command")
 
+    # --- Construct and Send CAN Message ---
     # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8)
     brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
     # RV-C CAN ID Construction (for PDU1 commands like DC_DIMMER_COMMAND_2)
+    # ... (rest of CAN ID and payload construction remains the same) ...
     prio = 6
     sa = 0xF9 # Source Address for commands from this controller
     # PGN is info["dgn"] (e.g., 0x1FEDB)
     arbitration_id = (prio << 26) | (pgn << 8) | sa
 
     # RV-C Payload for DC_DIMMER_COMMAND_2 (DGN 0x1FEDB)
-    # byte 0: Instance
-    # byte 1: Group Mask (0x7C for "All Instances of this DGN at this SA that support this command")
-    # byte 2: Desired Level (0-200, 0xC8 = 100%)
-    # byte 3: Command (0x00 = SetLevel)
-    # byte 4: Duration (0x00 = Instantaneous)
-    # byte 5-7: Reserved (0xFF)
     payload_data = bytes([
         instance,
         0x7C, # Group Mask
-        brightness_can_level,
+        brightness_can_level, # Byte 2: Level (0 should be OFF)
         0x00, # Command: SetLevel
         0x00, # Duration: Instantaneous
         0xFF, 0xFF, 0xFF # Reserved
     ])
 
     logging.debug(f"Preparing CAN message for entity={entity_id}: ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Instance={instance}, Interface={interface}")
-
+    # ... (rest of try/except block for sending remains the same) ...
     try:
         msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
         # Enqueue once. The can_writer task handles sending it twice.
@@ -576,7 +584,7 @@ async def control_entity(
         "status": "sent",
         "entity_id": entity_id,
         "command": cmd.command,
-        "brightness": target_brightness_ui,
+        "brightness": target_brightness_ui, # Return the target UI brightness
         "action": action,
     }
 
