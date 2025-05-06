@@ -103,7 +103,10 @@ def load_config_data(
             rvc_spec_path = rvc_spec_path_override
             logging.info(f"Using overridden RVC Spec Path: {rvc_spec_path}")
         else:
-            logging.warning(f"Override RVC Spec Path invalid or unreadable: {rvc_spec_path_override}. Falling back to default.")
+            logging.warning(
+                f"Provided override path for RVC spec is missing or unreadable: {rvc_spec_path_override}. "
+                f"Attempting to use bundled default: {default_spec_path}"
+            )
             logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
     else:
         logging.info(f"Using default RVC Spec Path: {rvc_spec_path}")
@@ -115,7 +118,10 @@ def load_config_data(
             device_mapping_path = device_mapping_path_override
             logging.info(f"Using overridden Device Mapping Path: {device_mapping_path}")
         else:
-            logging.warning(f"Override Device Mapping Path invalid or unreadable: {device_mapping_path_override}. Falling back to default.")
+            logging.warning(
+                f"Provided override path for device mapping is missing or unreadable: {device_mapping_path_override}. "
+                f"Attempting to use bundled default: {default_mapping_path}"
+            )
             logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
     else:
         logging.info(f"Using default Device Mapping Path: {device_mapping_path}")
