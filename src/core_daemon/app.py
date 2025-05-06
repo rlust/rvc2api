@@ -895,7 +895,8 @@ async def _send_light_can_command(
         # Optimistic State Update
         optimistic_state_str = "on" if target_brightness_ui > 0 else "off"
         optimistic_raw_val = {"operating_status": brightness_can_level, "instance": instance, "group": 0x7C}
-        optimistic_value_val = {"operating_status": str(brightness_can_level), "instance": str(instance), "group": str(0x7C)}
+        # Ensure 'value' reflects the UI-scale brightness (0-100) for operating_status
+        optimistic_value_val = {"operating_status": str(target_brightness_ui), "instance": str(instance), "group": str(0x7C)}
         ts = time.time()
         lookup = entity_id_lookup.get(entity_id, {})
         
