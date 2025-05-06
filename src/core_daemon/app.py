@@ -10,7 +10,7 @@ from collections import deque
 
 import can
 from can.exceptions import CanInterfaceNotImplementedError
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -19,16 +19,22 @@ from rvc_decoder import load_config_data, decode_payload
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
-    level=logging.WARNING,  # switch to DEBUG to see raw frames
+    level=logging.WARNING,
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
-FRAME_COUNTER = Counter("rvc2api_frames_total", "Total CAN frames received")
-DECODE_ERRORS = Counter("rvc2api_decode_errors_total", "Total decode errors")
-LOOKUP_MISSES = Counter("rvc2api_lookup_misses_total", "Total device‑lookup misses")
-WS_CLIENTS    = Gauge("rvc2api_ws_clients", "Active WebSocket clients")
-FRAME_LATENCY = Histogram("rvc2api_frame_latency_seconds", "Time spent decoding & dispatching frames")
+FRAME_COUNTER       = Counter("rvc2api_frames_total", "Total CAN frames received")
+DECODE_ERRORS       = Counter("rvc2api_decode_errors_total", "Total decode errors")
+LOOKUP_MISSES       = Counter("rvc2api_lookup_misses_total", "Total device‑lookup misses")
+SUCCESSFUL_DECODES  = Counter("rvc2api_successful_decodes_total", "Total successful decodes")
+WS_CLIENTS          = Gauge("rvc2api_ws_clients", "Active WebSocket clients")
+WS_MESSAGES         = Counter("rvc2api_ws_messages_total", "Total WebSocket messages sent")
+ENTITY_COUNT        = Gauge("rvc2api_entity_count", "Number of entities in current state")
+HISTORY_SIZE_GAUGE  = Gauge("rvc2api_history_size", "Number of stored historical samples per entity", ["entity_id"])
+FRAME_LATENCY       = Histogram("rvc2api_frame_latency_seconds", "Time spent decoding & dispatching frames")
+HTTP_REQUESTS       = Counter("rvc2api_http_requests_total", "Total HTTP requests", ["method", "endpoint", "status_code"])
+HTTP_LATENCY        = Histogram("rvc2api_http_request_latency_seconds", "HTTP request latency in seconds", ["method", "endpoint"])
 
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
@@ -52,9 +58,23 @@ app = FastAPI(
     servers=[{"url": "http://localhost:8000", "description": "Holtel"}],
 )
 
+# ── HTTP middleware for Prometheus ─────────────────────────────────────────
+@app.middleware("http")
+async def prometheus_http_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    latency = time.perf_counter() - start
+
+    path = request.url.path
+    method = request.method
+    status = response.status_code
+
+    HTTP_REQUESTS.labels(method=method, endpoint=path, status_code=status).inc()
+    HTTP_LATENCY.labels(method=method, endpoint=path).observe(latency)
+    return response
+
 # ── In‑memory state + history ────────────────────────────────────────────────
 state: Dict[str, Dict[str, Any]] = {}
-# history buffer per entity (time‑based, 24 h retention)
 HISTORY_DURATION = 24 * 3600  # seconds
 history: Dict[str, deque[Dict[str, Any]]] = {
     eid: deque() for eid in entity_id_lookup
@@ -71,14 +91,12 @@ for eid in light_entity_ids:
         if entry["dgn_hex"].upper() == format(info["dgn"], "X")
     )
     decoded, raw = decode_payload(spec_entry, bytes([0] * 8))
-    payload = {
-        "entity_id": eid,
-        "value": decoded,
-        "raw": raw,
-        "timestamp": now,
-    }
+    payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": now}
     state[eid] = payload
     history[eid].append(payload)
+ENTITY_COUNT.set(len(state))
+for eid in history:
+    HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(history[eid]))
 
 # ── Active WebSocket clients ────────────────────────────────────────────────
 clients: set[WebSocket] = set()
@@ -90,16 +108,15 @@ class Entity(BaseModel):
     raw: Dict[str, int]
     timestamp: float
 
-
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
     for ws in list(clients):
         try:
             await ws.send_text(text)
+            WS_MESSAGES.inc()
         except Exception:
             clients.discard(ws)
     WS_CLIENTS.set(len(clients))
-
 
 # ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -132,6 +149,7 @@ async def start_can_readers():
                         LOOKUP_MISSES.inc()
                         continue
                     decoded, raw = decode_payload(entry, msg.data)
+                    SUCCESSFUL_DECODES.inc()
                 except Exception:
                     DECODE_ERRORS.inc()
                     continue
@@ -162,6 +180,7 @@ async def start_can_readers():
 
                 # update state
                 state[eid] = payload
+                ENTITY_COUNT.set(len(state))
 
                 # record into time‑based history
                 hq = history[eid]
@@ -169,12 +188,12 @@ async def start_can_readers():
                 cutoff = ts - HISTORY_DURATION
                 while hq and hq[0]["timestamp"] < cutoff:
                     hq.popleft()
+                HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
 
                 text = json.dumps(payload)
                 loop.call_soon_threadsafe(lambda t=text: loop.create_task(broadcast_to_clients(t)))
 
         threading.Thread(target=reader, daemon=True).start()
-
 
 # ── REST Endpoints ─────────────────────────────────────────────────────────
 @app.get("/entities", response_model=Dict[str, Entity])
@@ -195,12 +214,10 @@ async def list_entities(
 
     return {eid: ent for eid, ent in state.items() if matches(eid)}
 
-
 @app.get("/entities/ids", response_model=List[str])
 async def list_entity_ids():
     """Return all known entity IDs."""
     return list(state.keys())
-
 
 @app.get("/entities/{entity_id}", response_model=Entity)
 async def get_entity(entity_id: str):
@@ -209,7 +226,6 @@ async def get_entity(entity_id: str):
     if not ent:
         raise HTTPException(status_code=404, detail="Entity not found")
     return ent
-
 
 @app.get("/entities/{entity_id}/history", response_model=List[Entity])
 async def get_history(
@@ -223,7 +239,6 @@ async def get_history(
     if since is not None:
         entries = [e for e in entries if e["timestamp"] > since]
     return entries[-limit:]
-
 
 @app.get("/lights", response_model=Dict[str, Entity])
 async def list_lights(
@@ -254,7 +269,6 @@ async def list_lights(
         results[eid] = ent
     return results
 
-
 @app.get("/meta", response_model=Dict[str, List[str]])
 async def metadata():
     """
@@ -284,12 +298,10 @@ async def metadata():
         out[public] = sorted(set(flat))
     return out
 
-
 @app.get("/healthz")
 async def healthz():
     """Liveness probe."""
     return JSONResponse(status_code=200, content={"status": "ok"})
-
 
 @app.get("/readyz")
 async def readyz():
@@ -300,13 +312,11 @@ async def readyz():
     code = 200 if ready else 503
     return JSONResponse(status_code=code, content={"status": "ready" if ready else "pending", "entities": len(state)})
 
-
 @app.get("/metrics")
 def metrics():
     """Prometheus metrics endpoint."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
