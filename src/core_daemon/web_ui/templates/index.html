@@ -6,6 +6,11 @@
     <title>rvc2api UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+      .nav-link.active-nav {
+        background-color: #4A5568; /* Tailwind gray-600 */
+      }
+    </style>
   </head>
   <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
     <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
@@ -29,8 +34,9 @@
             </button>
           </div>
           <nav class="space-y-2">
-            <button data-view="lights" class="nav-link w-full text-left text-gray-300 hover:text-white">Lights</button>
-            <button data-view="logs" class="nav-link w-full text-left text-gray-300 hover:text-white">Logs</button>
+            <button data-view="home" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">Home</button>
+            <button data-view="lights" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Lights</button>
+            <button data-view="logs" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Logs</button>
             
             <!-- Configuration Section -->
             <div class="pt-2"> 
@@ -67,8 +73,45 @@
       </aside>
 
       <!-- Main content area -->
-      <main id="mainContent" class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-0 mt-16 md:mt-0">
-        <section id="lights-view" class="view-section">
+      <main id="mainContent" class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-0 mt-16 md:mt-0 md:h-[calc(100vh-4rem)]">
+        <!-- Home View / Dashboard -->
+        <section id="home-view" class="view-section">
+          <h1 class="text-3xl font-bold mb-8 text-gray-100">Dashboard</h1>
+
+          <div class="mb-10">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Quick Light Controls</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <button id="btn-all-on" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
+              </button>
+              <button id="btn-all-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
+              </button>
+              <button id="btn-interior-on" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
+              </button>
+              <button id="btn-interior-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
+              </button>
+              <button id="btn-exterior-on" class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
+              </button>
+              <button id="btn-exterior-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                <i class="mdi mdi-dome-light mr-2"></i>Exterior Off <!-- Using dome-light as mdi-outdoor-lamp-off not standard -->
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Scenes</h2>
+            <div class="bg-gray-800 p-6 rounded-lg shadow">
+              <p class="text-gray-400">Scene management and definition coming soon.</p>
+              <p class="text-gray-500 text-sm mt-2">This section will allow you to define and trigger custom scenes involving multiple devices (lights, locks, etc.).</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="lights-view" class="view-section hidden">
           <div class="flex items-center justify-between mb-4">
             <h1 class="text-3xl font-bold">RV-C Lights</h1>
             <div>
@@ -137,56 +180,12 @@
       const filter = document.getElementById('area-filter');
       const lightStates = {};
       const lightsLoadingMessage = document.getElementById('lights-loading-message');
+      const apiBasePath = '/api'; // Define base path for API calls
 
       // WebSocket for entity updates
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
 
       entitySocket.onmessage = (event) => {
-        const payload = JSON.parse(event.data);
-        if (!payload.entity_id) return;
-        // Merge new payload with existing state to preserve all fields
-        lightStates[payload.entity_id] = { 
-          ...(lightStates[payload.entity_id] || {}), 
-          ...payload 
-        };
-        renderGroupedLights();
-      };
-
-      function getCardColor(brightness, isOn) {
-        if (!isOn) return 'bg-gray-800';
-        const alpha = brightness / 100;
-        return `bg-[rgba(234,179,8,${alpha.toFixed(2)})] text-black`;
-      }
-
-      function renderCard(entity) {
-        const { entity_id, state, value, raw, capabilities = [], friendly_name } = entity;
-        const brightness = raw?.operating_status ?? 0;
-        const brightnessUI = Math.round(brightness / 2);
-        const isOn = state === 'on';
-        const colorClass = getCardColor(brightnessUI, isOn);
-
-        const card = document.createElement('div');
-        card.className = `rounded-2xl p-3 shadow transition-colors duration-300 ${colorClass} relative group`; // Reduced padding from p-4 to p-3
-        card.style.cursor = 'pointer';
-        card.id = entity_id;
-        card.innerHTML = `
-          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <i class="mdi mdi-power text-yellow-400"></i>
-          </div>
-          <h2 class="text-xl font-semibold mb-2">${friendly_name || entity_id}</h2>
-          ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
-        `;
-
-        card.addEventListener('click', (e) => {
-          if (e.target.tagName === 'INPUT') return;
-          fetch(`/api/entities/${entity_id}/control`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command: 'toggle' })
-          });
-        });
-
-        const slider = card.querySelector('input');
         if (slider) {
           slider.addEventListener('input', (e) => {
             const level = parseInt(e.target.value);
@@ -336,6 +335,50 @@
         }
       });
 
+      // Function to handle bulk light control button clicks
+      function setupBulkControlButtons() {
+        const controls = [
+          { id: 'btn-all-on', path: `${apiBasePath}/lights/all/on`, method: 'POST', name: 'All Lights On' },
+          { id: 'btn-all-off', path: `${apiBasePath}/lights/all/off`, method: 'POST', name: 'All Lights Off' },
+          { id: 'btn-interior-on', path: `${apiBasePath}/lights/interior/on`, method: 'POST', name: 'Interior Lights On' },
+          { id: 'btn-interior-off', path: `${apiBasePath}/lights/interior/off`, method: 'POST', name: 'Interior Lights Off' },
+          { id: 'btn-exterior-on', path: `${apiBasePath}/lights/exterior/on`, method: 'POST', name: 'Exterior Lights On' },
+          { id: 'btn-exterior-off', path: `${apiBasePath}/lights/exterior/off`, method: 'POST', name: 'Exterior Lights Off' },
+        ];
+
+        controls.forEach(control => {
+          const button = document.getElementById(control.id);
+          if (button) {
+            button.addEventListener('click', () => {
+              const originalText = button.innerHTML;
+              button.disabled = true;
+              button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+
+              fetch(control.path, { method: control.method })
+                .then(response => {
+                  if (!response.ok) {
+                    return response.json().then(err => { throw new Error(`HTTP error ${response.status}: ${err.detail || response.statusText}`) });
+                  }
+                  return response.json();
+                })
+                .then(data => {
+                  console.log(`Command ${control.name} successful:`, data);
+                  alert(`Action: ${data.action}\nStatus: ${data.status}\nProcessed: ${data.lights_processed}\nCommanded: ${data.lights_commanded}${data.errors && data.errors.length ? '\nErrors: ' + data.errors.join(', ') : ''}`);
+                })
+                .catch(error => {
+                  console.error(`Command ${control.name} failed:`, error);
+                  alert(`Failed to execute ${control.name}.\nError: ${error.message}`);
+                })
+                .finally(() => {
+                  button.disabled = false;
+                  button.innerHTML = originalText;
+                });
+            });
+          } else {
+            console.warn(`Button with ID ${control.id} not found for bulk control setup.`);
+          }
+        });
+      }
 
       fetch('/api/lights')
         .then(res => {
@@ -376,10 +419,17 @@
             targetView.classList.remove('hidden');
           } else {
             console.error(`View section not found: ${view}-view`);
-            return; // Exit if view not found
+            // Optionally, show a default view or an error message in the UI
+            const homeViewFallback = document.getElementById('home-view');
+            if (homeViewFallback) homeViewFallback.classList.remove('hidden');
+            return; 
           }
 
-          // ... (existing log, mapping, spec view logic) ...
+          // Update active nav link styling
+          document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
+          btn.classList.add('active-nav');
+
+          // Specific logic for views like logs, mapping, etc.
           if (view === 'logs') {
             connectLogSocket();
             document.getElementById('log-resume').click(); // Start unpaused
@@ -637,6 +687,32 @@
             // if (overlay) overlay remove();
           }
         });
+      });
+
+      // Set default view and initialize components
+      document.addEventListener('DOMContentLoaded', () => {
+        // Set "Home" as the default view
+        document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
+        const homeView = document.getElementById('home-view');
+        const homeNavLink = document.querySelector('.nav-link[data-view="home"]');
+
+        if (homeView) {
+          homeView.classList.remove('hidden');
+          document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
+          if (homeNavLink) homeNavLink.classList.add('active-nav');
+        } else {
+          // Fallback if home-view is not found, show the first available view (e.g. lights)
+          const lightsView = document.getElementById('lights-view');
+          const lightsNavLink = document.querySelector('.nav-link[data-view="lights"]');
+          if (lightsView) lightsView.classList.remove('hidden');
+          if (lightsNavLink) lightsNavLink.classList.add('active-nav');
+        }
+        
+        setupBulkControlButtons(); // Setup event listeners for the new buttons
+
+        // Any other initializations that need to happen after DOM is ready
+        // For example, if you still need to fetch initial data for other views:
+        // fetchInitialDataForOtherViews(); 
       });
     </script>
   </body>

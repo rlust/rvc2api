@@ -58,6 +58,8 @@ templates:
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   27:
     - entity_id: bedroom_accent_light
@@ -66,6 +68,8 @@ templates:
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   28:
     - entity_id: bedroom_vanity_light
@@ -74,6 +78,8 @@ templates:
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   29:
     - entity_id: bedroom_reading_light
@@ -82,6 +88,8 @@ templates:
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   30:
     - entity_id: master_bath_ceiling_light
@@ -90,184 +98,230 @@ templates:
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   31:
     - entity_id: master_bath_lav_light
-      friendly_name: Master Bathroom Lavatory Light
+      friendly_name: Lavatory Light
       suggested_area: Master Bathroom
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   32:
     - entity_id: master_bath_accent_light
-      friendly_name: Master Bathroom Accent Light
+      friendly_name: Accent Light
       suggested_area: Master Bathroom
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   33:
     - entity_id: mid_bath_ceiling_light
-      friendly_name: Mid Bathroom Ceiling Light
+      friendly_name: Ceiling Light
       suggested_area: Mid Bathroom
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   34:
     - entity_id: mid_bath_accent_light
-      friendly_name: Mid Bathroom Accent Light
+      friendly_name: Accent Light
       suggested_area: Mid Bathroom
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   35:
     - entity_id: entrance_ceiling_light
-      friendly_name: Entrance Ceiling Light
+      friendly_name: Ceiling Light
       suggested_area: Entrance
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   37:
     - entity_id: main_ceiling_light
-      friendly_name: Main Ceiling Light
+      friendly_name: Ceiling Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   38:
     - entity_id: bedroom_courtesy_light
-      friendly_name: Bedroom Courtesy Light
+      friendly_name: Courtesy Light
       suggested_area: Master Bedroom
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   39:
     - entity_id: main_ceiling_accent_light
-      friendly_name: Main Ceiling Accent Light
+      friendly_name: Ceiling Accent Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   41:
     - entity_id: main_driver_side_ceiling_light
-      friendly_name: Main Driver Side Ceiling Light
+      friendly_name: Driver Side Ceiling Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   42:
     - entity_id: main_passenger_side_ceiling_light
-      friendly_name: Main Passenger Side Ceiling Light
+      friendly_name: Passenger Side Ceiling Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   43:
     - entity_id: main_driver_side_slide_light
-      friendly_name: Main Driver Side Slide Light
+      friendly_name: Driver Side Slide Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   45:
     - entity_id: main_dinette_light
-      friendly_name: Main Dinette Light
+      friendly_name: Dinette Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   46:
     - entity_id: main_sink_light
-      friendly_name: Main Sink Light
+      friendly_name: Sink Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
   47:
     - entity_id: main_midship_light
-      friendly_name: Main Midship Light
+      friendly_name: Midship Light
       suggested_area: Main Living Area
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "interior"
       <<: *dimmable_light
 
   # Exterior Lights (Moved from 1FEDA)
   51:
     - entity_id: exterior_driver_side_awning_light
-      friendly_name: Exterior Driver Side Awning Light
+      friendly_name: Driver Side Awning Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   52:
     - entity_id: exterior_passenger_side_awning_light
-      friendly_name: Exterior Passenger Side Awning Light
+      friendly_name: Passenger Side Awning Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   53:
     - entity_id: basement_cargo_light
-      friendly_name: Basement Cargo Light
+      friendly_name: Cargo Light
       suggested_area: Basement
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   54:
     - entity_id: exterior_under_slide_light
-      friendly_name: Exterior Under Slide Light
+      friendly_name: Under Slide Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   57:
     - entity_id: exterior_driver_side_security_light
-      friendly_name: Exterior Driver Side Security Light
+      friendly_name: Driver Side Security Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   58:
     - entity_id: exterior_passenger_side_security_light
-      friendly_name: Exterior Passenger Side Security Light
+      friendly_name: Passenger Side Security Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   59:
     - entity_id: exterior_motion_light
-      friendly_name: Exterior Motion Light
+      friendly_name: Motion Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
   60:
     - entity_id: exterior_porch_light
-      friendly_name: Exterior Porch Light
+      friendly_name: Porch Light
       suggested_area: Exterior
       interface: can1
       status_dgn: '1FEDA'
       group_mask: '0x7C'
+      groups:
+        - "exterior"
       <<: *switchable_light
 
 # Lock Status (DGN 1FEDC likely corresponds to RVC_LOCK_STATUS)

@@ -94,8 +94,8 @@ class Entity(BaseModel):
     suggested_area: Optional[str] = "Unknown"
     device_type: Optional[str] = "unknown"
     capabilities: Optional[List[str]] = []
-    friendly_name: Optional[str] = None # Added friendly_name
-    location_type: Optional[str] = None # New field for interior/exterior
+    friendly_name: Optional[str] = None
+    groups: Optional[List[str]] = Field(default_factory=list) # Changed from locations to groups
 
 class ControlCommand(BaseModel):
     command: str
@@ -258,8 +258,8 @@ for eid in light_entity_ids:
         "suggested_area": lookup.get("suggested_area", "Unknown"),
         "device_type": lookup.get("device_type", "unknown"),
         "capabilities": lookup.get("capabilities", []),
-        "friendly_name": lookup.get("friendly_name"), # Ensure friendly_name is included
-        "location_type": lookup.get("location_type") # Add location_type
+        "friendly_name": lookup.get("friendly_name"),
+        "groups": lookup.get("groups", []) # Changed from locations to groups
     }
     state[eid] = payload
     history[eid].append(payload)
@@ -483,8 +483,8 @@ async def start_can_readers():
                         "suggested_area": lookup.get("suggested_area", "Unknown"),
                         "device_type": lookup.get("device_type", "unknown"),
                         "capabilities": lookup.get("capabilities", []),
-                        "friendly_name": lookup.get("friendly_name"), # Add friendly_name
-                        "location_type": lookup.get("location_type") # Add location_type
+                        "friendly_name": lookup.get("friendly_name"),
+                        "groups": lookup.get("groups", []) # Changed from locations to groups
                     }
                     # Custom Metrics
                     pgn = msg.arbitration_id & 0x3FFFF
@@ -597,7 +597,7 @@ async def list_lights(
             "device_type": cfg.get("device_type", "unknown"),
             "capabilities": cfg.get("capabilities", []),
             "friendly_name": cfg.get("friendly_name", None),
-            "location_type": cfg.get("location_type", None), # Add location_type
+            "groups": cfg.get("groups", []) # Changed from locations to groups
         }
     return results
 
@@ -644,13 +644,13 @@ async def metadata():
     # Ensure all keys are included
     for key in ["type", "area", "capability", "command"]:
         out.setdefault(key, [])
-    # Add location_type to meta if you want to filter by it directly in the future
-    location_types = set()
+    # Add groups to meta
+    all_groups = set()
     for cfg in entity_id_lookup.values():
-        lt = cfg.get("location_type")
-        if lt:
-            location_types.add(lt)
-    out["location_type"] = sorted(location_types)
+        grps = cfg.get("groups") # Changed from locations
+        if grps and isinstance(grps, list):
+            all_groups.update(grps)
+    out["groups"] = sorted(list(all_groups)) # Changed from locations to groups
 
 
     return out
@@ -717,7 +717,7 @@ async def get_rvc_spec_metadata():
         logger.error(f"API Error: RVC spec file not found at '{actual_spec_path_for_ui}' for metadata endpoint")
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
     try:
-        with open(actual_spec_path_for_ui, 'r') as f:
+        with open(actual_spec_path_for_ui, 'r') as f: # Corrected line
             spec_data = json.load(f)
         return {
             "version": spec_data.get("version"),
@@ -854,7 +854,7 @@ async def _send_light_can_command(
             "device_type": lookup.get("device_type", current_payload.get("device_type", "light")),
             "capabilities": lookup.get("capabilities", current_payload.get("capabilities", [])),
             "friendly_name": lookup.get("friendly_name", current_payload.get("friendly_name")),
-            "location_type": lookup.get("location_type", current_payload.get("location_type"))
+            "groups": lookup.get("groups", current_payload.get("groups", [])) # Changed from locations to groups
         })
         state[entity_id] = current_payload # Update state with the merged payload
 
@@ -1002,7 +1002,7 @@ async def control_entity(
 
 # --- Bulk Light Control Endpoints ---
 async def _bulk_control_lights(
-    location_filter: Optional[str], # "interior", "exterior", or None for "all"
+    group_filter: Optional[str], # Changed from location_filter to group_filter
     target_state_on: bool, # True for ON, False for OFF
     action_name: str
 ) -> BulkLightControlResponse:
@@ -1020,9 +1020,10 @@ async def _bulk_control_lights(
 
         lights_processed += 1
         
-        if location_filter:
-            if device_config.get("location_type") != location_filter:
-                continue # Skip if location doesn't match
+        if group_filter: # Changed from location_filter
+            entity_groups = device_config.get("groups", []) # Changed from locations
+            if group_filter not in entity_groups: # Changed from location_filter
+                continue # Skip if group_filter is not in the entity's groups list
 
         action_description = f"Bulk: {action_name} {action_verb} - {eid}"
         if eid not in light_command_info:
