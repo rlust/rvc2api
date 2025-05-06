@@ -227,6 +227,27 @@
       const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
       let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
 
+      // Constants for sidebar widths
+      const SIDEBAR_EXPANDED_WIDTH_DESKTOP = '16rem'; // Corresponds to md:w-64
+      const SIDEBAR_COLLAPSED_WIDTH_DESKTOP = '4rem';  // Corresponds to md:w-16
+
+      function adjustPinnedLogsLayout() {
+        if (!pinnedLogsContainer || !sidebar) return;
+
+        if (window.innerWidth < 768) { // Tailwind 'md' breakpoint (768px)
+          // On mobile, sidebar is an overlay or hidden. Logs bar spans full width.
+          pinnedLogsContainer.style.left = '0px';
+        } else {
+          // Desktop view: sidebar is fixed on the left
+          const isSidebarCollapsedDesktop = sidebar.classList.contains('md:w-16');
+          if (isSidebarCollapsedDesktop) {
+            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_DESKTOP;
+          } else { // Sidebar is expanded (should have md:w-64)
+            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_DESKTOP;
+          }
+        }
+      }
+
       function setPinnedLogsState(isOpen, height) {
         localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
         if (isOpen && height) {
@@ -756,6 +777,7 @@
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
         }
+        adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
       }
       
       // Mobile sidebar toggle
@@ -828,6 +850,9 @@
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews(); 
       });
+
+      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+      window.addEventListener('resize', adjustPinnedLogsLayout);
     </script>
   </body>
 </html>
