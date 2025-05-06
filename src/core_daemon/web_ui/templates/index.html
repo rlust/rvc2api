@@ -556,7 +556,7 @@
           <i class="mdi mdi-chevron-up text-2xl"></i>
         </button>
       </div>
-      <div id="pinnedLogsContent" class="hidden bg-gray-800 px-4 pb-4 pt-2" style="height: calc(30vh - 3rem); max-height: 400px;"> <!-- Content area, height adjusted by JS -->
+      <div id="pinnedLogsContent" class="hidden bg-gray-800 px-4 pb-4 pt-2 flex flex-col" style="height: calc(30vh - 3rem); max-height: 400px;"> <!-- Added flex flex-col -->
         <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
           <select id="log-level" class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
             <option value="DEBUG">DEBUG</option>
@@ -571,7 +571,7 @@
             <button id="log-resume" class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm" disabled>Resume</button>
           </div>
         </div>
-        <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto h-full font-mono text-xs whitespace-pre-wrap"></pre>
+        <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre> <!-- Removed h-full, added flex-1 min-h-0 -->
         <p id="logs-waiting-message" class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">Waiting for logs...</p>
       </div>
     </div>
