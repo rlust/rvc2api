@@ -800,7 +800,8 @@
       });
       
       // Desktop sidebar toggle
-      toggleSidebarDesktopButton.addEventListener('click', () => {
+      toggleSidebarDesktopButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
         const isVisible = sidebar.classList.contains('md:w-64'); // Check if expanded
         setDesktopSidebarVisible(!isVisible);
       });
