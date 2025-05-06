@@ -23,9 +23,9 @@
              class="fixed inset-y-0 left-0 z-40 md:relative md:translate-x-0
                     transform -translate-x-full md:w-64 
                     bg-gray-800 p-4 space-y-4 border-r border-gray-700 
-                    transition-transform duration-300 ease-in-out 
+                    transition-all duration-300 ease-in-out 
                     overflow-y-auto flex flex-col justify-between md:mt-0 mt-16">
-        <div>
+        <div id="sidebarNavContent">
           <div class="flex justify-between items-center mb-4">
             <span class="text-lg font-semibold">Navigation</span>
             <button id="closeSidebarButton" class="md:hidden text-gray-400 hover:text-white">
@@ -578,21 +578,24 @@
       const closeSidebarButton = document.getElementById('closeSidebarButton');
       const toggleSidebarDesktopButton = document.getElementById('toggleSidebarDesktop');
       const desktopSidebarVisibleKey = 'desktopSidebarVisible';
+      const sidebarNavContent = document.getElementById('sidebarNavContent');
 
       function setDesktopSidebarVisible(visible) {
         localStorage.setItem(desktopSidebarVisibleKey, visible);
-        if (visible) {
-          sidebar.classList.remove('md:-ml-64');
-          sidebar.classList.add('md:w-64');
+        if (visible) { // EXPANDING
+          sidebar.classList.remove('md:w-16'); // Remove collapsed width
+          sidebar.classList.add('md:w-64');    // Add expanded width
+          mainContent.classList.remove('md:ml-16');
           mainContent.classList.add('md:ml-64');
-          mainContent.classList.remove('md:ml-0'); // Ensure this is removed
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
-        } else {
-          sidebar.classList.add('md:-ml-64'); // Effectively hides it by moving it left
-          sidebar.classList.remove('md:w-64'); // Keep its structure but off-screen
+          if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
+        } else { // COLLAPSING
+          sidebar.classList.remove('md:w-64');  // Remove expanded width
+          sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
           mainContent.classList.remove('md:ml-64');
-          mainContent.classList.add('md:ml-0');
-          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i> <span class="ml-2">Expand</span>';
+          mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
+          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
+          if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
         }
       }
       
@@ -617,16 +620,15 @@
       
       // Desktop sidebar toggle
       toggleSidebarDesktopButton.addEventListener('click', () => {
-        const isVisible = !sidebar.classList.contains('md:-ml-64');
+        const isVisible = sidebar.classList.contains('md:w-64'); // Check if expanded
         setDesktopSidebarVisible(!isVisible);
       });
 
       // Initialize sidebar state from localStorage for desktop
-      if (localStorage.getItem(desktopSidebarVisibleKey) === 'false') {
+      const storedState = localStorage.getItem(desktopSidebarVisibleKey);
+      if (storedState === 'false') {
         setDesktopSidebarVisible(false);
-      } else {
-        // Default to visible, adjust main content margin
-        mainContent.classList.add('md:ml-64'); 
+      } else { // null, 'true', or any other value defaults to visible
         setDesktopSidebarVisible(true);
       }
 
@@ -640,15 +642,6 @@
             // if (overlay) overlay remove();
           }
         });
-      });
-
-      document.getElementById('toggleSidebar').addEventListener('click', () => {
-        const sidebar = document.getElementById('sidebar');
-        // This button is now toggleSidebarDesktop, the old logic is replaced.
-        // Keeping this to avoid breaking if something else calls it, but it should be removed or refactored.
-        // For now, let it call the new desktop toggle logic.
-        const isVisible = !sidebar.classList.contains('md:-ml-64');
-        setDesktopSidebarVisible(!isVisible);
       });
     </script>
   </body>
