@@ -489,85 +489,95 @@ async def control_entity(
 
     # --- Read Current State ---
     current_state_data = state.get(entity_id, {})
+
+    # Determine current_on using the reader's pre-calculated "state" field
+    current_on_str = current_state_data.get("state", "off") # Default to "off" if not found
+    current_on = current_on_str.lower() == "on"
+
+    # Determine current_brightness_ui using the same key the reader uses ("operating_status")
     current_raw_values = current_state_data.get("raw", {})
-
-    # More robustly find the raw brightness value key
-    # Prioritize keys known to be used for brightness status.
-    # Ensure this list matches the possible signal names in your rvc.json for brightness.
-    possible_brightness_keys = ["operating status (brightness)", "operating_status", "brightness"]
-    raw_brightness_key_found = None
-    for key_name in possible_brightness_keys:
-        if key_name in current_raw_values:
-            raw_brightness_key_found = key_name
-            break
+    # The reader thread in app.py uses "operating_status" to determine its "state" field.
+    # We rely on that key for the current raw brightness value.
+    current_brightness_raw = current_raw_values.get("operating_status", 0) # Default to 0 if key not found
     
-    current_brightness_raw = current_raw_values.get(raw_brightness_key_found, 0) if raw_brightness_key_found else 0
-
-    # Scale raw CAN value (e.g., 0-200) to UI brightness (0-100)
     current_brightness_ui = 0
+    # Ensure raw value is treated as a number, scale it to UI percentage (0-100)
+    # Assuming raw 0-200 maps to UI 0-100%
     if isinstance(current_brightness_raw, (int, float)):
-        current_brightness_ui = min(int(current_brightness_raw) // 2, 100) # Assuming 0-200 raw maps to 0-100% UI
+        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
     
-    current_on = current_brightness_ui > 0
-
     # --- Determine Target State ---
-    target_brightness_ui = current_brightness_ui # Default: no change
+    target_brightness_ui = current_brightness_ui # Default: no change in brightness if already on
     action = "No change"
 
     if cmd.command == "set":
         if cmd.state not in {"on", "off"}:
-            raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set")
+            raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set command")
         if cmd.state == "on":
-            target_brightness_ui = cmd.brightness if cmd.brightness is not None else (current_brightness_ui if current_on else 100)
+            # If brightness is specified, use it. 
+            # Else, if light is already on, keep its current brightness.
+            # Else (light is off and turning on without specific brightness), set to 100%.
+            if cmd.brightness is not None:
+                target_brightness_ui = cmd.brightness
+            elif not current_on: # Turning on from off state, and no brightness specified
+                target_brightness_ui = 100
+            # If current_on is true and cmd.brightness is None, target_brightness_ui remains current_brightness_ui (no change)
             action = f"Set ON to {target_brightness_ui}%"
         else: # cmd.state == "off"
             target_brightness_ui = 0
             action = "Set OFF"
 
     elif cmd.command == "toggle":
-        if current_on: 
+        if current_on:
             target_brightness_ui = 0
             action = "Toggle OFF"
         else:
-            target_brightness_ui = 100 
+            # When toggling ON from OFF state, set to 100%.
+            # (rvc-console might try to restore previous brightness, app.py currently uses 100%)
+            target_brightness_ui = 100
             action = f"Toggle ON to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_up":
-        if not current_on and current_brightness_ui == 0:
-             target_brightness_ui = 10 
+        if not current_on and current_brightness_ui == 0: # If light is off, start at 10%
+            target_brightness_ui = 10
         else:
-             target_brightness_ui = min(current_brightness_ui + 10, 100)
+            target_brightness_ui = min(current_brightness_ui + 10, 100)
         action = f"Brightness UP to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_down":
         target_brightness_ui = max(current_brightness_ui - 10, 0)
         action = f"Brightness DOWN to {target_brightness_ui}%"
-
     else:
-        raise HTTPException(status_code=400, detail="Invalid command")
+        raise HTTPException(status_code=400, detail=f"Invalid command: {cmd.command}")
 
     # --- Construct and Send CAN Message ---
-    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8)
+    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8 as per RV-C for 100%)
     brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
-    # RV-C CAN ID Construction (for PDU1 commands like DC_DIMMER_COMMAND_2)
-    # ... (rest of CAN ID and payload construction remains the same) ...
+    # RV-C CAN ID Construction (Priority, PGN, Source Address)
+    # This was confirmed to be equivalent to rvc-console.py's method for PDU2 DGNs like 0x1FEDB
     prio = 6
     sa = 0xF9 # Source Address for commands from this controller
-    # PGN is info["dgn"] (e.g., 0x1FEDB)
+    # pgn here is the DGN value from light_command_info (e.g., 0x1FEDB)
     arbitration_id = (prio << 26) | (pgn << 8) | sa
 
     # RV-C Payload for DC_DIMMER_COMMAND_2 (DGN 0x1FEDB)
+    # byte 0: Instance
+    # byte 1: Group Mask (0x7C for "All Instances of this DGN at this SA that support this command")
+    # byte 2: Desired Level (0-200, 0xC8 = 100%)
+    # byte 3: Command (0x00 = SetLevel)
+    # byte 4: Duration (0x00 = Instantaneous)
+    # byte 5-7: Reserved (0xFF)
     payload_data = bytes([
         instance,
-        0x7C, # Group Mask
-        brightness_can_level, # Byte 2: Level (0 should be OFF)
+        0x7C, 
+        brightness_can_level, 
         0x00, # Command: SetLevel
         0x00, # Duration: Instantaneous
         0xFF, 0xFF, 0xFF # Reserved
     ])
 
-    logging.debug(f"Preparing CAN message for entity={entity_id}: ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Instance={instance}, Interface={interface}")
+    logging.debug(f"Preparing CAN message for entity={entity_id}: ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Instance={instance}, Interface={interface}, TargetUIBrightness={target_brightness_ui}%, CANLevel={brightness_can_level}")
     # ... (rest of try/except block for sending remains the same) ...
     try:
         msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
