@@ -13,7 +13,7 @@ authors = [
   { name = "Ryan Holt", email = "ryan@ryanholt.net" }
 ]
 # Python support
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 
 # runtime deps
 dependencies = [
