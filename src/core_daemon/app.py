@@ -115,9 +115,14 @@ class Entity(BaseModel):
     timestamp: float
 
 class ControlCommand(BaseModel):
-    command: str  # "set", "toggle", "dim_up", "dim_down"
-    state: Optional[str] = None        # "on" or "off", required for "set"
-    brightness: Optional[int] = None   # 0-100, optional for "set"
+    command: str  # One of: "set", "toggle", "dim_up", "dim_down"
+    state: Optional[str] = Query(None, description="Target state: 'on' or 'off' (used only for 'set')")
+    brightness: Optional[int] = Query(
+        None,
+        ge=0,
+        le=100,
+        description="Target brightness percent (0-100). Used for 'set' when state='on'"
+    )
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
@@ -294,16 +299,16 @@ async def metadata():
     Expose groupable dimensions:
     - type        (device_type)
     - area        (suggested_area)
-    - capability  (e.g. 'on_off', 'brightness', 'toggle', etc.)
+    - capability  (defined in mapping)
+    - command     (derived from capabilities)
     """
     mapping = {
         "type":       "device_type",
         "area":       "suggested_area",
+        "capability": "capabilities",
     }
-
     out: Dict[str, List[str]] = {}
 
-    # Populate type and area from config
     for public, internal in mapping.items():
         values = set()
         for cfg in entity_id_lookup.values():
@@ -314,18 +319,22 @@ async def metadata():
                 values.add(val)
         out[public] = sorted(values)
 
-    # Build full capability set
-    capability_set = set()
+    # Include derived command set based on capabilities
+    command_set = set()
     for eid, cfg in entity_id_lookup.items():
-        caps = set(cfg.get("capabilities", []))
         if eid in light_command_info:
-            caps.update(["set", "toggle", "dim_up", "dim_down"])
-        capability_set.update(caps)
+            caps = cfg.get("capabilities", [])
+            command_set.add("on_off")
+            command_set.add("set")
+            command_set.add("toggle")
+            if "brightness" in caps:
+                command_set.add("brightness")
+                command_set.add("brightness_increase")
+                command_set.add("brightness_decrease")
+    out["command"] = sorted(command_set)
 
-    out["capability"] = sorted(capability_set)
-
-    # Ensure all keys are included even if empty
-    for key in ["type", "area", "capability"]:
+    # Ensure all keys are included
+    for key in ["type", "area", "capability", "command"]:
         out.setdefault(key, [])
 
     return out
@@ -366,7 +375,35 @@ async def websocket_endpoint(ws: WebSocket):
         WS_CLIENTS.set(len(clients))
 
 @app.post("/entities/{entity_id}/control")
-async def control_entity(entity_id: str, cmd: ControlCommand):
+async def control_entity(
+    entity_id: str,
+    cmd: ControlCommand = Body(..., examples={
+        "turn_on": {
+            "summary": "Turn light on",
+            "value": {"command": "set", "state": "on"}
+        },
+        "turn_off": {
+            "summary": "Turn light off",
+            "value": {"command": "set", "state": "off"}
+        },
+        "set_brightness": {
+            "summary": "Set brightness to 75%",
+            "value": {"command": "set", "state": "on", "brightness": 75}
+        },
+        "toggle": {
+            "summary": "Toggle current state",
+            "value": {"command": "toggle"}
+        },
+        "dim_up": {
+            "summary": "Increase brightness by 10%",
+            "value": {"command": "dim_up"}
+        },
+        "dim_down": {
+            "summary": "Decrease brightness by 10%",
+            "value": {"command": "dim_down"}
+        }
+    })
+):
     device = entity_id_lookup.get(entity_id)
     if not device:
         raise HTTPException(status_code=404, detail="Entity not found")
