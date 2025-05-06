@@ -20,14 +20,11 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
-# Load your spec and mapping, allowing overrides
-spec_path    = os.getenv("CAN_SPEC_PATH")    # e.g. "/etc/rvc2api/rvc.json"
-mapping_path = os.getenv("CAN_MAP_PATH")     # e.g. "/etc/rvc2api/device_mapping.yml"
+# Load your spec and mapping, forcing use of bundled files
+# spec_path    = os.getenv("CAN_SPEC_PATH")    # e.g. "/etc/rvc2api/rvc.json" # << REMOVED
+# mapping_path = os.getenv("CAN_MAP_PATH")     # e.g. "/etc/rvc2api/device_mapping.yml" # << REMOVED
 decoder_map, device_mapping, device_lookup, status_lookup, \
-    light_entity_ids, entity_id_lookup, light_command_info = load_config_data(
-        rvc_spec_path=spec_path,
-        device_mapping_path=mapping_path
-    )
+    light_entity_ids, entity_id_lookup, light_command_info = load_config_data() # << REMOVED ARGUMENTS
 
 app = FastAPI(title="rvc2api")
 
