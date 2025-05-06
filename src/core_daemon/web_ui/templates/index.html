@@ -14,31 +14,37 @@
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar Navigation -->
-      <aside id="sidebar" class="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 transition-all duration-300 overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-          <span class="text-lg font-semibold">Navigation</span>
-          <button id="toggleSidebar" class="text-gray-400 hover:text-gray-100">
-            <i class="mdi mdi-chevron-left"></i>
-          </button>
+      <aside id="sidebar" class="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 transition-all duration-300 overflow-y-auto flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-lg font-semibold">Navigation</span>
+          </div>
+          <nav class="space-y-2">
+            <button data-view="lights" class="nav-link w-full text-left text-gray-300 hover:text-white">Lights</button>
+            <button data-view="logs" class="nav-link w-full text-left text-gray-300 hover:text-white">Logs</button>
+          </nav>
         </div>
-        <nav class="space-y-2">
-          <button data-view="lights" class="nav-link w-full text-left text-gray-300 hover:text-white">Lights</button>
-          <button data-view="logs" class="nav-link w-full text-left text-gray-300 hover:text-white">Logs</button>
-        </nav>
-        <div class="mt-6">
-          <label class="block mb-2 text-sm text-gray-300">
-            <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
-          </label>
-          <select id="area-filter" class="block w-full bg-gray-900 text-gray-100 border border-gray-700 rounded p-2">
-            <option value="All">All</option>
-          </select>
+        <div class="border-t border-gray-700 pt-4 text-center">
+          <button id="toggleSidebar" class="text-gray-400 hover:text-gray-100">
+            <i class="mdi mdi-chevron-left"></i> Collapse
+          </button>
         </div>
       </aside>
 
       <!-- Main content area -->
       <main class="flex-1 overflow-y-auto p-6">
         <section id="lights-view" class="view-section">
-          <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-3xl font-bold">RV-C Lights</h1>
+            <div>
+              <label class="block mb-1 text-sm text-gray-300">
+                <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
+              </label>
+              <select id="area-filter" class="bg-gray-900 text-gray-100 border border-gray-700 rounded p-2">
+                <option value="All">All</option>
+              </select>
+            </div>
+          </div>
           <div id="light-grid" class="space-y-8"></div>
         </section>
         <section id="logs-view" class="view-section hidden">
@@ -130,6 +136,18 @@
         });
         logBuffer = [];
         logStream.scrollTop = logStream.scrollHeight;
+      });
+
+      const toggleSidebarBtn = document.getElementById('toggleSidebar');
+      const sidebar = document.getElementById('sidebar');
+
+      toggleSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('w-64');
+        sidebar.classList.toggle('w-0');
+        sidebar.classList.toggle('p-4');
+        toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-left');
+        toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-right');
+        toggleSidebarBtn.innerHTML = sidebar.classList.contains('w-0') ? '<i class="mdi mdi-chevron-right"></i> Expand' : '<i class="mdi mdi-chevron-left"></i> Collapse';
       });
     </script>
   </body>
