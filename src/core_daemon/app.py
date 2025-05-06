@@ -114,6 +114,11 @@ class Entity(BaseModel):
     raw: Dict[str, int]
     timestamp: float
 
+class ControlCommand(BaseModel):
+    command: str
+    state: Optional[str] = None     # "on" or "off"
+    brightness: Optional[int] = None  # 0–100
+
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
     for ws in list(clients):
@@ -137,6 +142,7 @@ async def start_can_readers():
         def reader(iface=iface):
             try:
                 bus = can.interface.Bus(channel=iface, bustype=bustype, bitrate=bitrate)
+                buses[iface] = bus
             except CanInterfaceNotImplementedError as e:
                 logging.error(f"Cannot open CAN bus '{iface}' ({bustype}): {e}")
                 return
@@ -288,7 +294,7 @@ async def metadata():
     Expose groupable dimensions:
     - type      (device_type)
     - area      (suggested_area)
-    - capability
+    - capability (e.g. 'on_off', 'brightness', etc.)
     """
     mapping = {
         "type":       "device_type",
@@ -306,6 +312,10 @@ async def metadata():
             elif val is not None:
                 values.add(val)
         out[public] = sorted(values)
+
+    # Ensure all keys are included even if empty
+    for key in mapping:
+        out.setdefault(key, [])
 
     return out
 
@@ -343,6 +353,54 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         clients.discard(ws)
         WS_CLIENTS.set(len(clients))
+
+@app.post("/entities/{entity_id}/control")
+async def control_entity(entity_id: str, cmd: ControlCommand):
+    device = entity_id_lookup.get(entity_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    if entity_id not in light_command_info:
+        raise HTTPException(status_code=400, detail="Entity is not controllable")
+
+    info = light_command_info[entity_id]
+    dgn = info["dgn"]
+    inst = info["instance"]
+    interface = info["interface"]
+
+    # Build CAN data
+    brightness = 0x00
+    duration = 0x00  # Instant
+
+    if cmd.command == "set":
+        if cmd.state == "on":
+            brightness_ui = cmd.brightness if cmd.brightness is not None else 100
+            brightness = min(brightness_ui * 2, 0xC8)  # scale 0–100 to 0–200 (limit to 200)
+        elif cmd.state == "off":
+            brightness = 0
+        else:
+            raise HTTPException(status_code=400, detail="State must be 'on' or 'off'")
+    else:
+        raise HTTPException(status_code=400, detail="Unknown command")
+
+    # Frame to send
+    data = [brightness] + [0xFF] * 7
+    arbitration_id = 0x18EF0000 | (0xDA << 8) | inst  # PGN 0x1FED9, priority 6
+    msg = can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True)
+
+    # Send on correct CAN interface
+    try:
+        bus = can.interface.Bus(channel=interface, bustype=os.getenv("CAN_BUSTYPE", "socketcan"))
+        bus.send(msg)
+        await asyncio.sleep(0.05)  # 50ms delay
+        bus.send(msg)
+        logging.info(f"Sent control to {entity_id}: brightness={brightness}")
+    except Exception as e:
+        logging.error(f"Failed to send CAN control to {entity_id}: {e}")
+        raise HTTPException(status_code=500, detail="CAN send failed")
+
+    return {"status": "sent", "entity_id": entity_id, "brightness": brightness}
+
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
