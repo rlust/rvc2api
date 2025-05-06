@@ -13,7 +13,7 @@ from can.exceptions import CanInterfaceNotImplementedError
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response, Body
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from rvc_decoder import load_config_data, decode_payload
@@ -132,12 +132,16 @@ class Entity(BaseModel):
 
 class ControlCommand(BaseModel):
     command: str  # One of: "set", "toggle", "brightness_up", "brightness_down"
-    state: Optional[str] = Query(None, description="Target state: 'on' or 'off' (used only for 'set')")
-    brightness: Optional[int] = Query(
-        None,
+    state: Optional[str] = Field(
+        default=None,
+        description="Target state: 'on' or 'off'. Required only for 'set' command."
+    )
+
+    brightness: Optional[int] = Field(
+        default=None,
         ge=0,
         le=100,
-        description="Target brightness percent (0-100). Used for 'set' when state='on'"
+        description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'."
     )
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
@@ -482,13 +486,18 @@ async def control_entity(
     try:
         bus = can.interface.Bus(channel=interface, bustype=os.getenv("CAN_BUSTYPE", "socketcan"))
         bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
-        # Optional: resend once to ensure delivery
         time.sleep(0.05)
         bus.send(can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True))
         logging.info(f"{action} → sent brightness={brightness_ui}% to {entity_id}")
     except Exception as e:
         logging.error(f"Failed to send CAN control to {entity_id}: {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
+    finally:
+        try:
+            bus.shutdown()
+        except AttributeError:
+            # Fallback for bus types without shutdown()
+            bus.close()
 
     return {
         "status": "sent",
