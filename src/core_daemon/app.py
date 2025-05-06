@@ -29,6 +29,7 @@ coloredlogs.install(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
     fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 )
+logger.setLevel(logging.DEBUG) # Ensure this logger processes DEBUG messages for its handlers
 
 logger.info("rvc2api starting up...")
 
