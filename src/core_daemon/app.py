@@ -115,7 +115,7 @@ class Entity(BaseModel):
     timestamp: float
 
 class ControlCommand(BaseModel):
-    command: str  # One of: "set", "toggle", "dim_up", "dim_down"
+    command: str  # One of: "set", "toggle", "brightness_up", "brightness_down"
     state: Optional[str] = Query(None, description="Target state: 'on' or 'off' (used only for 'set')")
     brightness: Optional[int] = Query(
         None,
@@ -394,13 +394,13 @@ async def control_entity(
             "summary": "Toggle current state",
             "value": {"command": "toggle"}
         },
-        "dim_up": {
+        "brightness_up": {
             "summary": "Increase brightness by 10%",
-            "value": {"command": "dim_up"}
+            "value": {"command": "brightness_up"}
         },
-        "dim_down": {
+        "brightness_down": {
             "summary": "Decrease brightness by 10%",
-            "value": {"command": "dim_down"}
+            "value": {"command": "brightness_down"}
         }
     })
 ):
@@ -438,13 +438,13 @@ async def control_entity(
         brightness_ui = 0 if current_on else 100
         action = "Toggle OFF" if current_on else "Toggle ON"
 
-    elif cmd.command == "dim_up":
+    elif cmd.command == "brightness_up":
         brightness_ui = min(current_brightness + 10, 100)
-        action = f"Dim UP to {brightness_ui}%"
+        action = f"Brightness UP to {brightness_ui}%"
 
-    elif cmd.command == "dim_down":
+    elif cmd.command == "brightness_down":
         brightness_ui = max(current_brightness - 10, 0)
-        action = f"Dim DOWN to {brightness_ui}%"
+        action = f"Brightness DOWN to {brightness_ui}%"
 
     else:
         raise HTTPException(status_code=400, detail="Invalid command")
