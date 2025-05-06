@@ -260,19 +260,43 @@ log_ws_clients: set[WebSocket] = set()
 
 # ── Log WebSocket Handler ──────────────────────────────────────────────────
 class WebSocketLogHandler(logging.Handler):
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        super().__init__()
+        self.loop = loop
+
     def emit(self, record):
         log_entry = self.format(record)
-        for ws in list(log_ws_clients):
+        # Iterate over a copy of the set for safe removal if a client disconnects
+        for ws_client in list(log_ws_clients):
             try:
-                coro = ws.send_text(log_entry)
-                fut = asyncio.run_coroutine_threadsafe(coro, asyncio.get_event_loop())
+                if self.loop and self.loop.is_running():
+                    coro = ws_client.send_text(log_entry)
+                    asyncio.run_coroutine_threadsafe(coro, self.loop)
+                # else: # Loop not running or not available, log silently dropped for WS
+                    # print(f"WebSocketLogHandler: Event loop not available. Dropping log: {log_entry}")
             except Exception:
-                log_ws_clients.discard(ws)
+                # If send_text fails (e.g., client disconnected abruptly), remove from set
+                log_ws_clients.discard(ws_client)
 
-log_ws_handler = WebSocketLogHandler()
-log_ws_handler.setLevel(logging.DEBUG)
-log_ws_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
-logger.addHandler(log_ws_handler)
+@app.on_event("startup")
+async def setup_websocket_logging():
+    """Initializes and adds the WebSocketLogHandler to the root logger."""
+    try:
+        main_loop = asyncio.get_running_loop()
+        log_ws_handler = WebSocketLogHandler(loop=main_loop)
+        
+        # Set level to DEBUG so it processes all messages; client-side will filter
+        log_ws_handler.setLevel(logging.DEBUG)
+        
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        log_ws_handler.setFormatter(formatter)
+        
+        # Add to the root logger to capture logs from all modules
+        logging.getLogger().addHandler(log_ws_handler)
+        
+        logger.info("WebSocketLogHandler initialized and added to the root logger.")
+    except Exception as e:
+        logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
