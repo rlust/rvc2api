@@ -338,13 +338,31 @@
           }
 
           if (view === 'mapping') {
-            fetch('/static/device_mapping.yml').then(res => res.text()).then(text => {
-              document.getElementById('mapping-content').textContent = text;
-            });
+            fetch('/static/device_mapping.yml')
+              .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
+                return res.text();
+              })
+              .then(text => {
+                document.getElementById('mapping-content').textContent = text;
+              })
+              .catch(err => {
+                console.error("Failed to fetch device_mapping.yml:", err);
+                document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
+              });
           } else if (view === 'spec') {
-            fetch('/static/rvc.json').then(res => res.text()).then(text => {
-              document.getElementById('spec-content').textContent = text;
-            });
+            fetch('/static/rvc.json')
+              .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
+                return res.text();
+              })
+              .then(text => {
+                document.getElementById('spec-content').textContent = text;
+              })
+              .catch(err => {
+                console.error("Failed to fetch rvc.json:", err);
+                document.getElementById('spec-content').textContent = `Error: Could not load rvc.json.\n${err.message}`;
+              });
           }
         });
       });

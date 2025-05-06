@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from rvc_decoder import load_config_data, decode_payload
+from rvc_decoder.decode import _default_paths # Add this import
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
@@ -85,7 +86,6 @@ CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "La
 
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
-mapping_override = os.getenv("CAN_MAP_PATH")
 logger.info(f"Loading CAN spec from: {spec_override or 'default'}, mapping from: {mapping_override or 'default'}")
 (
     decoder_map,
@@ -135,21 +135,61 @@ unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entrie
 # ── Copy Configs to WebUI  ───────────────────────────────────────────────────
 @app.on_event("startup")
 async def copy_config_files():
-    static_dir = os.path.join(web_ui_dir, "static")
+    static_dir = os.path.join(os.path.dirname(__file__), "web_ui", "static")
     os.makedirs(static_dir, exist_ok=True)
 
-    default_map_path = "/etc/rvc2api/device_mapping.yml"
-    default_spec_path = "/etc/rvc2api/rvc.json"
+    decoder_default_spec_path, decoder_default_map_path = _default_paths()
 
-    map_src = mapping_override or default_map_path
-    spec_src = spec_override or default_spec_path
+    map_src_to_copy = None
+    if mapping_override and os.path.exists(mapping_override):
+        map_src_to_copy = mapping_override
+        logger.info(f"Using mapping file from CAN_MAP_PATH for UI copy: {map_src_to_copy}")
+    elif os.path.exists(decoder_default_map_path):
+        map_src_to_copy = decoder_default_map_path
+        logger.info(f"Using decoder's default mapping file for UI copy: {map_src_to_copy}")
+    else:
+        logger.warning(
+            f"Cannot find a source for device_mapping.yml for UI copy. "
+            f"Checked CAN_MAP_PATH ('{mapping_override}') and decoder default ('{decoder_default_map_path}')."
+        )
+
+    spec_src_to_copy = None
+    if spec_override and os.path.exists(spec_override):
+        spec_src_to_copy = spec_override
+        logger.info(f"Using RVC spec file from CAN_SPEC_PATH for UI copy: {spec_src_to_copy}")
+    elif os.path.exists(decoder_default_spec_path):
+        spec_src_to_copy = decoder_default_spec_path
+        logger.info(f"Using decoder's default RVC spec file for UI copy: {spec_src_to_copy}")
+    else:
+        logger.warning(
+            f"Cannot find a source for rvc.json for UI copy. "
+            f"Checked CAN_SPEC_PATH ('{spec_override}') and decoder default ('{decoder_default_spec_path}')."
+        )
+
+    dest_map_path = os.path.join(static_dir, "device_mapping.yml")
+    dest_spec_path = os.path.join(static_dir, "rvc.json")
 
     try:
-        shutil.copyfile(map_src, os.path.join(static_dir, "device_mapping.yml"))
-        shutil.copyfile(spec_src, os.path.join(static_dir, "rvc.json"))
-        logger.info(f"Copied mapping: {map_src}, spec: {spec_src} to static directory")
+        if map_src_to_copy:
+            if os.path.exists(map_src_to_copy):
+                shutil.copyfile(map_src_to_copy, dest_map_path)
+                logger.info(f"Copied for UI: {map_src_to_copy} -> {dest_map_path}")
+            else:
+                logger.warning(f"Source file for device_mapping.yml NOT FOUND at {map_src_to_copy} during copy attempt.")
+        else:
+            logger.warning(f"device_mapping.yml was not copied to static dir as no suitable source was identified.")
+
+        if spec_src_to_copy:
+            if os.path.exists(spec_src_to_copy):
+                shutil.copyfile(spec_src_to_copy, dest_spec_path)
+                logger.info(f"Copied for UI: {spec_src_to_copy} -> {dest_spec_path}")
+            else:
+                logger.warning(f"Source file for rvc.json NOT FOUND at {spec_src_to_copy} during copy attempt.")
+        else:
+            logger.warning(f"rvc.json was not copied to static dir as no suitable source was identified.")
+
     except Exception as e:
-        logger.warning(f"Failed to copy mapping or spec file to static directory: {e}")
+        logger.error(f"Error copying config files to static directory for UI: {e}", exc_info=True)
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
 buses: Dict[str, can.Bus] = {}
