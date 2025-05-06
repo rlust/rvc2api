@@ -12,7 +12,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ poetry2nix.overlay ];
+          overlays = [ inputs.poetry2nix.overlays.default ]; # Use inputs.poetry2nix.overlays.default
         };
       in {
         # Build your application entirely from pyproject.toml + poetry.lock
