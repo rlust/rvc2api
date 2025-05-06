@@ -16,7 +16,7 @@ from rvc_decoder import load_config_data, decode_payload
 
 # Configure basic logging
 logging.basicConfig(
-    level=logging.INFO, # Change this to logging.DEBUG to see raw frames
+    level=logging.WARNING, # Change this to logging.DEBUG to see raw frames
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
