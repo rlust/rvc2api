@@ -13,15 +13,19 @@
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-      <!-- Collapsible Sidebar -->
-      <aside id="sidebar" class="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 transition-all duration-300">
+      <!-- Sidebar Navigation -->
+      <aside id="sidebar" class="w-64 bg-gray-800 p-4 space-y-4 border-r border-gray-700 transition-all duration-300 overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-          <span class="text-lg font-semibold">Filters</span>
+          <span class="text-lg font-semibold">Navigation</span>
           <button id="toggleSidebar" class="text-gray-400 hover:text-gray-100">
             <i class="mdi mdi-chevron-left"></i>
           </button>
         </div>
-        <div>
+        <nav class="space-y-2">
+          <button data-view="lights" class="nav-link w-full text-left text-gray-300 hover:text-white">Lights</button>
+          <button data-view="logs" class="nav-link w-full text-left text-gray-300 hover:text-white">Logs</button>
+        </nav>
+        <div class="mt-6">
           <label class="block mb-2 text-sm text-gray-300">
             <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
           </label>
@@ -31,12 +35,16 @@
         </div>
       </aside>
 
-      <!-- Main content -->
+      <!-- Main content area -->
       <main class="flex-1 overflow-y-auto p-6">
-        <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
-        <div id="light-grid" class="space-y-8">
-          <!-- Grouped lights will be injected here -->
-        </div>
+        <section id="lights-view" class="view-section">
+          <h1 class="text-3xl font-bold mb-6">RV-C Lights</h1>
+          <div id="light-grid" class="space-y-8"></div>
+        </section>
+        <section id="logs-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Live Logs</h1>
+          <pre id="log-stream" class="bg-black text-green-400 p-4 rounded overflow-auto max-h-[70vh]"></pre>
+        </section>
       </main>
     </div>
 
@@ -56,6 +64,23 @@
         toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-left');
         toggleSidebarBtn.querySelector('i').classList.toggle('mdi-chevron-right');
       });
+
+      document.querySelectorAll('.nav-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const view = btn.getAttribute('data-view');
+          document.querySelectorAll('.view-section').forEach(sec => {
+            sec.classList.add('hidden');
+          });
+          document.getElementById(`${view}-view`).classList.remove('hidden');
+        });
+      });
+
+      const logSocket = new WebSocket(`ws://${location.host}/logs/ws`);
+      const logStream = document.getElementById('log-stream');
+      logSocket.onmessage = (event) => {
+        logStream.textContent += event.data + '\n';
+        logStream.scrollTop = logStream.scrollHeight;
+      };
 
       function getCardColor(brightness, isOn) {
         if (!isOn) return 'bg-gray-800';
