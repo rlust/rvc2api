@@ -43,6 +43,7 @@ class Entity(BaseModel):
     suggested_area: Optional[str] = "Unknown"
     device_type: Optional[str] = "unknown"
     capabilities: Optional[List[str]] = []
+    friendly_name: Optional[str] = None # Added friendly_name
 
 class ControlCommand(BaseModel):
     command: str
@@ -391,6 +392,7 @@ async def start_can_readers():
 
                 for device in matching_devices:
                     eid = device["entity_id"]
+                    lookup = entity_id_lookup.get(eid, {}) # Get full lookup for additional fields
                     payload = {
                         "entity_id": eid,
                         "value": decoded,
@@ -399,7 +401,8 @@ async def start_can_readers():
                         "timestamp": ts,
                         "suggested_area": lookup.get("suggested_area", "Unknown"),
                         "device_type": lookup.get("device_type", "unknown"),
-                        "capabilities": lookup.get("capabilities", [])
+                        "capabilities": lookup.get("capabilities", []),
+                        "friendly_name": lookup.get("friendly_name") # Add friendly_name
                     }
                     # Custom Metrics
                     pgn = msg.arbitration_id & 0x3FFFF
@@ -745,7 +748,7 @@ async def control_entity(
     pf = (pgn >> 8) & 0xFF   # PDU Format
     da = 0xFF                # Destination Address for PDU1 commands
 
-    if pf < 0xF0: # PDU1 format (DA is destination)
+    if (pf < 0xF0): # PDU1 format (DA is destination)
         arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (da << 8) | sa
     else: # PDU2 format (PS is part of PGN)
         ps = pgn & 0xFF      # PDU Specific (lower 8 bits of DGN)
@@ -792,7 +795,8 @@ async def control_entity(
             "timestamp": ts,
             "suggested_area": lookup.get("suggested_area", "Unknown"),
             "device_type": lookup.get("device_type", "unknown"),
-            "capabilities": lookup.get("capabilities", [])
+            "capabilities": lookup.get("capabilities", []),
+            "friendly_name": lookup.get("friendly_name") # Add friendly_name
         }
         state[entity_id] = payload
         history[entity_id].append(payload)
