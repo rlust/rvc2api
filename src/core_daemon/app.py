@@ -489,21 +489,26 @@ async def control_entity(
 
     # --- Read Current State ---
     current_state_data = state.get(entity_id, {})
-    # Use the 'state' field directly populated by the reader thread
-    current_on_str = current_state_data.get("state", "off")
-    current_on = current_on_str.lower() == "on"
-
-    # Also get current brightness for brightness commands and restoring state
     current_raw_values = current_state_data.get("raw", {})
-    # Use the specific key the reader uses to determine state: "operating_status"
-    raw_brightness_key = "operating_status"
-    current_brightness_raw = current_raw_values.get(raw_brightness_key, 0)
+
+    # More robustly find the raw brightness value key
+    # Prioritize keys known to be used for brightness status.
+    # Ensure this list matches the possible signal names in your rvc.json for brightness.
+    possible_brightness_keys = ["operating status (brightness)", "operating_status", "brightness"]
+    raw_brightness_key_found = None
+    for key_name in possible_brightness_keys:
+        if key_name in current_raw_values:
+            raw_brightness_key_found = key_name
+            break
+    
+    current_brightness_raw = current_raw_values.get(raw_brightness_key_found, 0) if raw_brightness_key_found else 0
+
     # Scale raw CAN value (e.g., 0-200) to UI brightness (0-100)
     current_brightness_ui = 0
-    if isinstance(current_brightness_raw, int):
-        current_brightness_ui = min(current_brightness_raw // 2, 100) # Assuming 0-200 maps to 0-100%
-    elif isinstance(current_brightness_raw, float): # Handle potential float just in case
-        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+    if isinstance(current_brightness_raw, (int, float)):
+        current_brightness_ui = min(int(current_brightness_raw) // 2, 100) # Assuming 0-200 raw maps to 0-100% UI
+    
+    current_on = current_brightness_ui > 0
 
     # --- Determine Target State ---
     target_brightness_ui = current_brightness_ui # Default: no change
@@ -513,7 +518,6 @@ async def control_entity(
         if cmd.state not in {"on", "off"}:
             raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set")
         if cmd.state == "on":
-            # If brightness specified, use it. Else if currently on, keep current brightness. Else default 100.
             target_brightness_ui = cmd.brightness if cmd.brightness is not None else (current_brightness_ui if current_on else 100)
             action = f"Set ON to {target_brightness_ui}%"
         else: # cmd.state == "off"
@@ -521,19 +525,16 @@ async def control_entity(
             action = "Set OFF"
 
     elif cmd.command == "toggle":
-        if current_on: # Use the state derived from the 'state' field
+        if current_on: 
             target_brightness_ui = 0
             action = "Toggle OFF"
         else:
-            # Default to 100% when toggling ON from OFF state
-            # (Could potentially restore previous brightness if we stored it)
-            target_brightness_ui = 100
+            target_brightness_ui = 100 
             action = f"Toggle ON to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_up":
-        # Ensure light turns on if increasing brightness from 0
         if not current_on and current_brightness_ui == 0:
-             target_brightness_ui = 10 # Start at 10% if off
+             target_brightness_ui = 10 
         else:
              target_brightness_ui = min(current_brightness_ui + 10, 100)
         action = f"Brightness UP to {target_brightness_ui}%"
