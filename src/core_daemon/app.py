@@ -556,11 +556,20 @@ async def control_entity(
     brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
     # RV-C CAN ID Construction (Priority, PGN, Source Address)
-    # This was confirmed to be equivalent to rvc-console.py's method for PDU2 DGNs like 0x1FEDB
     prio = 6
     sa = 0xF9 # Source Address for commands from this controller
     # pgn here is the DGN value from light_command_info (e.g., 0x1FEDB)
-    arbitration_id = (prio << 26) | (pgn << 8) | sa
+
+    # Correct CAN ID construction based on PDU format (mimicking rvc-console.py)
+    dp = (pgn >> 16) & 1      # Data Page bit
+    pf = (pgn >> 8) & 0xFF   # PDU Format
+    da = 0xFF                # Destination Address for PDU1 commands
+
+    if pf < 0xF0: # PDU1 format (DA is destination)
+        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (da << 8) | sa
+    else: # PDU2 format (PS is part of PGN)
+        ps = pgn & 0xFF      # PDU Specific (lower 8 bits of DGN)
+        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (ps << 8) | sa
 
     # RV-C Payload for DC_DIMMER_COMMAND_2 (DGN 0x1FEDB)
     # byte 0: Instance
