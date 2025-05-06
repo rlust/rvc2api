@@ -37,6 +37,17 @@
                 </button>
               </div>
             </div>
+            <!-- Unmapped Entries Link -->
+            <div class="pt-2">
+              <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                Troubleshooting
+              </h3>
+              <div class="space-y-1">
+                <button data-view="unmapped" class="nav-link w-full text-left text-gray-300 hover:text-white pl-4">
+                  Unmapped Entries
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
         <div class="border-t border-gray-700 pt-4 text-center">
@@ -94,6 +105,19 @@
             Loading spec metadata...
           </div>
           <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+        </section>
+
+        <!-- Unmapped Entries View -->
+        <section id="unmapped-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
+          <p class="mb-4 text-gray-400">
+            These are CAN messages received by the system that could not be mapped to a known device based on your 
+            <code>device_mapping.yml</code>. Use this information to help build out your configuration.
+          </p>
+          <div id="unmapped-entries-container" class="space-y-6">
+            <p id="unmapped-loading-message">Loading unmapped entries...</p>
+            <!-- Unmapped entries will be loaded here -->
+          </div>
         </section>
       </main>
     </div>
@@ -340,8 +364,15 @@
         btn.addEventListener('click', () => {
           const view = btn.getAttribute('data-view');
           document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-          document.getElementById(`${view}-view`).classList.remove('hidden');
+          const targetView = document.getElementById(`${view}-view`);
+          if (targetView) {
+            targetView.classList.remove('hidden');
+          } else {
+            console.error(`View section not found: ${view}-view`);
+            return; // Exit if view not found
+          }
 
+          // ... (existing log, mapping, spec view logic) ...
           if (view === 'logs') {
             connectLogSocket();
             document.getElementById('log-resume').click(); // Start unpaused
@@ -367,7 +398,6 @@
                 document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
               });
           } else if (view === 'spec') {
-            // Fetch and display rvc.json content
             fetch('/api/config/rvc_spec')
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
@@ -380,9 +410,7 @@
                 console.error("Failed to fetch rvc.json:", err);
                 document.getElementById('spec-content').textContent = `Error: Could not load rvc.json.\n${err.message}`;
               });
-
-            // Fetch and display rvc.json metadata
-            fetch('/api/config/rvc_spec_details')
+            fetch('/api/config/rvc_spec_metadata')
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.json();
@@ -402,9 +430,133 @@
                 console.error("Failed to fetch rvc.json metadata:", err);
                 document.getElementById('spec-metadata').textContent = `Error: Could not load spec metadata. ${err.message}`;
               });
+          } else if (view === 'unmapped') {
+            const container = document.getElementById('unmapped-entries-container');
+            const loadingMsg = document.getElementById('unmapped-loading-message');
+            loadingMsg.classList.remove('hidden');
+            container.innerHTML = ''; // Clear previous entries
+            container.appendChild(loadingMsg);
+
+            fetch('/api/unmapped_entries')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                return response.json();
+              })
+              .then(data => {
+                loadingMsg.classList.add('hidden');
+                if (Object.keys(data).length === 0) {
+                  container.innerHTML = '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
+                  return;
+                }
+
+                for (const [key, entry] of Object.entries(data)) {
+                  const entryDiv = document.createElement('div');
+                  entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
+                  
+                  let decodedSignalsHtml = 'N/A';
+                  if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
+                    decodedSignalsHtml = '<ul class="list-disc list-inside pl-4 text-sm">';
+                    for (const [sigKey, sigValue] of Object.entries(entry.decoded_signals)) {
+                      decodedSignalsHtml += `<li><strong>${sigKey}:</strong> ${sigValue}</li>`;
+                    }
+                    decodedSignalsHtml += '</ul>';
+                  } else if (entry.decoded_signals) {
+                    decodedSignalsHtml = '<span class="text-gray-500">No signals decoded (PGN might be complex or data invalid).</span>';
+                  }
+
+                  const yamlSuggestion = generateYamlSuggestion(entry);
+
+                  entryDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
+                      <p><strong>PGN:</strong> ${entry.pgn_hex}</p>
+                      <p><strong>DGN:</strong> ${entry.dgn_hex}</p>
+                      <p><strong>Instance:</strong> ${entry.instance}</p>
+                      <p><strong>Count:</strong> ${entry.count}</p>
+                      <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
+                      <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
+                      <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${entry.last_data_hex}</code></p>
+                    </div>
+                    <div class="mb-3">
+                      <p class="font-semibold mb-1">Decoded Signals (from PGN ${entry.pgn_hex}):</p>
+                      ${decodedSignalsHtml}
+                    </div>
+                    <div>
+                      <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
+                      <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
+                      <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
+                    </div>
+                  `;
+                  container.appendChild(entryDiv);
+                }
+                // Add event listeners to new copy buttons
+                container.querySelectorAll('.copy-yaml-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const yamlText = event.target.previousElementSibling.querySelector('code').innerText;
+                        navigator.clipboard.writeText(yamlText).then(() => {
+                            event.target.textContent = 'Copied!';
+                            setTimeout(() => { event.target.textContent = 'Copy YAML'; }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy YAML: ', err);
+                            event.target.textContent = 'Failed to copy';
+                            setTimeout(() => { event.target.textContent = 'Copy YAML'; }, 2000);
+                        });
+                    });
+                });
+              })
+              .catch(error => {
+                console.error('Error fetching unmapped entries:', error);
+                loadingMsg.classList.add('hidden');
+                container.innerHTML = `<p class="text-red-500">Error loading unmapped entries: ${error.message}</p>`;
+              });
           }
         });
       });
+
+      // Function to generate YAML suggestion
+      function generateYamlSuggestion(entry) {
+        const dgn = entry.dgn_hex;
+        const instance = entry.instance;
+        const pgn = entry.pgn_hex;
+        let suggestedName = `new_device_for_pgn_${pgn}`; 
+        if (dgn && dgn !== "PGN_UNKNOWN" && instance !== "N/A") {
+            suggestedName = `new_device_for_${dgn}_inst_${instance}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        }
+
+        let yaml = `# Suggested entry for PGN: ${pgn}`;
+        if (dgn && instance) {
+            yaml += `, DGN: ${dgn}, Instance: ${instance}`;
+        }
+        yaml += `\n# First seen: ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}`;
+        yaml += `\n# Last seen: ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}`;
+        yaml += `\n# Count: ${entry.count}`;
+        yaml += `\n# Last Data: ${entry.last_data_hex}`;
+
+        if (entry.decoded_signals) {
+            yaml += `\n# Decoded Signals (from PGN ${pgn}):\n`;
+            for (const [key, value] of Object.entries(entry.decoded_signals)) {
+                yaml += `#   ${key}: ${value}\n`;
+            }
+        }
+
+        yaml += `\n- name: "${suggestedName}" # TODO: Change to a unique, descriptive name`;
+        if (dgn && dgn !== "PGN_UNKNOWN") {
+             yaml += `\n  dgn: "${dgn}"`;
+        }
+        if (instance !== "N/A") {
+            yaml += `\n  instance: ${instance}`;
+        }
+        yaml += `\n  type: "unknown" # TODO: Specify device type (e.g., light, sensor, tank, hvac)`;
+        yaml += `\n  suggested_area: "Default Area" # TODO: Assign an area`;
+        yaml += `\n  friendly_name: "New Unmapped Device" # TODO: Set a user-friendly name`;
+        yaml += `\n  # capabilities: [] # e.g., [on_off, brightness] for lights, if applicable`;
+        yaml += `\n  # command_pgn: "FFFFF" # If controllable, specify the command PGN`;
+        yaml += `\n  # command_instance_override: ${instance !== "N/A" ? instance : 0} # Usually same as status instance`;
+
+        return yaml;
+      }
 
       document.getElementById('toggleSidebar').addEventListener('click', () => {
         const sidebar = document.getElementById('sidebar');
