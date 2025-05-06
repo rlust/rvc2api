@@ -186,7 +186,7 @@ for eid in light_entity_ids:
     # Add human-readable state
     brightness = raw.get("operating_status", 0) # Changed key
     human_state = "on" if brightness > 0 else "off"
-
+    lookup = entity_id_lookup.get(eid, {})
     payload = {
         "entity_id": eid,
         "value": decoded,
@@ -724,6 +724,7 @@ async def control_entity(
         optimistic_raw = {"operating_status": brightness_can_level, "instance": instance, "group": 124}
         optimistic_value = {"operating_status": str(brightness_can_level), "instance": str(instance), "group": "124"}
         ts = time.time()
+        lookup = entity_id_lookup.get(entity_id, {})
         payload = {
             "entity_id": entity_id,
             "value": optimistic_value,
