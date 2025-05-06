@@ -66,10 +66,7 @@ def decode_payload(entry: dict, data_bytes: bytes):
     return decoded, raw_values
 
 
-def load_config_data(
-    rvc_spec_path: str | None = None,
-    device_mapping_path: str | None = None,
-):
+def load_config_data():
     """
     Load and parse:
       1. RVC spec JSON → decoder_map (PGN→spec entry, adds 'dgn_hex')
@@ -80,7 +77,7 @@ def load_config_data(
          • light_entity_ids (set of IDs)
          • light_command_info (id→{dgn,instance,interface})
 
-    If paths are not provided, defaults to bundled config files.
+    Uses bundled config files.
 
     Returns:
       decoder_map: dict[int,dict],
@@ -91,11 +88,8 @@ def load_config_data(
       entity_id_lookup: dict[str,dict],
       light_command_info: dict[str,dict]
     """
-    # Determine default paths if not overridden
-    if rvc_spec_path is None or device_mapping_path is None:
-        default_spec, default_map = _default_paths()
-        rvc_spec_path = rvc_spec_path or default_spec
-        device_mapping_path = device_mapping_path or default_map
+    # Determine default paths
+    rvc_spec_path, device_mapping_path = _default_paths()
     logging.info(f"Using RVC Spec Path: {rvc_spec_path}")
     logging.info(f"Using Device Mapping Path: {device_mapping_path}")
 
