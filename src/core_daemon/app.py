@@ -698,6 +698,7 @@ async def control_entity(
         0xFF, 0xFF, 0xFF # Reserved
     ])
 
+    logger.info(f"CAN CMD OUT: entity_id={entity_id}, arbitration_id=0x{arbitration_id:08X}, data={payload_data.hex().upper()}, instance={instance}, action={action}")
     logger.debug(f"CAN CMD: entity={entity_id}, ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Inst={instance}, Iface={interface}, TargetUIBrightness={target_brightness_ui}%, CANLevel={brightness_can_level}, Action: {action}")
     try:
         msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
