@@ -1186,6 +1186,18 @@
       ]
     },
     {
+      "name": "GENERATOR_COMMAND",
+      "id": 536861658,
+      "extended": true,
+      "length": 8,
+      "description": "Generator Control Command",
+      "pdf_reference": "Sec. 6.18.21",
+      "signals": [
+        { "name": "instance", "start_bit": 0, "length": 8 },
+        { "name": "command", "start_bit": 8, "length": 8 }  // 0 = Stop, 1 = Start, 2 = Prime, 3 = Preheat
+      ]
+    },
+    {
       "name": "GENERATOR_STATUS_1",
       "id": 436198557,
       "extended": true,
@@ -1198,6 +1210,32 @@
         { "name": "engine_run_time",         "start_bit": 8,  "length": 32, "scale": 1, "unit": "min", "byte_order": "little_endian" },
         { "name": "engine_load",             "start_bit": 40, "length": 8,  "scale": 1, "unit": "%"   },
         { "name": "start_battery_voltage",   "start_bit": 48, "length": 16, "scale": 1, "unit": "Vdc", "byte_order": "little_endian" }
+      ]
+    },
+    {
+      "name": "GENERATOR_STATUS_2",
+      "id": 536861659,
+      "extended": true,
+      "length": 8,
+      "description": "Generator Status 2",
+      "pdf_reference": "Sec. 6.18.24",
+      "signals": [
+        { "name": "engine_rpm",        "start_bit": 0,  "length": 16, "scale": 0.125, "unit": "RPM", "byte_order": "little_endian" },
+        { "name": "coolant_temp",      "start_bit": 16, "length": 8,  "scale": 1,     "unit": "°C" },
+        { "name": "fuel_rate",         "start_bit": 24, "length": 16, "scale": 0.1,   "unit": "L/h", "byte_order": "little_endian" },
+        { "name": "shutdown_flags",    "start_bit": 40, "length": 8 }
+      ]
+    },
+    {
+      "name": "GENERATOR_DEMAND_COMMAND",
+      "id": 536870895,
+      "extended": true,
+      "length": 8,
+      "description": "Generator Demand Command",
+      "pdf_reference": "Sec. 6.18.18",
+      "signals": [
+        { "name": "instance", "start_bit": 0, "length": 8 },
+        { "name": "demand",   "start_bit": 8, "length": 8 }  // 0 = No demand, 1 = Demand
       ]
     },
     {
