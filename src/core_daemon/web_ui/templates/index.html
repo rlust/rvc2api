@@ -558,6 +558,110 @@
       // WebSocket for entity updates
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
 
+      // Helper function to call light services
+      function callLightService(entityId, action, data = {}) {
+        let path;
+        let body = {}; 
+
+        if (action === 'turn_on') {
+            path = `${apiBasePath}/lights/${entityId}/on`;
+            if (data.brightness !== undefined) {
+                body.brightness = data.brightness;
+            }
+        } else if (action === 'turn_off') {
+            path = `${apiBasePath}/lights/${entityId}/off`;
+        } else {
+            console.error('Unknown light action for service call:', action);
+            return Promise.reject('Unknown light action');
+        }
+        
+        return fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: Object.keys(body).length ? JSON.stringify(body) : null 
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => { throw new Error(`HTTP error ${response.status}: ${err.detail || response.statusText}`) });
+          }
+          return response.json();
+        })
+        .then(responseData => {
+          console.log(`Action ${action} for ${entityId} successful:`, responseData);
+          // UI should update via WebSocket message triggering renderGroupedLights()
+        })
+        .catch(error => {
+          console.error(`Action ${action} for ${entityId} failed:`, error);
+          alert(`Failed to control ${entityId}: ${error.message}`);
+        });
+      }
+
+      // Function to render a single light card
+      function renderCard(entity) {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-800 p-4 rounded-lg shadow-md space-y-3 entity-card'; // Added entity-card for easier selection
+        card.dataset.entityId = entity.entity_id; // Store entity_id for updates
+
+        const friendlyName = entity.friendly_name || entity.entity_id;
+        let state = entity.state || 'unknown';
+        const attributes = entity.attributes || {};
+        const capabilities = entity.capabilities || [];
+
+        let cardContent = `
+          <h3 class="text-lg font-semibold">${friendlyName}</h3>
+          <p class="text-sm">
+            State: <span class="font-medium state-text">${state.toUpperCase()}</span>
+          </p>
+        `;
+
+        const hasOnOff = capabilities.includes('on_off');
+        const hasBrightness = capabilities.includes('brightness');
+
+        if (hasOnOff) {
+          cardContent += `
+            <div class="flex space-x-2">
+              <button data-entity-id="${entity.entity_id}" data-action="turn_on" class="light-control-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm">ON</button>
+              <button data-entity-id="${entity.entity_id}" data-action="turn_off" class="light-control-btn flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded text-sm">OFF</button>
+            </div>
+          `;
+        }
+
+        if (hasBrightness) {
+          const currentBrightness = attributes.brightness !== undefined ? attributes.brightness : (state.toLowerCase() === 'on' ? 255 : 0);
+          cardContent += `
+            <div class="brightness-control space-y-1">
+              <label for="br-${entity.entity_id}" class="text-sm">Brightness:</label>
+              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" 
+                     min="0" max="255" value="${currentBrightness}" 
+                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider">
+            </div>
+          `;
+        }
+        
+        card.innerHTML = cardContent;
+
+        card.querySelectorAll('.light-control-btn').forEach(button => {
+          button.addEventListener('click', (e) => {
+            const entityId = e.target.dataset.entityId;
+            const action = e.target.dataset.action;
+            callLightService(entityId, action);
+          });
+        });
+
+        if (hasBrightness) {
+          const slider = card.querySelector('.brightness-slider');
+          if (slider) {
+            slider.addEventListener('input', (e) => {
+              // Debounce or throttle this if updates are too frequent
+              const entityId = e.target.dataset.entityId;
+              const brightness = parseInt(e.target.value, 10);
+              callLightService(entityId, 'turn_on', { brightness: brightness });
+            });
+          }
+        }
+        return card;
+      }
+
       entitySocket.onmessage = (event) => {
         const entityData = JSON.parse(event.data);
         const entity_id = entityData.entity_id;
