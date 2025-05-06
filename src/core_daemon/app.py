@@ -449,7 +449,12 @@ async def list_lights(
             val = ent.get("state")
             if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
-        results[eid] = ent
+        results[eid] = {
+            **ent,
+            "suggested_area": cfg.get("suggested_area", "Unknown"),
+            "device_type": cfg.get("device_type", "unknown"),
+            "capabilities": cfg.get("capabilities", []),
+        }
     return results
 
 @app.get("/meta", response_model=Dict[str, List[str]])
