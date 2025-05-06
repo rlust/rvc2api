@@ -708,6 +708,30 @@ async def control_entity(
             CAN_TX_ENQUEUE_TOTAL.inc()
         CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize()) # Update gauge after successful enqueue
         logger.info(f"CAN CMD Queued: {action} for {entity_id} (CAN Lvl: {brightness_can_level}) -> {interface}")
+
+        # --- Optimistic State Update (like rvc-console.py) ---
+        optimistic_state = "on" if target_brightness_ui > 0 else "off"
+        optimistic_raw = {"operating_status": brightness_can_level, "instance": instance, "group": 124}
+        optimistic_value = {"operating_status": str(brightness_can_level), "instance": str(instance), "group": "124"}
+        ts = time.time()
+        payload = {
+            "entity_id": entity_id,
+            "value": optimistic_value,
+            "raw": optimistic_raw,
+            "state": optimistic_state,
+            "timestamp": ts,
+            "capabilities": entity_id_lookup.get(entity_id, {}).get("capabilities", [])
+        }
+        state[entity_id] = payload
+        history[entity_id].append(payload)
+        cutoff = ts - HISTORY_DURATION
+        while history[entity_id] and history[entity_id][0]["timestamp"] < cutoff:
+            history[entity_id].popleft()
+        ENTITY_COUNT.set(len(state))
+        HISTORY_SIZE_GAUGE.labels(entity_id=entity_id).set(len(history[entity_id]))
+        text = json.dumps(payload)
+        await broadcast_to_clients(text)
+        # --- End Optimistic State Update ---
     except Exception as e:
         logger.error(f"Failed to enqueue CAN control for {entity_id} (Action: {action}): {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
