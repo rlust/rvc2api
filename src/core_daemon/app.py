@@ -16,20 +16,20 @@ from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTEN
 
 from rvc_decoder import load_config_data, decode_payload
 
-# Configure basic logging
+# ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.WARNING,  # switch to DEBUG to see raw frames
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
-# Prometheus metrics
+# ── Metrics ─────────────────────────────────────────────────────────────────
 FRAME_COUNTER = Counter("rvc2api_frames_total", "Total CAN frames received")
 DECODE_ERRORS = Counter("rvc2api_decode_errors_total", "Total decode errors")
 LOOKUP_MISSES = Counter("rvc2api_lookup_misses_total", "Total device‑lookup misses")
 WS_CLIENTS    = Gauge("rvc2api_ws_clients", "Active WebSocket clients")
 FRAME_LATENCY = Histogram("rvc2api_frame_latency_seconds", "Time spent decoding & dispatching frames")
 
-# Load spec + mapping, allowing overrides via env
+# ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
 mapping_override = os.getenv("CAN_MAP_PATH")
 (
@@ -45,19 +45,16 @@ mapping_override = os.getenv("CAN_MAP_PATH")
     device_mapping_path_override=mapping_override,
 )
 
+# ── FastAPI ─────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Holtel rvc2api",
-    servers=[
-        {
-            "url": "http://localhost:8000",
-            "description": "Holtel"
-        }
-    ]
+    title="rvc2api",
+    servers=[{"url": "http://localhost:8000", "description": "Holtel"}],
 )
 
-# In‑memory state: entity_id → last payload
+# In‑memory state: entity_id → payload
 state: Dict[str, Dict[str, Any]] = {}
-# Pre‑seed lights (they don’t broadcast “off” state)
+
+# ── Pre‑seed lights (off state) ───────────────────────────────────────────────
 now = time.time()
 for eid in light_entity_ids:
     info = light_command_info.get(eid)
@@ -80,6 +77,7 @@ for eid in light_entity_ids:
 # Active WebSocket clients
 clients: set[WebSocket] = set()
 
+# ── Models ──────────────────────────────────────────────────────────────────
 class Entity(BaseModel):
     entity_id: str
     value: Dict[str, str]
@@ -87,6 +85,7 @@ class Entity(BaseModel):
     timestamp: float
 
 
+# ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
     for ws in list(clients):
         try:
@@ -95,12 +94,10 @@ async def broadcast_to_clients(text: str):
             clients.discard(ws)
     WS_CLIENTS.set(len(clients))
 
-
+# ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
 async def start_can_readers():
     loop = asyncio.get_running_loop()
-
-    # pick up real interfaces and bus type
     raw_ifaces = os.getenv("CAN_CHANNELS", "can0,can1")
     interfaces = [i.strip() for i in raw_ifaces.split(",") if i.strip()]
     bustype = os.getenv("CAN_BUSTYPE", "socketcan")
@@ -109,17 +106,12 @@ async def start_can_readers():
     for iface in interfaces:
         def reader(iface=iface):
             try:
-                bus = can.interface.Bus(
-                    channel=iface,
-                    bustype=bustype,
-                    bitrate=bitrate,
-                )
+                bus = can.interface.Bus(channel=iface, bustype=bustype, bitrate=bitrate)
             except CanInterfaceNotImplementedError as e:
                 logging.error(f"Cannot open CAN bus '{iface}' ({bustype}): {e}")
                 return
 
             logging.info(f"Started CAN reader on {iface} via {bustype} @ {bitrate}bps")
-
             while True:
                 msg = bus.recv(timeout=1.0)
                 if msg is None:
@@ -128,12 +120,10 @@ async def start_can_readers():
                 FRAME_COUNTER.inc()
                 start = time.perf_counter()
                 try:
-                    # find spec entry
                     entry = decoder_map.get(msg.arbitration_id)
                     if not entry:
                         LOOKUP_MISSES.inc()
                         continue
-
                     decoded, raw = decode_payload(entry, msg.data)
                 except Exception:
                     DECODE_ERRORS.inc()
@@ -141,22 +131,22 @@ async def start_can_readers():
                 finally:
                     FRAME_LATENCY.observe(time.perf_counter() - start)
 
-                dgn_hex = entry.get("dgn_hex")
-                instance = raw.get("instance")
-                if not dgn_hex or instance is None:
+                dgn = entry.get("dgn_hex")
+                inst = raw.get("instance")
+                if not dgn or inst is None:
                     LOOKUP_MISSES.inc()
                     continue
 
-                key = (dgn_hex.upper(), str(instance))
+                key = (dgn.upper(), str(inst))
                 device = (
                     status_lookup.get(key)
-                    or status_lookup.get((dgn_hex.upper(), "default"))
+                    or status_lookup.get((dgn.upper(), "default"))
                     or device_lookup.get(key)
-                    or device_lookup.get((dgn_hex.upper(), "default"))
+                    or device_lookup.get((dgn.upper(), "default"))
                 )
                 if not device:
                     LOOKUP_MISSES.inc()
-                    logging.info(f"No device config for {key} from PGN 0x{msg.arbitration_id:X}")
+                    logging.info(f"No device config for {key}, PGN 0x{msg.arbitration_id:X}")
                     continue
 
                 eid = device["entity_id"]
@@ -164,17 +154,15 @@ async def start_can_readers():
                 payload = {"entity_id": eid, "value": decoded, "raw": raw, "timestamp": ts}
                 state[eid] = payload
                 text = json.dumps(payload)
-
-                # schedule broadcast on main loop
                 loop.call_soon_threadsafe(lambda t=text: loop.create_task(broadcast_to_clients(t)))
 
-        t = threading.Thread(target=reader, daemon=True)
-        t.start()
+        threading.Thread(target=reader, daemon=True).start()
 
 
+# ── REST Endpoints ─────────────────────────────────────────────────────────
 @app.get("/entities", response_model=Dict[str, Entity])
 async def list_entities(
-    type: Optional[str] = Query(None, alias="type"),
+    type: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
 ):
     """
@@ -206,14 +194,54 @@ async def get_entity(entity_id: str):
     return ent
 
 
+@app.get("/lights", response_model=Dict[str, Entity])
+async def list_lights(
+    state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
+    capability:    Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
+    area:          Optional[str] = Query(None),
+):
+    """
+    Return lights, optionally filtered by:
+    - state ('on' or 'off')
+    - a specific capability (e.g. 'brightness')
+    - area (suggested_area)
+    """
+    results: Dict[str, Entity] = {}
+    for eid, ent in state.items():
+        if eid not in light_entity_ids:
+            continue
+
+        cfg = entity_id_lookup.get(eid, {})
+        if area and cfg.get("suggested_area") != area:
+            continue
+
+        caps = cfg.get("capabilities", [])
+        if capability and capability not in caps:
+            continue
+
+        if state_filter:
+            val = ent["value"].get("OnOff") or ent["value"].get("on_off") or ent["value"].get("state")
+            if not val or val.lower() != state_filter.lower():
+                continue
+
+        results[eid] = ent
+
+    return results
+
+
 @app.get("/meta", response_model=Dict[str, List[str]])
 async def metadata():
     """
-    List the dimensions and their available values:
-      • type  → distinct device_type values
-      • area  → distinct suggested_area values
+    Expose groupable dimensions:
+    - type      (device_type)
+    - area      (suggested_area)
+    - capability
     """
-    mapping = {"type": "device_type", "area": "suggested_area"}
+    mapping = {
+        "type":       "device_type",
+        "area":       "suggested_area",
+        "capability": "capabilities",
+    }
     out: Dict[str, List[str]] = {}
     for public, internal in mapping.items():
         vals = {
@@ -221,7 +249,14 @@ async def metadata():
             for cfg in entity_id_lookup.values()
             if cfg.get(internal)
         }
-        out[public] = sorted(vals)  # type: ignore[list]
+        # Flatten for lists of lists:
+        flat = []
+        for v in vals:
+            if isinstance(v, list):
+                flat.extend(v)
+            else:
+                flat.append(v)
+        out[public] = sorted(set(flat))  # type: ignore[list]
     return out
 
 
