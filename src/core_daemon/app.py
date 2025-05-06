@@ -509,6 +509,7 @@ async def list_lights(
             "suggested_area": cfg.get("suggested_area", "Unknown"),
             "device_type": cfg.get("device_type", "unknown"),
             "capabilities": cfg.get("capabilities", []),
+            "friendly_name": cfg.get("friendly_name", None),
         }
     return results
 
