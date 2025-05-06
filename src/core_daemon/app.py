@@ -54,8 +54,7 @@ mapping_override = os.getenv("CAN_MAP_PATH")
 
 # ── FastAPI setup ──────────────────────────────────────────────────────────
 app = FastAPI(
-    title="rvc2api",
-    servers=[{"url": "http://localhost:8000", "description": "Holtel"}],
+    title="Holtel rvc2api",
 )
 
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
