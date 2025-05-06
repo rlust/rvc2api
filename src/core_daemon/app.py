@@ -38,6 +38,9 @@ class Entity(BaseModel):
     raw: Dict[str, int]
     state: str
     timestamp: float
+    suggested_area: Optional[str] = "Unknown"
+    device_type: Optional[str] = "unknown"
+    capabilities: Optional[List[str]] = []
 
 class ControlCommand(BaseModel):
     command: str
