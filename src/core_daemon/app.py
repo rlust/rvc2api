@@ -299,16 +299,16 @@ async def metadata():
         vals = {
             cfg.get(internal)
             for cfg in entity_id_lookup.values()
-            if cfg.get(internal)
+            if cfg.get(internal) is not None
         }
         flat: List[str] = []
         for v in vals:
             if isinstance(v, list):
                 flat.extend(v)
-            else:
+            elif isinstance(v, str):
                 flat.append(v)
+            # Optionally handle other types like int or bool here if they exist
         out[public] = sorted(set(flat))
-    return out
 
 @app.get("/healthz")
 async def healthz():
