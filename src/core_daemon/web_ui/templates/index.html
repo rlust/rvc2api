@@ -10,15 +10,60 @@
       .nav-link.active-nav {
         background-color: #4A5568; /* Tailwind gray-600 */
       }
+      /* Basic Theme Styles */
+      body.theme-default {
+        background-color: #1a202c; /* Tailwind gray-900 */
+        color: #e2e8f0; /* Tailwind gray-100 */
+      }
+      body.theme-dark header, body.theme-dark aside, body.theme-dark #pinnedLogsContainer, body.theme-dark #pinnedLogsContent, body.theme-dark .view-section pre, body.theme-dark .view-section div[class*="bg-gray-800"] {
+        background-color: #1f2937; /* Darker gray, e.g., gray-800 */
+        color: #d1d5db; /* Lighter gray text */
+      }
+      body.theme-dark .nav-link.active-nav { background-color: #374151; /* gray-700 */}
+      body.theme-dark button, body.theme-dark select, body.theme-dark input {
+        background-color: #374151; /* gray-700 */
+        color: #d1d5db;
+        border-color: #4b5563; /* gray-600 */
+      }
+      body.theme-dark #log-stream { background-color: #111827; color: #a7f3d0; } /* Even darker for log, greenish text */
+
+      body.theme-light {
+        background-color: #f3f4f6; /* Tailwind gray-100 */
+        color: #1f2937; /* Tailwind gray-800 */
+      }
+      body.theme-light header, body.theme-light aside, body.theme-light #pinnedLogsContainer, body.theme-light #pinnedLogsContent, body.theme-light .view-section pre, body.theme-light .view-section div[class*="bg-gray-800"] {
+        background-color: #ffffff; /* White */
+        color: #1f2937; /* Dark gray text */
+        border-color: #e5e7eb; /* Lighter border */
+      }
+      body.theme-light .nav-link { color: #374151; }
+      body.theme-light .nav-link.active-nav { background-color: #e5e7eb; /* gray-200 */ color: #111827;}
+      body.theme-light button, body.theme-light select, body.theme-light input {
+        background-color: #e5e7eb; /* gray-200 */
+        color: #1f2937;
+        border-color: #d1d5db; /* gray-300 */
+      }
+      body.theme-light #log-stream { background-color: #e5e7eb; color: #065f46; } /* Light bg for log, dark green text */
+      body.theme-light #spec-content {color: #0000AA;} /* Dark blue for spec content in light theme */
+      body.theme-light #mapping-content {color: #007700;} /* Dark green for mapping content in light theme */
+
     </style>
   </head>
-  <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
+  <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
     <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
       <div class="flex items-center">
         <button id="mobileMenuButton" class="md:hidden text-gray-300 hover:text-white mr-4">
           <i class="mdi mdi-menu text-2xl"></i>
         </button>
         <span>rvc2api Dashboard</span>
+      </div>
+      <div class="relative">
+        <select id="themeSwitcher" class="bg-gray-700 text-gray-200 text-sm rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="default">Default Theme</option>
+          <option value="dark">Dark Theme</option>
+          <option value="light">Light Theme</option>
+          <!-- Add more themes here -->
+        </select>
       </div>
     </header>
 
@@ -862,6 +907,31 @@
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews(); 
       });
+
+      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+      window.addEventListener('resize', adjustPinnedLogsLayout);
+
+      const themeSwitcher = document.getElementById('themeSwitcher');
+      const THEME_KEY = 'selectedTheme';
+
+      function applyTheme(theme) {
+        document.body.classList.remove('theme-default', 'theme-dark', 'theme-light');
+        document.body.classList.add(`theme-${theme}`);
+        localStorage.setItem(THEME_KEY, theme);
+        themeSwitcher.value = theme;
+      }
+
+      themeSwitcher.addEventListener('change', (event) => {
+        applyTheme(event.target.value);
+      });
+
+      // Load saved theme on page load
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) {
+        applyTheme(savedTheme);
+      } else {
+        applyTheme('default'); // Default to 'default' theme if nothing is saved
+      }
 
       // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
       window.addEventListener('resize', adjustPinnedLogsLayout);
