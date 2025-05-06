@@ -89,7 +89,10 @@
         </section>
 
         <section id="spec-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-6">Current rvc.json</h1>
+          <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
+          <div id="spec-metadata" class="mb-4 text-sm text-gray-400">
+            Loading spec metadata...
+          </div>
           <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
         </section>
       </main>
@@ -364,6 +367,7 @@
                 document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
               });
           } else if (view === 'spec') {
+            // Fetch and display rvc.json content
             fetch('/api/config/rvc_spec')
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
@@ -375,6 +379,28 @@
               .catch(err => {
                 console.error("Failed to fetch rvc.json:", err);
                 document.getElementById('spec-content').textContent = `Error: Could not load rvc.json.\n${err.message}`;
+              });
+
+            // Fetch and display rvc.json metadata
+            fetch('/api/config/rvc_spec_details')
+              .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
+                return res.json();
+              })
+              .then(data => {
+                const metadataDiv = document.getElementById('spec-metadata');
+                if (data.version && data.spec_document) {
+                  metadataDiv.innerHTML = `
+                    <p><strong>Version:</strong> ${data.version}</p>
+                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
+                  `;
+                } else {
+                  metadataDiv.textContent = 'Could not load spec metadata.';
+                }
+              })
+              .catch(err => {
+                console.error("Failed to fetch rvc.json metadata:", err);
+                document.getElementById('spec-metadata').textContent = `Error: Could not load spec metadata. ${err.message}`;
               });
           }
         });

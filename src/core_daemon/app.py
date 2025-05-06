@@ -9,6 +9,7 @@ import coloredlogs
 import shutil # Keep for now, though copy_config_files is removed
 from typing import Dict, Any, Optional, List
 from collections import deque
+from pathlib import Path
 
 import can
 from can.exceptions import CanInterfaceNotImplementedError
@@ -645,6 +646,47 @@ async def get_device_mapping_config_content_api():
     else:
         logger.error(f"API Error: Device mapping file not found for UI display at '{actual_map_path_for_ui}'")
         raise HTTPException(status_code=404, detail="Device mapping file not found.")
+
+CONFIG_PATH = Path(__file__).parent / "rvc_decoder" / "config"
+RVC_SPEC_FILE = CONFIG_PATH / "rvc.json"
+DEVICE_MAPPING_FILE = CONFIG_PATH / "device_mapping.yml"
+
+@app.get("/config/rvc_spec_details")
+async def get_rvc_spec_details():
+    """Returns metadata from the rvc.json spec file."""
+    try:
+        with open(RVC_SPEC_FILE, 'r') as f:
+            spec_data = json.load(f)
+        return {
+            "version": spec_data.get("version"),
+            "spec_document": spec_data.get("spec_document")
+        }
+    except FileNotFoundError:
+        logger.error(f"rvc.json not found at {RVC_SPEC_FILE}")
+        raise HTTPException(status_code=404, detail="rvc.json not found")
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding rvc.json at {RVC_SPEC_FILE}")
+        raise HTTPException(status_code=500, detail="Error decoding rvc.json")
+
+@app.get("/config/rvc_spec_metadata")
+async def get_rvc_spec_metadata():
+    """Returns metadata (version and spec_document URL) from the rvc.json spec file."""
+    if not os.path.exists(actual_spec_path_for_ui):
+        logger.error(f"API Error: RVC spec file not found at '{actual_spec_path_for_ui}' for metadata endpoint")
+        raise HTTPException(status_code=404, detail="RVC spec file not found.")
+    try:
+        with open(actual_spec_path_for_ui, 'r') as f:
+            spec_data = json.load(f)
+        return {
+            "version": spec_data.get("version"),
+            "spec_document": spec_data.get("spec_document")
+        }
+    except json.JSONDecodeError:
+        logger.error(f"API Error: Could not decode RVC spec from '{actual_spec_path_for_ui}'")
+        raise HTTPException(status_code=500, detail="Error decoding RVC spec file.")
+    except Exception as e:
+        logger.error(f"API Error: Could not read RVC spec from '{actual_spec_path_for_ui}': {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
 
 @app.get("/config/rvc_spec", response_class=PlainTextResponse) # Removed /api/ prefix
 async def get_rvc_spec_config_content_api():
