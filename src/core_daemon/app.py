@@ -16,7 +16,7 @@ from rvc_decoder import load_config_data, decode_payload
 
 # Configure basic logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO, # Change this to logging.DEBUG to see raw frames
     format="%(asctime)s %(levelname)7s %(message)s",
 )
 
@@ -79,16 +79,18 @@ async def start_can_readers():
                 if msg is None:
                     continue
 
-                logging.debug(f"RAW frame: id=0x{msg.arbitration_id:X} data={list(msg.data)}")
+                # logging.debug(f"RAW frame: id=0x{msg.arbitration_id:X} data={list(msg.data)}") # Uncomment if changing level to DEBUG
 
                 entry = decoder_map.get(msg.arbitration_id)
                 if not entry:
+                    logging.warning(f"No decoder map entry found for arbitration ID: 0x{msg.arbitration_id:X}")
                     continue
 
                 decoded, raw = decode_payload(entry, msg.data)
                 key = (entry["dgn_hex"], str(entry.get("instance", 0)))
                 device = status_lookup.get(key) or device_lookup.get(key)
                 if not device:
+                    logging.warning(f"No device found for key (DGN, instance): {key} from arbitration ID 0x{msg.arbitration_id:X}")
                     continue
 
                 eid = device["entity_id"]
