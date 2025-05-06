@@ -49,9 +49,28 @@ app = FastAPI(title="rvc2api")
 
 # In‑memory state: entity_id → last payload
 state: Dict[str, Dict[str, Any]] = {}
+# Pre‑seed lights (they don’t broadcast “off” state)
+now = time.time()
+for eid in light_entity_ids:
+    info = light_command_info.get(eid)
+    if not info:
+        continue
+    # find the spec entry for this DGN
+    spec_entry = next(
+        entry for entry in decoder_map.values()
+        if entry["dgn_hex"].upper() == format(info["dgn"], "X")
+    )
+    # default 8‑byte off payload (all zeros)
+    decoded, raw = decode_payload(spec_entry, bytes([0]*8))
+    state[eid] = {
+        "entity_id": eid,
+        "value": decoded,
+        "raw": raw,
+        "timestamp": now,
+    }
+
 # Active WebSocket clients
 clients: set[WebSocket] = set()
-
 
 class Entity(BaseModel):
     entity_id: str
