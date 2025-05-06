@@ -207,6 +207,25 @@ for eid in history:
 # ── Active WebSocket clients ────────────────────────────────────────────────
 clients: set[WebSocket] = set()
 
+# ── Log WebSocket clients ──────────────────────────────────────────────────
+log_ws_clients: set[WebSocket] = set()
+
+# ── Log WebSocket Handler ──────────────────────────────────────────────────
+class WebSocketLogHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        for ws in list(log_ws_clients):
+            try:
+                coro = ws.send_text(log_entry)
+                fut = asyncio.run_coroutine_threadsafe(coro, asyncio.get_event_loop())
+            except Exception:
+                log_ws_clients.discard(ws)
+
+log_ws_handler = WebSocketLogHandler()
+log_ws_handler.setLevel(logging.DEBUG)
+log_ws_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+logger.addHandler(log_ws_handler)
+
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
     for ws in list(clients):
@@ -558,6 +577,24 @@ async def websocket_endpoint(ws: WebSocket):
         clients.discard(ws)
         WS_CLIENTS.set(len(clients))
         logger.error(f"WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
+
+@app.websocket("/ws/logs")
+async def websocket_logs(ws: WebSocket):
+    """
+    WebSocket endpoint: stream all log messages in real time.
+    """
+    await ws.accept()
+    log_ws_clients.add(ws)
+    logger.info(f"Log WebSocket client connected: {ws.client.host}:{ws.client.port}")
+    try:
+        while True:
+            await ws.receive_text()  # Keep connection alive
+    except WebSocketDisconnect:
+        log_ws_clients.discard(ws)
+        logger.info(f"Log WebSocket client disconnected: {ws.client.host}:{ws.client.port}")
+    except Exception as e:
+        log_ws_clients.discard(ws)
+        logger.error(f"Log WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
 
 @app.post("/entities/{entity_id}/control")
 async def control_entity(
