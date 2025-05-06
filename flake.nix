@@ -31,14 +31,18 @@
             pyyaml
             prometheus_client
             coloredlogs # Added coloredlogs
+            jinja2 # Added for Jinja2Templates
           ];
           format = "pyproject";
 
-          # Include package data (config files)
-          # This might require adjustments based on how setuptools handles it
+          # Include package data (config files and web_ui)
           postInstall = ''
             mkdir -p $out/lib/${pkgs.python3.libPrefix}/site-packages/rvc_decoder/config
             cp src/rvc_decoder/config/* $out/lib/${pkgs.python3.libPrefix}/site-packages/rvc_decoder/config/
+            
+            # Copy the web_ui directory
+            mkdir -p $out/lib/${pkgs.python3.libPrefix}/site-packages/core_daemon/web_ui
+            cp -r src/core_daemon/web_ui/* $out/lib/${pkgs.python3.libPrefix}/site-packages/core_daemon/web_ui/
           '';
 
           # If you have tests defined in pyproject.toml that Nix can run:
