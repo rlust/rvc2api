@@ -175,7 +175,7 @@ for eid in light_entity_ids:
     decoded, raw = decode_payload(spec_entry, bytes([0] * 8))
 
     # Add human-readable state
-    brightness = raw.get("operating status (brightness)", 0)
+    brightness = raw.get("operating_status", 0) # Changed key
     human_state = "on" if brightness > 0 else "off"
 
     payload = {
@@ -326,8 +326,8 @@ async def start_can_readers():
                 eid = device["entity_id"]
                 ts = time.time()
                 # Determine human-readable state
-                # Use the likely correct signal name "Operating Status (Brightness)"
-                raw_brightness = raw.get("Operating Status (Brightness)", 0)
+                # Use the signal name for brightness from the raw dictionary
+                raw_brightness = raw.get("operating_status", 0) # Changed key
                 state_str = "on" if raw_brightness > 0 else "off"
 
                 payload = {
@@ -586,12 +586,12 @@ async def control_entity(
 
     logger.debug(f"Control for {entity_id}: current_on_str='{current_on_str}', current_on={current_on}")
 
-    # Determine current_brightness_ui using the likely correct signal name
+    # Determine current_brightness_ui using the correct signal name from raw data
     current_raw_values = current_state_data.get("raw", {})
-    # The reader thread in app.py uses "Operating Status (Brightness)" to determine its "state" field.
+    # The reader thread in app.py uses "operating_status" to determine its "state" field.
     # We rely on that key for the current raw brightness value.
     # Assuming raw 0-200 maps to UI 0-100%
-    current_brightness_raw = current_raw_values.get("Operating Status (Brightness)", 0) # Default to 0 if key not found
+    current_brightness_raw = current_raw_values.get("operating_status", 0) # Changed key. Default to 0 if key not found
     
     current_brightness_ui = 0
     # Ensure raw value is treated as a number, scale it to UI percentage (0-100)
