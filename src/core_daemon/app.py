@@ -452,6 +452,9 @@ async def list_lights(
         if eid not in light_entity_ids:
             continue
         cfg = entity_id_lookup.get(eid, {})
+        # Ensure only device_type 'light' is included
+        if cfg.get("device_type") != "light":
+            continue
         if area and cfg.get("suggested_area") != area:
             continue
         caps = cfg.get("capabilities", [])
