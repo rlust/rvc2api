@@ -160,8 +160,12 @@
         const grouped = {};
 
         for (const entity of Object.values(lightStates)) {
+          if (entity.device_type !== 'light') { // Explicitly check if the entity is a light
+            continue;
+          }
           const area = entity?.suggested_area || 'Unknown';
           if (selected !== 'All' && selected !== area) continue;
+
           if (!grouped[area]) grouped[area] = [];
           grouped[area].push(entity);
         }
