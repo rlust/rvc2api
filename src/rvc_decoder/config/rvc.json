@@ -1193,8 +1193,18 @@
       "description": "Generator Control Command",
       "pdf_reference": "Sec. 6.18.21",
       "signals": [
-        { "name": "instance", "start_bit": 0, "length": 8 },
-        { "name": "command", "start_bit": 8, "length": 8 }  // 0 = Stop, 1 = Start, 2 = Prime, 3 = Preheat
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Instance ID for the generator device"
+        },
+        {
+          "name": "command",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = Stop, 1 = Start, 2 = Prime, 3 = Preheat"
+        }
       ]
     },
     {
@@ -1234,8 +1244,18 @@
       "description": "Generator Demand Command",
       "pdf_reference": "Sec. 6.18.18",
       "signals": [
-        { "name": "instance", "start_bit": 0, "length": 8 },
-        { "name": "demand",   "start_bit": 8, "length": 8 }  // 0 = No demand, 1 = Demand
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Instance ID for the generator device"
+        },
+        {
+          "name": "demand",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = No demand, 1 = Demand (request generator start)"
+        }
       ]
     },
     {
