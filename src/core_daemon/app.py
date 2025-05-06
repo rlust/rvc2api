@@ -681,7 +681,7 @@ async def control_entity(
     # byte 5-7: Reserved (0xFF)
     payload_data = bytes([
         instance,
-        0xFF, # Group Mask for specific instance addressing (was 0x7C)
+        0x7C, # Group Mask (changed from 0xFF to 0x7C to match logs/rvc-console behavior)
         brightness_can_level, 
         0x00, # Command: SetLevel
         0x00, # Duration: Instantaneous
