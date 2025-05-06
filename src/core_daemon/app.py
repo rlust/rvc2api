@@ -522,7 +522,15 @@ async def control_entity(
 
     brightness = min(brightness_ui * 2, 0xC8)
     data = [brightness] + [0xFF] * 7
-    arbitration_id = 0x18EF0000 | (0xDA << 8) | inst  # PGN 0x1FED9
+    command_dgn = dgn
+    group_mask_hex = device.get("group_mask")
+    if group_mask_hex:
+        destination = int(group_mask_hex, 16)
+    else:
+        destination = 0xFF
+
+    arbitration_id = (command_dgn << 8) | destination
+    logging.debug(f"Sending to entity={entity_id} via DGN=0x{command_dgn:X}, dest=0x{destination:X}")
 
     try:
         msg = can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True)
