@@ -14,6 +14,9 @@ from can.exceptions import CanInterfaceNotImplementedError
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response, Body
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
@@ -96,6 +99,9 @@ app = FastAPI(
     title="Holtel rvc2api",
     servers=[{"url": "/", "description": "Holtel de Assfire"}],
 )
+web_ui_dir = os.path.join(os.path.dirname(__file__), "web_ui")
+app.mount("/static", StaticFiles(directory=os.path.join(web_ui_dir, "static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(web_ui_dir, "templates"))
 
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
 @app.middleware("http")
@@ -714,6 +720,10 @@ async def get_queue_status():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("rvc2api shutting down...")
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
