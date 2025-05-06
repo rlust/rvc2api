@@ -138,8 +138,8 @@ async def copy_config_files():
     static_dir = os.path.join(web_ui_dir, "static")
     os.makedirs(static_dir, exist_ok=True)
 
-    default_map_path = "/etc/nixos/files/device_mapping.yml"
-    default_spec_path = "/etc/nixos/files/rvc.json"
+    default_map_path = "/etc/rvc2api/device_mapping.yml"
+    default_spec_path = "/etc/rvc2api/rvc.json"
 
     map_src = mapping_override or default_map_path
     spec_src = spec_override or default_spec_path
