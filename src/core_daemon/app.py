@@ -296,14 +296,24 @@ async def start_can_readers():
                     continue
 
                 key = (dgn.upper(), str(inst))
-                device = (
-                    status_lookup.get(key)
-                    or status_lookup.get((dgn.upper(), "default"))
-                    or device_lookup.get(key)
-                    or device_lookup.get((dgn.upper(), "default"))
-                )
+                # Find all matching devices for this status DGN/instance
+                matching_devices = [
+                    dev for k, dev in status_lookup.items()
+                    if k == key
+                ]
+                # If no match, try default instance
+                if not matching_devices:
+                    default_key = (dgn.upper(), "default")
+                    if default_key in status_lookup:
+                        matching_devices = [status_lookup[default_key]]
+                # Fallback to device_lookup if still not found
+                if not matching_devices:
+                    if key in device_lookup:
+                        matching_devices = [device_lookup[key]]
+                    elif (dgn.upper(), "default") in device_lookup:
+                        matching_devices = [device_lookup[(dgn.upper(), "default")]]
 
-                if not device:
+                if not matching_devices:
                     LOOKUP_MISSES.inc()
                     logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
 
@@ -330,43 +340,38 @@ async def start_can_readers():
                         current_unmapped.count += 1
                     continue
 
-                eid = device["entity_id"]
                 ts = time.time()
-                # Determine human-readable state
-                # Use the signal name for brightness from the raw dictionary
-                raw_brightness = raw.get("operating_status", 0) # Changed key
+                raw_brightness = raw.get("operating_status", 0)
                 state_str = "on" if raw_brightness > 0 else "off"
 
-                payload = {
-                    "entity_id": eid,
-                    "value": decoded,
-                    "raw": raw,
-                    "state": state_str,
-                    "timestamp": ts,
-                    "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
-                }
-
-                # --- Custom Metrics ---
-                pgn = msg.arbitration_id & 0x3FFFF
-                PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
-                INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
-                device_type = device.get("device_type", "unknown")
-                DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
-
-                # update state
-                state[eid] = payload
-                ENTITY_COUNT.set(len(state))
-
-                # record into time‑based history
-                hq = history[eid]
-                hq.append(payload)
-                cutoff = ts - HISTORY_DURATION
-                while hq and hq[0]["timestamp"] < cutoff:
-                    hq.popleft()
-                HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
-
-                text = json.dumps(payload)
-                loop.call_soon_threadsafe(lambda t=text: loop.create_task(broadcast_to_clients(t)))
+                for device in matching_devices:
+                    eid = device["entity_id"]
+                    payload = {
+                        "entity_id": eid,
+                        "value": decoded,
+                        "raw": raw,
+                        "state": state_str,
+                        "timestamp": ts,
+                        "capabilities": entity_id_lookup.get(eid, {}).get("capabilities", [])
+                    }
+                    # Custom Metrics
+                    pgn = msg.arbitration_id & 0x3FFFF
+                    PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
+                    INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
+                    device_type = device.get("device_type", "unknown")
+                    DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
+                    # update state
+                    state[eid] = payload
+                    ENTITY_COUNT.set(len(state))
+                    # record into time‑based history
+                    hq = history[eid]
+                    hq.append(payload)
+                    cutoff = ts - HISTORY_DURATION
+                    while hq and hq[0]["timestamp"] < cutoff:
+                        hq.popleft()
+                    HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
+                    text = json.dumps(payload)
+                    loop.call_soon_threadsafe(lambda t=text: loop.create_task(broadcast_to_clients(t)))
 
         threading.Thread(target=reader, daemon=True).start()
 
