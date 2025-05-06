@@ -805,6 +805,17 @@
         setDesktopSidebarVisible(!isVisible);
       });
 
+      // Allow clicking the entire collapsed sidebar pane to expand it on desktop
+      sidebar.addEventListener('click', () => {
+        const isCollapsedDesktop = window.innerWidth >= 768 && sidebar.classList.contains('md:w-16');
+        if (isCollapsedDesktop) {
+          // If the sidebar is collapsed in desktop view, clicking on it should expand it.
+          // The toggleSidebarDesktopButton also calls setDesktopSidebarVisible(true) when clicked in this state.
+          // Calling setDesktopSidebarVisible(true) multiple times is handled gracefully by the function.
+          setDesktopSidebarVisible(true);
+        }
+      });
+
       // Initialize sidebar state from localStorage for desktop
       const storedState = localStorage.getItem(desktopSidebarVisibleKey);
       if (storedState === 'false') {
