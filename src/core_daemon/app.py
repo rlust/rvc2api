@@ -86,6 +86,7 @@ CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "La
 
 # ── Load spec & mappings ─────────────────────────────────────────────────────
 spec_override    = os.getenv("CAN_SPEC_PATH")
+mapping_override = os.getenv("CAN_MAP_PATH") # Define mapping_override here
 logger.info(f"Loading CAN spec from: {spec_override or 'default'}, mapping from: {mapping_override or 'default'}")
 (
     decoder_map,
