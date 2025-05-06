@@ -295,20 +295,16 @@ async def metadata():
         "capability": "capabilities",
     }
     out: Dict[str, List[str]] = {}
+
     for public, internal in mapping.items():
-        vals = {
-            cfg.get(internal)
-            for cfg in entity_id_lookup.values()
-            if cfg.get(internal) is not None
-        }
-        flat: List[str] = []
-        for v in vals:
-            if isinstance(v, list):
-                flat.extend(v)
-            elif isinstance(v, str):
-                flat.append(v)
-            # Optionally handle other types like int or bool here if they exist
-        out[public] = sorted(set(flat))
+        values = set()
+        for cfg in entity_id_lookup.values():
+            val = cfg.get(internal)
+            if isinstance(val, list):
+                values.update(val)
+            elif val is not None:
+                values.add(val)
+        out[public] = sorted(values)
 
 @app.get("/healthz")
 async def healthz():
