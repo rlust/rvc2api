@@ -36,7 +36,7 @@
           <nav class="space-y-2">
             <button data-view="home" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">Home</button>
             <button data-view="lights" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Lights</button>
-            <button data-view="logs" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Logs</button>
+            <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
             
             <!-- Configuration Section -->
             <div class="pt-2"> 
@@ -139,24 +139,6 @@
           </div>
         </section>
 
-        <section id="logs-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-6">Live Logs</h1>
-          <div class="mb-4 flex flex-wrap gap-4">
-            <select id="log-level" class="bg-gray-800 border border-gray-700 text-white rounded p-2">
-              <option value="DEBUG">DEBUG</option>
-              <option value="INFO" selected>INFO</option>
-              <option value="WARNING">WARNING</option>
-              <option value="ERROR">ERROR</option>
-              <option value="CRITICAL">CRITICAL</option>
-            </select>
-            <input id="log-search" type="text" placeholder="Search logs..." class="bg-gray-800 border border-gray-700 text-white rounded p-2 flex-1" />
-            <button id="log-pause" class="bg-gray-700 hover:bg-gray-600 text-white rounded p-2">Pause</button>
-            <button id="log-resume" class="bg-gray-700 hover:bg-gray-600 text-white rounded p-2" disabled>Resume</button>
-          </div>
-          <pre id="log-stream" class="bg-black text-green-400 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
-          <p id="logs-waiting-message" class="text-gray-500 hidden">Waiting for logs...</p>
-        </section>
-
         <section id="mapping-view" class="view-section hidden">
           <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
           <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
@@ -185,6 +167,34 @@
       </main>
     </div>
 
+    <!-- Pinned Logs Container -->
+    <div id="pinnedLogsContainer" class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out" style="height: 3rem;"> <!-- Initial height for collapsed header -->
+      <div id="pinnedLogsHeader" class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
+        <span class="font-semibold text-gray-300 ml-2">Logs</span>
+        <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
+          <i class="mdi mdi-chevron-up text-2xl"></i>
+        </button>
+      </div>
+      <div id="pinnedLogsContent" class="hidden bg-gray-800 px-4 pb-4 pt-2" style="height: calc(30vh - 3rem); max-height: 400px;"> <!-- Content area, height adjusted by JS -->
+        <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
+          <select id="log-level" class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO" selected>INFO</option>
+            <option value="WARNING">WARNING</option>
+            <option value="ERROR">ERROR</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+          <input id="log-search" type="text" placeholder="Search logs..." class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500" />
+          <div class="flex gap-2">
+            <button id="log-pause" class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm">Pause</button>
+            <button id="log-resume" class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm" disabled>Resume</button>
+          </div>
+        </div>
+        <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto h-full font-mono text-xs whitespace-pre-wrap"></pre>
+        <p id="logs-waiting-message" class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">Waiting for logs...</p>
+      </div>
+    </div>
+
     <script>
       const socket = new WebSocket(`ws://${location.host}/ws`);
       const grid = document.getElementById('light-grid');
@@ -192,6 +202,87 @@
       const lightStates = {};
       const lightsLoadingMessage = document.getElementById('lights-loading-message');
       const apiBasePath = '/api'; // Define base path for API calls
+
+      // Pinned Logs Elements
+      const pinnedLogsContainer = document.getElementById('pinnedLogsContainer');
+      const pinnedLogsHeader = document.getElementById('pinnedLogsHeader');
+      const togglePinnedLogsBtn = document.getElementById('togglePinnedLogsBtn');
+      const pinnedLogsChevronIcon = togglePinnedLogsBtn.querySelector('i');
+      const pinnedLogsContent = document.getElementById('pinnedLogsContent');
+      const mainContent = document.getElementById('mainContent'); // Already defined, ensure it is
+
+      // Log stream elements (now part of pinnedLogsContent)
+      let logSocket = null;
+      let isLogPaused = false;
+      const logStream = document.getElementById('log-stream');
+      const logLevelFilter = document.getElementById('log-level');
+      const logSearchInput = document.getElementById('log-search');
+      const logsWaitingMessage = document.getElementById('logs-waiting-message');
+      const logPauseBtn = document.getElementById('log-pause');
+      const logResumeBtn = document.getElementById('log-resume');
+
+      const PINNED_LOGS_OPEN_KEY = 'pinnedLogsOpen';
+      const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
+      const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
+      const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
+      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
+
+      function setPinnedLogsState(isOpen, height) {
+        localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
+        if (isOpen && height) {
+          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
+          currentExpandedLogsHeight = height;
+        }
+
+        if (isOpen) {
+          pinnedLogsContent.classList.remove('hidden');
+          pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+          pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+          mainContent.style.paddingBottom = currentExpandedLogsHeight;
+          pinnedLogsChevronIcon.classList.remove('mdi-chevron-up');
+          pinnedLogsChevronIcon.classList.add('mdi-chevron-down');
+          connectLogSocket();
+          if (logStream.childElementCount === 0 && logSocket && logSocket.readyState === WebSocket.OPEN) {
+            logsWaitingMessage.classList.remove('hidden');
+          }
+        } else {
+          pinnedLogsContent.classList.add('hidden');
+          pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
+          mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT; // Adjust padding for collapsed bar
+          pinnedLogsChevronIcon.classList.remove('mdi-chevron-down');
+          pinnedLogsChevronIcon.classList.add('mdi-chevron-up');
+          // Consider disconnecting log socket if not needed by any other view, 
+          // but for a pinned pane, usually keep it connected if user might reopen.
+          // For now, let's keep it simple and not disconnect immediately on collapse.
+          // disconnectLogSocket(); // Optional: if you want to save resources
+          logsWaitingMessage.classList.add('hidden');
+        }
+      }
+
+      togglePinnedLogsBtn.addEventListener('click', () => {
+        const isOpen = !pinnedLogsContent.classList.contains('hidden');
+        setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+      });
+      pinnedLogsHeader.addEventListener('click', (e) => {
+        if (e.target === pinnedLogsHeader || e.target === pinnedLogsHeader.querySelector('span')) {
+            const isOpen = !pinnedLogsContent.classList.contains('hidden');
+            setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+        }
+      });
+
+      // Initialize pinned logs state from localStorage
+      const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
+      const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
+      if (savedHeight) currentExpandedLogsHeight = savedHeight;
+      // Set initial state without animation for page load
+      const originalTransition = pinnedLogsContainer.style.transition;
+      pinnedLogsContainer.style.transition = 'none';
+      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
+      // Restore transition after initial setup
+      // Use a timeout to ensure the no-transition style is applied before restoring it
+      setTimeout(() => {
+        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out'; 
+      }, 50);
 
       // WebSocket for entity updates
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
@@ -264,66 +355,91 @@
       filter.addEventListener('change', renderGroupedLights);
 
       // WebSocket for logs - to be initialized when log view is active
-      let logSocket = null;
-      let isLogPaused = false;
-      const logStream = document.getElementById('log-stream');
-      const logLevelFilter = document.getElementById('log-level');
-      const logSearchInput = document.getElementById('log-search');
-      const logsWaitingMessage = document.getElementById('logs-waiting-message');
+      // This section needs to be adapted for the pinned logs.
+      // connectLogSocket() and disconnectLogSocket() will be used by setPinnedLogsState.
 
+      // Original log control event listeners (pause, resume, filter changes)
+      // Ensure these are correctly scoped if they were inside a view-specific block before.
+      logPauseBtn.addEventListener('click', () => {
+        isLogPaused = true;
+        logPauseBtn.disabled = true;
+        logResumeBtn.disabled = false;
+      });
+
+      logResumeBtn.addEventListener('click', () => {
+        isLogPaused = false;
+        logPauseBtn.disabled = false;
+        logResumeBtn.disabled = true;
+        logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
+      });
+      
+      logLevelFilter.addEventListener('change', () => { 
+        logStream.innerHTML = ''; 
+        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
+            logsWaitingMessage.classList.remove('hidden');
+        }
+      });
+      logSearchInput.addEventListener('input', () => {
+        logStream.innerHTML = ''; 
+        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
+            logsWaitingMessage.classList.remove('hidden');
+        }
+      });
+
+      // connectLogSocket function (ensure it's defined correctly)
       function connectLogSocket() {
         if (logSocket && logSocket.readyState === WebSocket.OPEN) {
           return;
         }
         logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
-        logsWaitingMessage.classList.remove('hidden'); // Show waiting message
+        // logsWaitingMessage.classList.remove('hidden'); // Managed by setPinnedLogsState
 
         logSocket.onopen = () => {
           console.log("Log WebSocket connected");
-          logStream.innerHTML = ''; // Clear previous logs on new connection
-          // logsWaitingMessage.classList.add('hidden'); // Hide if logs start coming immediately, or keep visible until first message
+          // logStream.innerHTML = ''; // Clearing is now handled by filter changes or explicit actions
+          if (pinnedLogsContent.classList.contains('hidden') === false && logStream.childElementCount === 0) {
+             logsWaitingMessage.classList.remove('hidden');
+          }
         };
 
         logSocket.onmessage = (event) => {
           if (isLogPaused) return;
-          logsWaitingMessage.classList.add('hidden'); // Hide waiting message on first log
+          logsWaitingMessage.classList.add('hidden');
 
           const logEntry = event.data;
           const currentLogLevel = logLevelFilter.value.toUpperCase();
           const searchTerm = logSearchInput.value.toLowerCase();
 
-          // Apply log level filter 
-          // Assumes log format like: "YYYY-MM-DD HH:MM:SS,ms LEVELNAME LOGGER_NAME: Message"
-          const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/); // Corrected regex
+          const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/);
           const entryLogLevel = levelMatch ? levelMatch[1].toUpperCase() : "UNKNOWN";
           
           const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
           const currentFilterIndex = logLevels.indexOf(currentLogLevel);
           const entryLevelIndex = logLevels.indexOf(entryLogLevel);
 
-          if (entryLevelIndex < currentFilterIndex) {
-            return; // Skip if entry level is lower than selected filter level
-          }
-
-          // Apply search term filter
-          if (searchTerm && !logEntry.toLowerCase().includes(searchTerm)) {
-            return; // Skip if search term not found
-          }
+          if (entryLevelIndex < currentFilterIndex) return;
+          if (searchTerm && !logEntry.toLowerCase().includes(searchTerm)) return;
 
           const logLine = document.createElement('div');
           logLine.textContent = logEntry;
           logStream.appendChild(logLine);
-          logStream.scrollTop = logStream.scrollHeight; // Auto-scroll
+          // Optimized scroll: only scroll if user is already near the bottom
+          const scrollThreshold = 20; // Pixels from bottom
+          if (logStream.scrollHeight - logStream.scrollTop - logStream.clientHeight < scrollThreshold) {
+            logStream.scrollTop = logStream.scrollHeight;
+          }
         };
 
         logSocket.onerror = (error) => {
           console.error("Log WebSocket error:", error);
-          logStream.innerHTML += '<div class="text-red-500">Log WebSocket error. See console for details.</div>';
+          logStream.innerHTML += '<div class="text-red-500">Log WebSocket error. See console.</div>';
         };
 
         logSocket.onclose = () => {
           console.log("Log WebSocket disconnected");
-          // Optionally add a message to the UI, or attempt to reconnect
+          // logsWaitingMessage.classList.remove('hidden'); // Show waiting if it was open
+          // logsWaitingMessage.textContent = 'Log stream disconnected. Attempting to reconnect...'; 
+          // Basic auto-reconnect could be added here if desired
         };
       }
 
@@ -334,34 +450,6 @@
           console.log("Log WebSocket intentionally disconnected");
         }
       }
-
-      // Log controls
-      document.getElementById('log-pause').addEventListener('click', () => {
-        isLogPaused = true;
-        document.getElementById('log-pause').disabled = true;
-        document.getElementById('log-resume').disabled = false;
-      });
-
-      document.getElementById('log-resume').addEventListener('click', () => {
-        isLogPaused = false;
-        document.getElementById('log-pause').disabled = false;
-        document.getElementById('log-resume').disabled = true;
-        logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
-      });
-      
-      // Re-apply filters when they change
-      logLevelFilter.addEventListener('change', () => { 
-        logStream.innerHTML = ''; // Clear and let new messages re-populate with new filter
-      });
-      logSearchInput.addEventListener('input', () => {
-        logStream.innerHTML = ''; // Clear and let new messages re-populate with new filter
-        // For immediate filtering of existing content (if not clearing), 
-        // you'd need to re-evaluate all stored logs, which is more complex.
-        // This approach filters new incoming logs.
-        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
-            logsWaitingMessage.classList.remove('hidden');
-        }
-      });
 
       // Function to handle bulk light control button clicks
       function setupBulkControlButtons() {
@@ -441,33 +529,32 @@
       document.querySelectorAll('.nav-link').forEach(btn => {
         btn.addEventListener('click', () => {
           const view = btn.getAttribute('data-view');
+          
+          // If a main view navigation occurs, and logs are open, ensure logs remain visible
+          // The pinned log pane is independent of view sections now.
+
           document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
           const targetView = document.getElementById(`${view}-view`);
           if (targetView) {
             targetView.classList.remove('hidden');
           } else {
             console.error(`View section not found: ${view}-view`);
-            // Optionally, show a default view or an error message in the UI
             const homeViewFallback = document.getElementById('home-view');
             if (homeViewFallback) homeViewFallback.classList.remove('hidden');
+            // If home is fallback, ensure its nav link is active
+            const homeNavLinkFallback = document.querySelector('.nav-link[data-view="home"]');
+            if (homeNavLinkFallback) {
+                document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
+                homeNavLinkFallback.classList.add('active-nav');
+            }
             return; 
           }
 
-          // Update active nav link styling
           document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
           btn.classList.add('active-nav');
 
-          // Specific logic for views like logs, mapping, etc.
-          if (view === 'logs') {
-            connectLogSocket();
-            document.getElementById('log-resume').click(); // Start unpaused
-            if (logStream.childElementCount === 0) { // Check if logs view is empty
-                logsWaitingMessage.classList.remove('hidden');
-            }
-          } else {
-            disconnectLogSocket();
-            logsWaitingMessage.classList.add('hidden'); // Hide waiting message when leaving logs view
-          }
+          // Remove specific logic for 'logs' view as it's now pinned
+          // if (view === 'logs') { ... } else { disconnectLogSocket(); ... }
 
           if (view === 'mapping') {
             fetch('/api/config/device_mapping')
@@ -646,7 +733,6 @@
 
       // Sidebar toggle logic
       const sidebar = document.getElementById('sidebar');
-      const mainContent = document.getElementById('mainContent');
       const mobileMenuButton = document.getElementById('mobileMenuButton');
       const closeSidebarButton = document.getElementById('closeSidebarButton');
       const toggleSidebarDesktopButton = document.getElementById('toggleSidebarDesktop');
@@ -660,9 +746,6 @@
           sidebar.classList.add('md:w-64');    // Add expanded width
           mainContent.classList.remove('md:ml-16');
           mainContent.classList.add('md:ml-64');
-          if (window.innerWidth >= MD_BREAKPOINT_PX) {
-            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
-          }
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
           if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
         } else { // COLLAPSING
@@ -670,9 +753,6 @@
           sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
           mainContent.classList.remove('md:ml-64');
           mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
-          if (window.innerWidth >= MD_BREAKPOINT_PX) {
-            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
-          }
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
         }
@@ -747,82 +827,6 @@
         // Any other initializations that need to happen after DOM is ready
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews(); 
-      });
-
-      const PINNED_LOGS_OPEN_KEY = 'pinnedLogsOpen';
-      const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
-      const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
-      const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
-      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
-
-      // Constants for sidebar and breakpoint
-      const SIDEBAR_EXPANDED_WIDTH_CSS = '16rem'; // Tailwind md:w-64
-      const SIDEBAR_COLLAPSED_WIDTH_CSS = '4rem';  // Tailwind md:w-16
-      const MD_BREAKPOINT_PX = 768; // Tailwind 'md' breakpoint
-
-      function setPinnedLogsState(isOpen, height) {
-        localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
-        if (isOpen && height) {
-          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
-          currentExpandedLogsHeight = height;
-        }
-
-        // Adjust left position of pinnedLogsContainer based on sidebar state and window width
-        if (window.innerWidth >= MD_BREAKPOINT_PX) {
-          if (sidebar.classList.contains('md:w-64')) { // Check if sidebar is expanded
-            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
-          } else {
-            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
-          }
-        } else {
-          pinnedLogsContainer.style.left = '0px';
-        }
-
-        if (isOpen) {
-          pinnedLogsContainer.style.height = height;
-          pinnedLogsContainer.classList.add('expanded');
-        } else {
-          pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
-          pinnedLogsContainer.classList.remove('expanded');
-        }
-      }
-
-      // Initialize pinned logs state from localStorage
-      const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
-      const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
-      if (savedHeight) currentExpandedLogsHeight = savedHeight;
-      
-      const originalTransition = pinnedLogsContainer.style.transition;
-      pinnedLogsContainer.style.transition = 'none'; // Disable transition for initial setup
-      
-      // Call setPinnedLogsState to apply initial height AND left position
-      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
-      
-      // Restore transition after initial setup
-      setTimeout(() => {
-        // Ensure 'left' is part of the transition properties
-        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out, left 0.3s ease-in-out'; 
-      }, 50);
-
-      window.addEventListener('resize', () => {
-        // Adjust pinnedLogsContainer left position on resize
-        if (window.innerWidth >= MD_BREAKPOINT_PX) {
-          if (sidebar.classList.contains('md:w-64')) { // Check if sidebar is expanded
-            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_CSS;
-          } else {
-            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_CSS;
-          }
-        } else {
-          pinnedLogsContainer.style.left = '0px';
-        }
-        // Mobile sidebar visibility on resize (existing logic)
-        if (window.innerWidth >= 768) {
-          sidebar.classList.remove('-translate-x-full');
-          sidebar.classList.add('translate-x-0');
-        } else {
-          sidebar.classList.add('-translate-x-full');
-          sidebar.classList.remove('translate-x-0');
-        }
       });
     </script>
   </body>
