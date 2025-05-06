@@ -10,6 +10,17 @@
       .nav-link.active-nav {
         background-color: #4A5568; /* Tailwind gray-600 */
       }
+      /* Collapsed sidebar hover effect */
+      #sidebar.sidebar-collapsed-hoverable { 
+        cursor: pointer;
+      }
+      body.theme-default #sidebar.sidebar-collapsed-hoverable:hover,
+      body.theme-dark #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: #374151; /* Tailwind gray-700 */
+      }
+      body.theme-light #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: #e5e7eb; /* Tailwind gray-200 */
+      }
       /* Basic Theme Styles */
       body.theme-default {
         background-color: #1a202c; /* Tailwind gray-900 */
@@ -814,6 +825,7 @@
           mainContent.classList.add('md:ml-64');
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
           if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
+          sidebar.classList.remove('sidebar-collapsed-hoverable'); // Remove hover indication class
         } else { // COLLAPSING
           sidebar.classList.remove('md:w-64');  // Remove expanded width
           sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
@@ -821,6 +833,7 @@
           mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
           toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
+          sidebar.classList.add('sidebar-collapsed-hoverable'); // Add hover indication class
         }
         adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
       }
