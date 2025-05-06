@@ -1,57 +1,45 @@
 [build-system]
-# use setuptools as the PEP 517 build backend
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires    = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
-name = "rvc2api"
-version = "0.1.0"
+[tool.poetry]
+name        = "rvc2api"
+version     = "0.1.0"
 description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket"
-readme = "README.md"
-license = { file = "LICENSE" }
-authors = [
-  { name = "Ryan Holt", email = "ryan@ryanholt.net" }
-]
-# Python support
-requires-python = ">=3.12"
+readme      = "README.md"
+license     = "MIT"
+authors     = ["Ryan Holt <ryan@ryanholt.net>"]
 
-# runtime deps
-dependencies = [
-  "fastapi>=0.95",
-  "uvicorn[standard]>=0.22",
-  "python-can>=4.0",
-  "pydantic>=1.10",
-  "PyYAML>=6.0",
-]
-
-keywords = ["can", "rv-c", "websocket", "fastapi"]
+# PyPI metadata
+keywords    = ["can", "rv-c", "websocket", "fastapi"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX :: Linux",
 ]
 
-[project.urls]
-"Homepage"   = "https://github.com/carpenike/rvc2api"
-"Repository" = "https://github.com/carpenike/rvc2api"
-
-[project.optional-dependencies]
-# dev dependencies for testing and linting
-dev = [
-  "pytest>=7.2",
-  "mypy>=1.5",
-  "flake8>=6.0",
+# src layout and extra files
+packages = [
+  { include = "rvc_decoder", from = "src" },
+]
+include = [
+  "src/rvc_decoder/config/rvc.json",
+  "src/rvc_decoder/config/device_mapping.yml",
 ]
 
-[tool.setuptools]
-include-package-data = true
+[tool.poetry.dependencies]
+python = ">=3.12"
+fastapi    = "^0.95"
+uvicorn    = { extras = ["standard"], version = "^0.22" }
+python-can = "^4.0"
+pydantic   = "^1.10"
+pyyaml     = "^6.0"
 
-[tool.setuptools.package-data]
-"rvc_decoder" = [
-  "config/rvc.json",
-  "config/device_mapping.yml",
-]
+[tool.poetry.dev-dependencies]
+pytest = "^7.2"
+mypy   = "^1.5"
+flake8 = "^6.0"
 
-[tool.setuptools.packages.find]
-# your code lives under src/
-where = ["src"]
+[tool.poetry.urls]
+Homepage   = "https://github.com/carpenike/rvc2api"
+Repository = "https://github.com/carpenike/rvc2api"
