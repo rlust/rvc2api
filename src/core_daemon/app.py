@@ -255,7 +255,8 @@ async def start_can_readers():
                 eid = device["entity_id"]
                 ts = time.time()
                 # Determine human-readable state
-                raw_brightness = raw.get("operating_status", 0)
+                # Use the likely correct signal name "Operating Status (Brightness)"
+                raw_brightness = raw.get("Operating Status (Brightness)", 0)
                 state_str = "on" if raw_brightness > 0 else "off"
 
                 payload = {
@@ -494,11 +495,11 @@ async def control_entity(
     current_on_str = current_state_data.get("state", "off") # Default to "off" if not found
     current_on = current_on_str.lower() == "on"
 
-    # Determine current_brightness_ui using the same key the reader uses ("operating_status")
+    # Determine current_brightness_ui using the likely correct signal name
     current_raw_values = current_state_data.get("raw", {})
-    # The reader thread in app.py uses "operating_status" to determine its "state" field.
+    # The reader thread in app.py uses "Operating Status (Brightness)" to determine its "state" field.
     # We rely on that key for the current raw brightness value.
-    current_brightness_raw = current_raw_values.get("operating_status", 0) # Default to 0 if key not found
+    current_brightness_raw = current_raw_values.get("Operating Status (Brightness)", 0) # Default to 0 if key not found
     
     current_brightness_ui = 0
     # Ensure raw value is treated as a number, scale it to UI percentage (0-100)
