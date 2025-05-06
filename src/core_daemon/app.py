@@ -483,73 +483,100 @@ async def control_entity(
         raise HTTPException(status_code=400, detail="Entity is not controllable")
 
     info = light_command_info[entity_id]
-    dgn = info["dgn"]
-    inst = info["instance"]
+    pgn = info["dgn"] # This is the PGN, e.g., 0x1FEDB for DC_DIMMER_COMMAND_2
+    instance = info["instance"]
     interface = info["interface"]
 
-    current = state.get(entity_id, {}).get("raw", {})
-    current_brightness = current.get("operating status (brightness)", 0) // 2
-    current_on = current_brightness > 0
+    current_state_data = state.get(entity_id, {})
+    current_raw_values = current_state_data.get("raw", {})
+    # Assuming 'operating status (brightness)' or a similar key holds the raw brightness value (0-200 or 0-250 range)
+    # Adjust this key if your decoder uses a different name for raw brightness
+    raw_brightness_key = next((k for k in ["operating status (brightness)", "operating_status", "brightness"] if k in current_raw_values), None)
+    current_brightness_raw = current_raw_values.get(raw_brightness_key, 0) if raw_brightness_key else 0
+    
+    # Convert raw CAN brightness (e.g., 0-200 for 0-100%) to UI brightness (0-100%)
+    # This assumes a scaling factor of 2 (e.g. CAN 200 = UI 100%). Adjust if different.
+    current_brightness_ui = min(current_brightness_raw // 2, 100) if isinstance(current_brightness_raw, int) else 0
+    current_on = current_brightness_ui > 0
 
     # Default: no change
-    brightness_ui = current_brightness
-    action = ""
+    target_brightness_ui = current_brightness_ui
+    action = "No change"
 
     if cmd.command == "set":
         if cmd.state not in {"on", "off"}:
             raise HTTPException(status_code=400, detail="State must be 'on' or 'off' for set")
         if cmd.state == "on":
-            brightness_ui = cmd.brightness if cmd.brightness is not None else 100
-            action = f"Turn ON to {brightness_ui}%"
-        else:
-            brightness_ui = 0
-            action = "Turn OFF"
+            target_brightness_ui = cmd.brightness if cmd.brightness is not None else (current_brightness_ui if current_brightness_ui > 0 else 100)
+            action = f"Set ON to {target_brightness_ui}%"
+        else: # cmd.state == "off"
+            target_brightness_ui = 0
+            action = "Set OFF"
 
     elif cmd.command == "toggle":
-        brightness_ui = 0 if current_on else 100
-        action = "Toggle OFF" if current_on else "Toggle ON"
+        if current_on:
+            target_brightness_ui = 0
+            action = "Toggle OFF"
+        else:
+            target_brightness_ui = current_brightness_ui if current_brightness_ui > 0 else 100 # Restore or default to 100%
+            action = f"Toggle ON to {target_brightness_ui}%"
+
 
     elif cmd.command == "brightness_up":
-        brightness_ui = min(current_brightness + 10, 100)
-        action = f"Brightness UP to {brightness_ui}%"
+        target_brightness_ui = min(current_brightness_ui + 10, 100)
+        action = f"Brightness UP to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_down":
-        brightness_ui = max(current_brightness - 10, 0)
-        action = f"Brightness DOWN to {brightness_ui}%"
+        target_brightness_ui = max(current_brightness_ui - 10, 0)
+        action = f"Brightness DOWN to {target_brightness_ui}%"
 
     else:
         raise HTTPException(status_code=400, detail="Invalid command")
 
-    brightness = min(brightness_ui * 2, 0xC8)
-    data = [brightness] + [0xFF] * 7
-    command_dgn = dgn
-    group_mask_hex = device.get("group_mask")
-    if group_mask_hex:
-        destination = int(group_mask_hex, 16)
-    else:
-        destination = 0xFF
+    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8)
+    brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
-    src = 0xDA  # or configurable via env
-    arbitration_id = (command_dgn << 8) | src
-    logging.debug(f"Sending to entity={entity_id} via DGN=0x{command_dgn:X}, dest=0x{destination:X}")
+    # RV-C CAN ID Construction (for PDU1 commands like DC_DIMMER_COMMAND_2)
+    prio = 6
+    sa = 0xF9 # Source Address for commands from this controller
+    # PGN is info["dgn"] (e.g., 0x1FEDB)
+    arbitration_id = (prio << 26) | (pgn << 8) | sa
+
+    # RV-C Payload for DC_DIMMER_COMMAND_2 (DGN 0x1FEDB)
+    # byte 0: Instance
+    # byte 1: Group Mask (0x7C for "All Instances of this DGN at this SA that support this command")
+    # byte 2: Desired Level (0-200, 0xC8 = 100%)
+    # byte 3: Command (0x00 = SetLevel)
+    # byte 4: Duration (0x00 = Instantaneous)
+    # byte 5-7: Reserved (0xFF)
+    payload_data = bytes([
+        instance,
+        0x7C, # Group Mask
+        brightness_can_level,
+        0x00, # Command: SetLevel
+        0x00, # Duration: Instantaneous
+        0xFF, 0xFF, 0xFF # Reserved
+    ])
+
+    logging.debug(f"Preparing CAN message for entity={entity_id}: ID=0x{arbitration_id:08X}, Data={payload_data.hex().upper()}, PGN=0x{pgn:X}, Instance={instance}, Interface={interface}")
 
     try:
-        msg = can.Message(arbitration_id=arbitration_id, data=bytes(data), is_extended_id=True)
-        await can_tx_queue.put((msg, interface))
+        msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
+        # Enqueue once. The can_writer task handles sending it twice.
         with CAN_TX_ENQUEUE_LATENCY.time():
             await can_tx_queue.put((msg, interface))
             CAN_TX_ENQUEUE_TOTAL.inc()
-            CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
-        logging.info(f"{action} → enqueued brightness={brightness_ui}% to {entity_id}")
+        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize()) # Update gauge after successful enqueue
+        logging.info(f"Action: {action} for {entity_id} (CAN Level: {brightness_can_level}) → enqueued to {interface}")
     except Exception as e:
-        logging.error(f"Failed to send CAN control to {entity_id}: {e}")
+        logging.error(f"Failed to enqueue CAN control for {entity_id}: {e}")
         raise HTTPException(status_code=500, detail="CAN send failed")
 
     return {
         "status": "sent",
         "entity_id": entity_id,
         "command": cmd.command,
-        "brightness": brightness_ui,
+        "brightness": target_brightness_ui,
         "action": action,
     }
 
