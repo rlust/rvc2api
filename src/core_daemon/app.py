@@ -10,7 +10,7 @@ from collections import deque
 
 import can
 from can.exceptions import CanInterfaceNotImplementedError
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response, Body
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
@@ -85,6 +85,9 @@ HISTORY_DURATION = 24 * 3600  # seconds
 history: Dict[str, deque[Dict[str, Any]]] = {
     eid: deque() for eid in entity_id_lookup
 }
+
+# ── Active CAN buses ─────────────────────────────────────────────────────────
+buses: Dict[str, can.Bus] = {}
 
 # ── Pre‑seed lights (off state) ───────────────────────────────────────────────
 now = time.time()
