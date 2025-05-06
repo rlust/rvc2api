@@ -147,8 +147,10 @@ async def can_writer():
 
             try:
                 bus.send(msg)
-                await asyncio.sleep(0.05)
+                logger.info(f"CAN TX: {interface} ID: {msg.arbitration_id:08X} Data: {msg.data.hex().upper()}") # Log first send
+                await asyncio.sleep(0.05) # RV-C spec recommends sending commands twice
                 bus.send(msg)
+                logger.info(f"CAN TX: {interface} ID: {msg.arbitration_id:08X} Data: {msg.data.hex().upper()}") # Log second send
             except Exception as e:
                 logger.error(f"CAN writer failed to send message on {interface}: {e}")
         except Exception as e:
@@ -569,6 +571,8 @@ async def control_entity(
     if entity_id not in light_command_info:
         logger.debug(f"Control command for non-controllable entity_id: {entity_id}")
         raise HTTPException(status_code=400, detail="Entity is not controllable")
+
+    logger.info(f"HTTP CMD RX: entity_id='{entity_id}', command='{cmd.command}', state='{cmd.state}', brightness='{cmd.brightness}'")
 
     info = light_command_info[entity_id]
     pgn = info["dgn"] # This is the PGN, e.g., 0x1FEDB for DC_DIMMER_COMMAND_2
