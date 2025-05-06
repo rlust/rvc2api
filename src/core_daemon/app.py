@@ -11,7 +11,8 @@ from collections import deque
 import can
 from can.exceptions import CanInterfaceNotImplementedError
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Response
-from fastapi.responses import JSONResponse
+from fastapi.exceptions import ResponseValidationError
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
@@ -342,3 +343,7 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         clients.discard(ws)
         WS_CLIENTS.set(len(clients))
+
+@app.exception_handler(ResponseValidationError)
+async def validation_exception_handler(request, exc):
+    return PlainTextResponse(f"Validation error: {exc}", status_code=500)
