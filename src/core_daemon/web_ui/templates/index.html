@@ -80,25 +80,36 @@
 
           <div class="mb-10">
             <h2 class="text-2xl font-semibold mb-4 text-gray-300">Quick Light Controls</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button id="btn-all-on" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
-              </button>
-              <button id="btn-all-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
-              </button>
-              <button id="btn-interior-on" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
-              </button>
-              <button id="btn-interior-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
-              </button>
-              <button id="btn-exterior-on" class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
-              </button>
-              <button id="btn-exterior-off" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                <i class="mdi mdi-dome-light mr-2"></i>Exterior Off <!-- Using dome-light as mdi-outdoor-lamp-off not standard -->
-              </button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+              <!-- Column 1: All Lights -->
+              <div class="space-y-4">
+                <button id="btn-all-on" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
+                </button>
+                <button id="btn-all-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
+                </button>
+              </div>
+
+              <!-- Column 2: Exterior Lights -->
+              <div class="space-y-4">
+                <button id="btn-exterior-on" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
+                </button>
+                <button id="btn-exterior-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-dome-light mr-2"></i>Exterior Off
+                </button>
+              </div>
+
+              <!-- Column 3: Interior Lights -->
+              <div class="space-y-4">
+                <button id="btn-interior-on" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
+                </button>
+                <button id="btn-interior-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                  <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
+                </button>
+              </div>
             </div>
           </div>
 
@@ -186,19 +197,36 @@
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
 
       entitySocket.onmessage = (event) => {
-        if (slider) {
-          slider.addEventListener('input', (e) => {
-            const level = parseInt(e.target.value);
-            fetch(`/api/entities/${entity_id}/control`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ command: 'set', state: 'on', brightness: level })
-            });
-          });
-        }
+        const entityData = JSON.parse(event.data);
+        const entity_id = entityData.entity_id;
 
-        return card;
-      }
+        if (entity_id) {
+          // If the entity is already in lightStates (i.e., it's a light we are displaying), update it.
+          if (lightStates.hasOwnProperty(entity_id)) {
+            lightStates[entity_id] = entityData;
+            renderGroupedLights();
+          }
+          // If it's a new entity that is a light (e.g., identified after initial load),
+          // add it to lightStates and render.
+          else if (entityData.device_type === 'light') {
+            lightStates[entity_id] = entityData;
+            // Check if its area needs to be added to the filter
+            const area = entityData.suggested_area || 'Unknown';
+            const areaFilter = document.getElementById('area-filter');
+            if (areaFilter) {
+              const existingOptions = Array.from(areaFilter.options).map(opt => opt.value);
+              if (!existingOptions.includes(area)) {
+                const opt = document.createElement('option');
+                opt.value = area;
+                opt.textContent = area;
+                areaFilter.appendChild(opt);
+                // Consider sorting filter options if many areas are dynamically added
+              }
+            }
+            renderGroupedLights();
+          }
+        }
+      };
 
       function renderGroupedLights() {
         grid.innerHTML = '';
