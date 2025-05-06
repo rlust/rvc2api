@@ -16,7 +16,7 @@
       let
         # Overlay to fix fastapi-cli dependency issue if present in current unstable
         fixFastapiCliOverlay = final: super: {
-          python3Packages = super.python3Packages.overrideScope' (pyfinal: pysuper: {
+          python3Packages = super.python3Packages.overrideScope (pyfinal: pysuper: { # Corrected: overrideScope' -> overrideScope
             fastapi-cli = pysuper.fastapi-cli.overridePythonAttrs (old: {
               # Remove the problematic dependency on uvicorn.optional-dependencies
               # Use tryEval to handle cases where the attribute might not exist
