@@ -20,11 +20,7 @@
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar Navigation -->
       <aside id="sidebar" 
-             class="fixed inset-y-0 left-0 z-40 md:relative md:translate-x-0
-                    transform -translate-x-full md:w-64 
-                    bg-gray-800 p-4 border-r border-gray-700 
-                    transition-all duration-300 ease-in-out 
-                    flex flex-col justify-between md:mt-0 mt-16">
+             class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between">
         <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
           <div class="flex justify-between items-center mb-4">
             <span class="text-lg font-semibold">Navigation</span>
@@ -170,7 +166,7 @@
         const colorClass = getCardColor(brightnessUI, isOn);
 
         const card = document.createElement('div');
-        card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass} relative group`;
+        card.className = `rounded-2xl p-3 shadow transition-colors duration-300 ${colorClass} relative group`; // Reduced padding from p-4 to p-3
         card.style.cursor = 'pointer';
         card.id = entity_id;
         card.innerHTML = `
@@ -178,8 +174,6 @@
             <i class="mdi mdi-power text-yellow-400"></i>
           </div>
           <h2 class="text-xl font-semibold mb-2">${friendly_name || entity_id}</h2>
-          <p class="mb-2 flex items-center"><i class="mdi ${isOn ? 'mdi-lightbulb-on' : 'mdi-lightbulb-off'} mr-1"></i><strong>${state}</strong></p>
-          <p class="mb-2 flex items-center"><i class="mdi mdi-brightness-6 mr-1"></i>${brightnessUI}%</p>
           ${capabilities.includes('brightness') ? `<input type="range" min="0" max="100" value="${brightnessUI}" class="w-full slider" />` : ''}
         `;
 
