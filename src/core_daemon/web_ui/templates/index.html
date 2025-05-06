@@ -270,29 +270,29 @@
         border-color: #374151; /* Fallback border color (Tailwind gray-700) */
       }
       body.theme-default .entity-card.light-off {
-        background-color: #1a202c; 
-        opacity: 0.7;
-        border-color: #2d3748; /* Tailwind gray-800 */
+        background-color: #15181e; /* Darker than page background */
+        opacity: 1; /* Full opacity */
+        border-color: #2d3748; /* Tailwind gray-800 for definition */
       }
       body.theme-dark .entity-card.light-off {
-        background-color: #1f2937; 
-        opacity: 0.65;
-        border-color: #374151; /* Tailwind gray-700 */
+        background-color: #1a202c; /* Darker than general card background (e.g., gray-900) */
+        opacity: 1; /* Full opacity */
+        border-color: #2d3748; /* Tailwind gray-800 for definition */
       }
       body.theme-light .entity-card.light-off {
-        background-color: #e2e8f0; 
-        opacity: 0.8;
-        border-color: #cbd5e1; /* Tailwind gray-300 */
+        background-color: #e2e8f0; /* Tailwind gray-200 (already darker than 'on' cards) */
+        opacity: 1; /* Full opacity */
+        border-color: #cbd5e1; /* Tailwind gray-300 for definition */
       }
       body.theme-catppuccin-mocha .entity-card.light-off {
-        background-color: var(--ctp-mocha-base); 
-        opacity: 0.7;
-        border-color: var(--ctp-mocha-surface0);
+        background-color: var(--ctp-mocha-mantle); /* Darker than page background (base) */
+        opacity: 1; /* Full opacity */
+        border-color: var(--ctp-mocha-surface0); /* surface0 for definition against mantle */
       }
       body.theme-catppuccin-latte .entity-card.light-off {
-        background-color: var(--ctp-latte-base); 
-        opacity: 0.75;
-        border-color: var(--ctp-latte-surface0);
+        background-color: var(--ctp-latte-surface1); /* Darker than 'on' cards (surface0) */
+        opacity: 1; /* Full opacity */
+        border-color: var(--ctp-latte-surface2); /* surface2 for definition against surface1 */
       }
 
       .entity-card {
