@@ -40,12 +40,12 @@
       }
 
       function renderCard(entity) {
-        const { entity_id, state, value, raw, capabilities = [] } = entity;
+        const { entity_id, state, value, raw, capabilities = [], friendly_name } = entity;
         const brightness = raw?.operating_status ?? 0;
         const brightnessUI = Math.round(brightness / 2);
         const isOn = state === 'on';
         const colorClass = getCardColor(brightnessUI, isOn);
-        const prettyName = prettifyName(entity_id);
+        const prettyName = friendly_name || prettifyName(entity_id);
 
         const card = document.createElement('div');
         card.className = `rounded-2xl p-4 shadow transition-colors duration-300 ${colorClass} relative group`;
@@ -91,7 +91,7 @@
         const grouped = {};
 
         for (const entity of Object.values(lightStates)) {
-          const area = entity?.area || entity?.value?.suggested_area || 'Unknown';
+          const area = entity?.suggested_area || entity?.area || entity?.value?.suggested_area || 'Unknown';
           if (selected !== 'All' && selected !== area) continue;
           if (!grouped[area]) grouped[area] = [];
           grouped[area].push(entity);
@@ -102,7 +102,7 @@
           const section = document.createElement('div');
           section.innerHTML = `
             <h2 class="text-2xl font-bold mb-1">${area}</h2>
-            <div class="h-1 w-full bg-gray-700 rounded mb-2"></div>
+            <div class="border-t border-gray-600 my-2"></div>
             <h3 class="text-xl font-semibold mb-4 flex items-center"><i class="mdi mdi-lightbulb-outline mr-2"></i>Lights</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
           `;
@@ -132,7 +132,7 @@
             lightStates[entity.entity_id] = entity;
           }
 
-          const areas = new Set(Object.values(lightStates).map(e => e?.area || e?.value?.suggested_area || 'Unknown'));
+          const areas = new Set(Object.values(lightStates).map(e => e?.suggested_area || e?.area || e?.value?.suggested_area || 'Unknown'));
           for (const area of [...areas].sort()) {
             const opt = document.createElement('option');
             opt.value = area;
