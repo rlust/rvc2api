@@ -120,8 +120,9 @@ class SuggestedMapping(BaseModel):
 
 class UnmappedEntryModel(BaseModel):
     pgn_hex: str
-    pgn_name: Optional[str] = Field(None, description="The human-readable name of the PGN, if known from the spec.")
+    pgn_name: Optional[str] = Field(None, description="The human-readable name of the PGN (from arbitration ID), if known from the spec.")
     dgn_hex: str
+    dgn_name: Optional[str] = Field(None, description="The human-readable name of the DGN, if known from the spec.")
     instance: str
     last_data_hex: str
     decoded_signals: Optional[Dict[str, Any]] = None
@@ -129,6 +130,7 @@ class UnmappedEntryModel(BaseModel):
     last_seen_timestamp: float
     count: int
     suggestions: Optional[List[SuggestedMapping]] = None # Added for suggestions
+    spec_entry: Optional[Dict[str, Any]] = Field(None, description="The raw rvc.json spec entry used for decoding, if PGN was known.")
 
 class BulkLightControlResponse(BaseModel):
     status: str
@@ -391,28 +393,34 @@ async def start_can_readers():
                         # Store unmapped entry for unknown PGN
                         unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}" # Ensure unique key for PGN unknown
                         now_ts = time.time()
-                        pgn_hex_val = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                        retrieved_pgn_name = pgn_hex_to_name_map.get(pgn_hex_val)
+                        
+                        model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                        model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
+                        model_dgn_hex = f"{msg.arbitration_id:X}" # Full Arb ID as DGN for unknown PGN
+                        model_dgn_name = pgn_hex_to_name_map.get(model_dgn_hex) # Attempt to name ArbID if it's a PGN
 
                         if unmapped_key_str not in unmapped_entries:
                             unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                                pgn_hex=pgn_hex_val,
-                                pgn_name=retrieved_pgn_name,
-                                dgn_hex=f"{msg.arbitration_id:X}", # Use full Arb ID as DGN placeholder
+                                pgn_hex=model_pgn_hex,
+                                pgn_name=model_pgn_name,
+                                dgn_hex=model_dgn_hex,
+                                dgn_name=model_dgn_name,
                                 instance="N/A",
                                 last_data_hex=msg.data.hex().upper(),
                                 decoded_signals=None, # No decoded signals if PGN is unknown
                                 first_seen_timestamp=now_ts,
                                 last_seen_timestamp=now_ts,
-                                count=1
+                                count=1,
+                                spec_entry=None # PGN unknown, so no specific spec entry
                             )
                         else:
                             current_unmapped = unmapped_entries[unmapped_key_str]
                             current_unmapped.last_data_hex = msg.data.hex().upper()
                             current_unmapped.last_seen_timestamp = now_ts
                             current_unmapped.count += 1
-                            if retrieved_pgn_name and not current_unmapped.pgn_name:
-                                current_unmapped.pgn_name = retrieved_pgn_name
+                            if model_pgn_name and not current_unmapped.pgn_name:
+                                current_unmapped.pgn_name = model_pgn_name
+                            # dgn_hex and dgn_name for PGN_UNKNOWN don't change on subsequent messages
                         continue # Skip further processing
                     
                     # PGN is known, attempt to decode
@@ -462,11 +470,14 @@ async def start_can_readers():
                     logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
 
                     unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
-                    # pgn_from_entry was used for pgn_hex field, ensure it's the PGN part of ArbID
-                    # entry.get("pgn_hex") might be defined in spec, otherwise fallback to ArbID PGN part
                     # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
-                    pgn_hex_for_model = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                    pgn_name_from_spec = entry.get('name') # Get PGN name directly from the spec entry
+                    # pgn_name_from_spec was entry.get('name'), which is better suited for dgn_name
+
+                    model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                    model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex) # Name of the PGN part of ArbID
+                    
+                    model_dgn_hex = dgn.upper() # dgn here is entry.get("dgn_hex")
+                    model_dgn_name = entry.get("name") # Name from spec entry is the DGN's name
 
                     now_ts = time.time()
 
@@ -483,16 +494,18 @@ async def start_can_readers():
 
                     if unmapped_key_str not in unmapped_entries:
                         unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                            pgn_hex=pgn_hex_for_model, # Use PGN from ArbID
-                            pgn_name=pgn_name_from_spec, # Use PGN name from spec
-                            dgn_hex=dgn.upper(),
+                            pgn_hex=model_pgn_hex, 
+                            pgn_name=model_pgn_name,
+                            dgn_hex=model_dgn_hex,
+                            dgn_name=model_dgn_name,
                             instance=str(inst),
                             last_data_hex=msg.data.hex().upper(),
                             decoded_signals=decoded_payload_for_unmapped, # Store the decoded signals
                             first_seen_timestamp=now_ts,
                             last_seen_timestamp=now_ts,
                             count=1,
-                            suggestions=suggestions_list if suggestions_list else None
+                            suggestions=suggestions_list if suggestions_list else None,
+                            spec_entry=entry # Store the spec entry used for decoding
                         )
                     else:
                         current_unmapped = unmapped_entries[unmapped_key_str]
@@ -500,8 +513,12 @@ async def start_can_readers():
                         current_unmapped.decoded_signals = decoded_payload_for_unmapped # Update decoded signals
                         current_unmapped.last_seen_timestamp = now_ts
                         current_unmapped.count += 1
-                        if pgn_name_from_spec and not current_unmapped.pgn_name:
-                             current_unmapped.pgn_name = pgn_name_from_spec
+                        if model_pgn_name and not current_unmapped.pgn_name:
+                             current_unmapped.pgn_name = model_pgn_name
+                        if model_dgn_name and not current_unmapped.dgn_name:
+                             current_unmapped.dgn_name = model_dgn_name
+                        if entry and not current_unmapped.spec_entry: # Add spec_entry if initially missing
+                            current_unmapped.spec_entry = entry
                         # Update suggestions if they weren't there or if logic changes (optional)
                         if not current_unmapped.suggestions and suggestions_list:
                             current_unmapped.suggestions = suggestions_list
