@@ -306,6 +306,8 @@ async def metadata():
                 values.add(val)
         out[public] = sorted(values)
 
+    return out
+
 @app.get("/healthz")
 async def healthz():
     """Liveness probe."""
