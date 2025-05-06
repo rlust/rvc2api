@@ -96,6 +96,7 @@ HISTORY_DURATION = 24 * 3600  # seconds
 history: Dict[str, deque[Dict[str, Any]]] = {
     eid: deque() for eid in entity_id_lookup
 }
+unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entries
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
 buses: Dict[str, can.Bus] = {}
@@ -192,6 +193,16 @@ class ControlCommand(BaseModel):
         description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'."
     )
 
+class UnmappedEntryModel(BaseModel):
+    pgn_hex: str
+    dgn_hex: str
+    instance: str
+    last_data_hex: str
+    decoded_signals: Optional[Dict[str, Any]] = None # Added field for decoded signals
+    first_seen_timestamp: float
+    last_seen_timestamp: float
+    count: int
+
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
     for ws in list(clients):
@@ -231,25 +242,58 @@ async def start_can_readers():
                     continue
 
                 FRAME_COUNTER.inc()
-                start = time.perf_counter()
+                start_time = time.perf_counter()
+                decoded_payload_for_unmapped: Optional[Dict[str, Any]] = None # Variable to hold decoded data
+                entry = decoder_map.get(msg.arbitration_id)
+
                 try:
-                    entry = decoder_map.get(msg.arbitration_id)
                     if not entry:
                         LOOKUP_MISSES.inc()
-                        continue
+                        # Store unmapped entry for unknown PGN
+                        unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}" # Ensure unique key for PGN unknown
+                        now_ts = time.time()
+                        pgn_hex_val = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}"
+
+                        if unmapped_key_str not in unmapped_entries:
+                            unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
+                                pgn_hex=pgn_hex_val,
+                                dgn_hex=f"{msg.arbitration_id:X}", # Use full Arb ID as DGN placeholder
+                                instance="N/A",
+                                last_data_hex=msg.data.hex().upper(),
+                                decoded_signals=None, # No decoded signals if PGN is unknown
+                                first_seen_timestamp=now_ts,
+                                last_seen_timestamp=now_ts,
+                                count=1
+                            )
+                        else:
+                            current_unmapped = unmapped_entries[unmapped_key_str]
+                            current_unmapped.last_data_hex = msg.data.hex().upper()
+                            current_unmapped.last_seen_timestamp = now_ts
+                            current_unmapped.count += 1
+                        continue # Skip further processing
+                    
+                    # PGN is known, attempt to decode
                     decoded, raw = decode_payload(entry, msg.data)
+                    decoded_payload_for_unmapped = decoded # Store for potential unmapped entry
                     SUCCESSFUL_DECODES.inc()
-                except Exception:
+
+                except Exception as e:
+                    logger.error(f"Decode error for PGN 0x{msg.arbitration_id:X} on {iface}: {e}")
                     DECODE_ERRORS.inc()
                     continue
                 finally:
-                    FRAME_LATENCY.observe(time.perf_counter() - start)
+                    FRAME_LATENCY.observe(time.perf_counter() - start_time)
 
-                dgn = entry.get("dgn_hex")
-                inst = raw.get("instance")
+                # At this point, PGN is known and decoded successfully
+                dgn = entry.get("dgn_hex") 
+                inst = raw.get("instance") # instance can be 0
+
                 if not dgn or inst is None:
                     LOOKUP_MISSES.inc()
-                    logger.debug(f"DGN or instance missing for PGN 0x{msg.arbitration_id:X}. DGN: {dgn}, Instance: {inst}") # Changed to debug
+                    logger.debug(f"DGN or instance missing in decoded payload for PGN 0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). DGN from payload: {dgn}, Instance from payload: {inst}")
+                    # Potentially log this as a specific type of unmapped if DGN/Inst couldn't be derived from a known PGN's signals
+                    # For now, we assume `decode_payload` populates `raw` with `instance` if the PGN spec defines it.
+                    # If `dgn` from spec or `instance` from raw signals is missing, it's a config/spec issue or unexpected payload.
                     continue
 
                 key = (dgn.upper(), str(inst))
@@ -259,9 +303,32 @@ async def start_can_readers():
                     or device_lookup.get(key)
                     or device_lookup.get((dgn.upper(), "default"))
                 )
+
                 if not device:
                     LOOKUP_MISSES.inc()
-                    logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})") # Changed to debug
+                    logger.debug(f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})")
+
+                    unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
+                    pgn_from_entry = entry.get("pgn_hex", f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}")
+                    now_ts = time.time()
+
+                    if unmapped_key_str not in unmapped_entries:
+                        unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
+                            pgn_hex=pgn_from_entry,
+                            dgn_hex=dgn.upper(),
+                            instance=str(inst),
+                            last_data_hex=msg.data.hex().upper(),
+                            decoded_signals=decoded_payload_for_unmapped, # Store the decoded signals
+                            first_seen_timestamp=now_ts,
+                            last_seen_timestamp=now_ts,
+                            count=1
+                        )
+                    else:
+                        current_unmapped = unmapped_entries[unmapped_key_str]
+                        current_unmapped.last_data_hex = msg.data.hex().upper()
+                        current_unmapped.decoded_signals = decoded_payload_for_unmapped # Update decoded signals
+                        current_unmapped.last_seen_timestamp = now_ts
+                        current_unmapped.count += 1
                     continue
 
                 eid = device["entity_id"]
@@ -347,6 +414,14 @@ async def get_history(
     if since is not None:
         entries = [e for e in entries if e["timestamp"] > since]
     return entries[-limit:]
+
+@app.get("/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])
+async def get_unmapped_entries():
+    """
+    Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
+    Stores the last seen data payload for each.
+    """
+    return unmapped_entries
 
 @app.get("/lights", response_model=Dict[str, Entity])
 async def list_lights(
