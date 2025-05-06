@@ -217,7 +217,8 @@ for eid in light_entity_ids:
         "timestamp": now,
         "suggested_area": lookup.get("suggested_area", "Unknown"),
         "device_type": lookup.get("device_type", "unknown"),
-        "capabilities": lookup.get("capabilities", [])
+        "capabilities": lookup.get("capabilities", []),
+        "friendly_name": lookup.get("friendly_name") # Ensure friendly_name is included
     }
     state[eid] = payload
     history[eid].append(payload)

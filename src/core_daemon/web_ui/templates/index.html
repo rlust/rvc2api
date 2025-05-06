@@ -47,7 +47,9 @@
               </select>
             </div>
           </div>
-          <div id="light-grid" class="space-y-8"></div>
+          <div id="light-grid" class="space-y-8">
+            <p id="lights-loading-message">Loading lights...</p>
+          </div>
         </section>
 
         <section id="logs-view" class="view-section hidden">
@@ -65,6 +67,7 @@
             <button id="log-resume" class="bg-gray-700 hover:bg-gray-600 text-white rounded p-2" disabled>Resume</button>
           </div>
           <pre id="log-stream" class="bg-black text-green-400 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+          <p id="logs-waiting-message" class="text-gray-500 hidden">Waiting for logs...</p>
         </section>
 
         <section id="mapping-view" class="view-section hidden">
@@ -84,8 +87,12 @@
       const grid = document.getElementById('light-grid');
       const filter = document.getElementById('area-filter');
       const lightStates = {};
+      const lightsLoadingMessage = document.getElementById('lights-loading-message');
 
-      socket.onmessage = (event) => {
+      // WebSocket for entity updates
+      const entitySocket = new WebSocket(`ws://${location.host}/ws`);
+
+      entitySocket.onmessage = (event) => {
         const payload = JSON.parse(event.data);
         if (!payload.entity_id) return;
         // Merge new payload with existing state to preserve all fields
@@ -178,9 +185,116 @@
 
       filter.addEventListener('change', renderGroupedLights);
 
+      // WebSocket for logs - to be initialized when log view is active
+      let logSocket = null;
+      let isLogPaused = false;
+      const logStream = document.getElementById('log-stream');
+      const logLevelFilter = document.getElementById('log-level');
+      const logSearchInput = document.getElementById('log-search');
+      const logsWaitingMessage = document.getElementById('logs-waiting-message');
+
+      function connectLogSocket() {
+        if (logSocket && logSocket.readyState === WebSocket.OPEN) {
+          return;
+        }
+        logSocket = new WebSocket(`ws://${location.host}/ws/logs`);
+        logsWaitingMessage.classList.remove('hidden'); // Show waiting message
+
+        logSocket.onopen = () => {
+          console.log("Log WebSocket connected");
+          logStream.innerHTML = ''; // Clear previous logs on new connection
+          // logsWaitingMessage.classList.add('hidden'); // Hide if logs start coming immediately, or keep visible until first message
+        };
+
+        logSocket.onmessage = (event) => {
+          if (isLogPaused) return;
+          logsWaitingMessage.classList.add('hidden'); // Hide waiting message on first log
+
+          const logEntry = event.data;
+          const currentLogLevel = logLevelFilter.value.toUpperCase();
+          const searchTerm = logSearchInput.value.toLowerCase();
+
+          // Apply log level filter (assuming log format "TIMESTAMP LEVEL NAME: MESSAGE")
+          // A more robust parsing might be needed if format varies significantly
+          const levelMatch = logEntry.match(/\S+\s+(\w+)/);
+          const entryLogLevel = levelMatch ? levelMatch[1].toUpperCase() : "UNKNOWN";
+          
+          const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
+          const currentFilterIndex = logLevels.indexOf(currentLogLevel);
+          const entryLevelIndex = logLevels.indexOf(entryLogLevel);
+
+          if (entryLevelIndex < currentFilterIndex) {
+            return; // Skip if entry level is lower than selected filter level
+          }
+
+          // Apply search term filter
+          if (searchTerm && !logEntry.toLowerCase().includes(searchTerm)) {
+            return; // Skip if search term not found
+          }
+
+          const logLine = document.createElement('div');
+          logLine.textContent = logEntry;
+          logStream.appendChild(logLine);
+          logStream.scrollTop = logStream.scrollHeight; // Auto-scroll
+        };
+
+        logSocket.onerror = (error) => {
+          console.error("Log WebSocket error:", error);
+          logStream.innerHTML += '<div class="text-red-500">Log WebSocket error. See console for details.</div>';
+        };
+
+        logSocket.onclose = () => {
+          console.log("Log WebSocket disconnected");
+          // Optionally add a message to the UI, or attempt to reconnect
+        };
+      }
+
+      function disconnectLogSocket() {
+        if (logSocket) {
+          logSocket.close();
+          logSocket = null;
+          console.log("Log WebSocket intentionally disconnected");
+        }
+      }
+
+      // Log controls
+      document.getElementById('log-pause').addEventListener('click', () => {
+        isLogPaused = true;
+        document.getElementById('log-pause').disabled = true;
+        document.getElementById('log-resume').disabled = false;
+      });
+
+      document.getElementById('log-resume').addEventListener('click', () => {
+        isLogPaused = false;
+        document.getElementById('log-pause').disabled = false;
+        document.getElementById('log-resume').disabled = true;
+        logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
+      });
+      
+      // Re-apply filters when they change
+      logLevelFilter.addEventListener('change', () => { 
+        logStream.innerHTML = ''; // Clear and let new messages re-populate with new filter
+      });
+      logSearchInput.addEventListener('input', () => {
+        logStream.innerHTML = ''; // Clear and let new messages re-populate with new filter
+        // For immediate filtering of existing content (if not clearing), 
+        // you'd need to re-evaluate all stored logs, which is more complex.
+        // This approach filters new incoming logs.
+        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
+            logsWaitingMessage.classList.remove('hidden');
+        }
+      });
+
+
       fetch('/lights')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
+          lightsLoadingMessage.classList.add('hidden');
           for (const entity of Object.values(data)) {
             lightStates[entity.entity_id] = entity;
           }
@@ -194,6 +308,12 @@
           }
 
           renderGroupedLights();
+        })
+        .catch(error => {
+          console.error("Failed to fetch lights:", error);
+          lightsLoadingMessage.textContent = 'Error loading lights. Please check console.';
+          lightsLoadingMessage.classList.remove('hidden');
+          lightsLoadingMessage.classList.add('text-red-500');
         });
 
       document.querySelectorAll('.nav-link').forEach(btn => {
@@ -201,6 +321,17 @@
           const view = btn.getAttribute('data-view');
           document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
           document.getElementById(`${view}-view`).classList.remove('hidden');
+
+          if (view === 'logs') {
+            connectLogSocket();
+            document.getElementById('log-resume').click(); // Start unpaused
+            if (logStream.childElementCount === 0) { // Check if logs view is empty
+                logsWaitingMessage.classList.remove('hidden');
+            }
+          } else {
+            disconnectLogSocket();
+            logsWaitingMessage.classList.add('hidden'); // Hide waiting message when leaving logs view
+          }
 
           if (view === 'mapping') {
             fetch('/static/device_mapping.yml').then(res => res.text()).then(text => {
