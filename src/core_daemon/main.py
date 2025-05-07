@@ -6,8 +6,6 @@ import os
 import threading
 import time
 from collections import deque
-
-# Removed shutil import
 from typing import Any, Dict, List, Optional
 
 import can
@@ -19,8 +17,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
-# Removed pydantic import, as models are now in core_daemon.models
 from rvc_decoder import decode_payload, load_config_data
 
 from core_daemon.config import (
@@ -30,8 +26,6 @@ from core_daemon.config import (
     get_fastapi_config,
     get_static_paths,
 )
-
-# Import metrics from the new metrics module
 from core_daemon.metrics import (
     CAN_TX_ENQUEUE_LATENCY,
     CAN_TX_ENQUEUE_TOTAL,
@@ -53,8 +47,6 @@ from core_daemon.metrics import (
     PGN_USAGE_COUNTER,
     SUCCESSFUL_DECODES,
 )
-
-# Import Pydantic models from core_daemon.models
 from core_daemon.models import (
     BulkLightControlResponse,
     ControlCommand,
@@ -63,17 +55,12 @@ from core_daemon.models import (
     SuggestedMapping,
     UnmappedEntryModel,
 )
-
-# Import WebSocket components
 from core_daemon.websocket import (
     WebSocketLogHandler,
     broadcast_to_clients,
     websocket_endpoint,
     websocket_logs_endpoint,
 )
-
-# Removed unused pathlib.Path import
-
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = configure_logger()
