@@ -56,7 +56,7 @@ Homepage   = "https://github.com/carpenike/rvc2api"
 Repository = "https://github.com/carpenike/rvc2api"
 
 [tool.poetry.scripts]
-rvc2api-daemon = "core_daemon.app:main" # Assumes main() in app.py runs the Uvicorn server
+rvc2api-daemon = "core_daemon.main:main" # Assumes main() in main.py runs the Uvicorn server
 rvc2api-console = "console_client.console:main" # Assumes main() in console.py runs the console client
 
 [tool.flake8]
