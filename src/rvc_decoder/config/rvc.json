@@ -4,463 +4,43 @@
   "spec_document": "http://www.rv-c.com/sites/rv-c.com/files/RV-C%20Specification%20Full%20Layer%2011-06-23_1.pdf",
   "messages": [
     {
-      "name": "DM_RV_9D",
-      "id": 419351197,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9D",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1 (Tables 3.2.5.1a & 3.2.5.1b)",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_94",
-      "id": 419351188,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x94",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1 (Tables 3.2.5.1a & 3.2.5.1b)",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1" },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3" },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5" },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7" },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1" },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2" },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3" },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6" },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_95",
-      "id": 419351189,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x95",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_96",
-      "id": 419351190,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x96",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_97",
-      "id": 419351191,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x97",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_98",
-      "id": 419351192,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x98",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_99",
-      "id": 419351193,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x99",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_9F",
+      "name": "DM_RV",
       "id": 419351199,
       "extended": true,
       "length": 8,
-      "source_address": "0x9F",
       "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
+      "pdf_reference": "Sec. 3.2.5.1 (DGN 1FECA)",
       "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
+        { "name": "operating_status",        "start_bit": 0,  "length": 2, "description": "00 = OK, 01 = Not Ready, 10 = Fault, 11 = Reserved" },
+        { "name": "operating_status_detail", "start_bit": 2,  "length": 2, "description": "Further status detail" },
+        { "name": "yellow_lamp_status",      "start_bit": 4,  "length": 2, "description": "Lamp behavior for minor fault" },
+        { "name": "red_lamp_status",         "start_bit": 6,  "length": 2, "description": "Lamp behavior for major fault" },
+        { "name": "DSA",                     "start_bit": 8,  "length": 8, "description": "Diagnostic Source Address" },
+        { "name": "SPN_MSB",                 "start_bit": 16, "length": 8 },
+        { "name": "SPN_ISB",                 "start_bit": 24, "length": 8 },
+        { "name": "SPN_LSB",                 "start_bit": 32, "length": 3 },
+        { "name": "FMI",                     "start_bit": 35, "length": 5, "description": "Failure Mode Identifier (reason for fault)" },
+        { "name": "occurrence_count",        "start_bit": 40, "length": 7 },
+        { "name": "reserved1",               "start_bit": 47, "length": 1 },
+        { "name": "DSA_extension",           "start_bit": 48, "length": 8 },
+        { "name": "bank_select",             "start_bit": 56, "length": 4 },
+        { "name": "reserved2",               "start_bit": 60, "length": 4 }
       ]
-    },
+    },    
     {
-      "name": "DM_RV_9F_reserved",
-      "id": 436128415,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9F",
-      "description": "Active Diagnostic Message (DM_RV) with reserved bit set",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1" },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3" },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5" },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7" },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1" },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2" },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3" },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6" },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_9B",
-      "id": 419351195,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9B",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_9C",
-      "id": 419351196,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9C",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_9A",
-      "id": 419351194,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9A",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_8E",
-      "id": 419351182,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x8E",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_8F",
-      "id": 419351183,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x8F",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_4F",
-      "id": 419210063,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x4F",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "DM_RV_AF",
-      "id": 419351215,
-      "extended": true,
-      "length": 8,
-      "source_address": "0xAF",
-      "description": "Active Diagnostic Message (DM_RV)",
-      "pdf_reference": "Sec. 3.2.5.1",
-      "signals": [
-        { "name": "operating_status",        "start_bit":   0, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–1"  },
-        { "name": "operating_status_detail", "start_bit":   2, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 2–3"  },
-        { "name": "yellow_lamp_status",      "start_bit":   4, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–5"  },
-        { "name": "red_lamp_status",         "start_bit":   6, "length": 2, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 6–7"  },
-        { "name": "DSA",                     "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 1"    },
-        { "name": "SPN_MSB",                 "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 2"    },
-        { "name": "SPN_ISB",                 "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 3"    },
-        { "name": "SPN_LSB",                 "start_bit":  32, "length": 3, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 5–7 of Byte 4" },
-        { "name": "FMI",                     "start_bit":  35, "length": 5, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–4 of Byte 4" },
-        { "name": "occurrence_count",        "start_bit":  40, "length": 7, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–6 of Byte 5" },
-        { "name": "reserved1",               "start_bit":  47, "length": 1, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bit 7 of Byte 5 (always 1)" },
-        { "name": "DSA_extension",           "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b Byte 6"    },
-        { "name": "bank_select",             "start_bit":  56, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 0–3 of Byte 7" },
-        { "name": "reserved2",               "start_bit":  60, "length": 4, "byte_order": "little_endian", "scale": 1, "offset": 0, "unit": null, "pdf_ref": "3.2.5.1b bits 4–7 of Byte 7" }
-      ]
-    },
-    {
-      "name": "PRODUCT_ID_96",
+      "name": "PRODUCT_ID",
       "id": 494861974,
       "extended": true,
-      "length": 8,
-      "source_address": "0x96",
-      "description": "Product Identification Message",
-      "pdf_reference": "Sec. 3.2.8",
-      "signals": [
-        { "name": "text", "start_bit": 0, "length": 64 }
-      ]
-    },
-    {
-      "name": "PRODUCT_ID_97",
-      "id": 494861975,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x97",
-      "description": "Product Identification Message",
-      "pdf_reference": "Sec. 3.2.8",
-      "signals": [
-        { "name": "text", "start_bit": 0, "length": 64 }
-      ]
-    },
-    {
-      "name": "PRODUCT_ID_98",
-      "id": 494861976,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x98",
-      "description": "Product Identification Message",
-      "pdf_reference": "Sec. 3.2.8",
-      "signals": [
-        { "name": "text", "start_bit": 0, "length": 64 }
-      ]
-    },
-    {
-      "name": "PRODUCT_ID_99",
-      "id": 494861977,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x99",
-      "description": "Product Identification Message",
-      "pdf_reference": "Sec. 3.2.8",
-      "signals": [
-        { "name": "text", "start_bit": 0, "length": 64 }
-      ]
-    },
-    {
-      "name": "PRODUCT_ID_8F",
-      "id": 417922959,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x8F",
-      "description": "Product Identification Message",
-      "pdf_reference": "Sec. 3.2.8",
-      "signals": [
-        { "name": "text", "start_bit": 0, "length": 64 }
+      "length": null,
+      "description": "Product Identification (multi-packet)",
+      "pdf_reference": "Sec. 3.2.8 (DGN 1FECA)",
+      "notes": "Multi-packet ASCII message with fields: Manufacturer, Product Code, Model Version, Serial Number",
+      "transport_protocol": "BAM",
+      "fields": [
+        "manufacturer_name",
+        "product_code",
+        "model_version",
+        "serial_number"
       ]
     },
     {
@@ -673,6 +253,71 @@
       ]
     },
     {
+      "name": "FLOOR_HEAT_STATUS",
+      "id": 419363999,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9F",
+      "description": "Floor Heat Status",
+      "pdf_reference": "Sec. 6.36.2 (DGN 1FEFC)",
+      "signals": [
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Unique ID for each floor heat unit (not tied to thermostat zones)"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 2,
+          "description": "00 = Automatic, 01 = Manual"
+        },
+        {
+          "name": "operating_status",
+          "start_bit": 10,
+          "length": 2,
+          "description": "00 = Off, 01 = On"
+        },
+        {
+          "name": "heat_element_status",
+          "start_bit": 12,
+          "length": 2,
+          "description": "00 = Off, 01 = On"
+        },
+        {
+          "name": "schedule_mode",
+          "start_bit": 14,
+          "length": 2,
+          "description": "00 = Disabled, 01 = Enabled (use programmed schedule)"
+        },
+        {
+          "name": "measured_temperature",
+          "start_bit": 16,
+          "length": 16,
+          "unit": "°C",
+          "byte_order": "little_endian",
+          "description": "Measured temperature from the floor heat sensor"
+        },
+        {
+          "name": "set_point",
+          "start_bit": 32,
+          "length": 16,
+          "unit": "°C",
+          "byte_order": "little_endian",
+          "description": "Desired floor heat temperature"
+        },
+        {
+          "name": "dead_band",
+          "start_bit": 48,
+          "length": 8,
+          "unit": "°C",
+          "scale": 0.1,
+          "description": "Allowed temperature deviation before system turns off/on (0.0–25.0°C)"
+        }
+      ]
+    },
+    {
       "name": "ATS_COMMAND",
       "id": 436185501,
       "extended": true,
@@ -860,30 +505,155 @@
       ]
     },
     {
+      "name": "WATERHEATER_COMMAND_2",
+      "id": 436115613,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9D",
+      "description": "Water Heater Command 2",
+      "pdf_reference": "Sec. 6.9.5 (DGN 1FE98h)",
+      "signals": [
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Water heater instance number (0 = all)"
+        },
+        {
+          "name": "engine_preheat",
+          "start_bit": 8,
+          "length": 4,
+          "description": "0000 = Off, 0001 = On, 0101 = Test (Forced On)"
+        },
+        {
+          "name": "command",
+          "start_bit": 16,
+          "length": 8,
+          "description": "0 = Electric Low Enable, 1 = Disable, 2 = Toggle, 3 = Electric High Enable, 4 = Disable, 5 = Toggle, 6 = Burner Enable, 7 = Disable, 8 = Toggle, 9–13 = Cycle/Test Modes"
+        },
+        {
+          "name": "preheat_time",
+          "start_bit": 24,
+          "length": 16,
+          "unit": "s",
+          "byte_order": "little_endian",
+          "description": "Duration of engine preheat in seconds"
+        },
+        {
+          "name": "lockout_time",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "s",
+          "byte_order": "little_endian",
+          "description": "Duration in seconds before the heater can retry after a failure"
+        }
+      ]
+    },
+    {
       "name": "WATERHEATER_STATUS_2",
       "id": 436115865,
       "extended": true,
       "length": 8,
       "source_address": "0x99",
       "description": "Water Heater Status",
-      "pdf_reference": "Sec. 6.9",
+      "pdf_reference": "Sec. 6.9.4 (DGN 1FE99h)",
       "signals": [
-        { "name": "instance",                   "start_bit": 0,  "length": 8 },
-        { "name": "electric_element_level",     "start_bit": 8,  "length": 4 },
-        { "name": "max_electric_element_level", "start_bit": 12, "length": 4 },
-        { "name": "engine_preheat",             "start_bit": 16, "length": 4 },
-        { "name": "coolant_level_warning",      "start_bit": 20, "length": 2 },
-        { "name": "hot_water_priority",         "start_bit": 22, "length": 2 },
-        { "name": "burner_status",              "start_bit": 24, "length": 2 },
-        { "name": "burner_indicator",           "start_bit": 26, "length": 2 },
-        { "name": "electric_low_overcurrent",   "start_bit": 32, "length": 2 },
-        { "name": "electric_low_undercurrent",  "start_bit": 34, "length": 2 },
-        { "name": "electric_low_temperature",   "start_bit": 36, "length": 2 },
-        { "name": "electric_low_input_status",  "start_bit": 38, "length": 2 },
-        { "name": "electric_high_overcurrent",  "start_bit": 40, "length": 2 },
-        { "name": "electric_high_undercurrent", "start_bit": 42, "length": 2 },
-        { "name": "electric_high_temperature",  "start_bit": 44, "length": 2 },
-        { "name": "electric_high_input_status", "start_bit": 46, "length": 2 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Water heater instance number (0 = all)"
+        },
+        {
+          "name": "electric_element_level",
+          "start_bit": 8,
+          "length": 4,
+          "description": "Desired electric element level (1–13)"
+        },
+        {
+          "name": "max_electric_element_level",
+          "start_bit": 12,
+          "length": 4,
+          "description": "Maximum available electric element level (typically 1 or 2)"
+        },
+        {
+          "name": "engine_preheat",
+          "start_bit": 16,
+          "length": 4,
+          "description": "0000 = Off, 0001 = On, 0101 = Test (Forced On)"
+        },
+        {
+          "name": "coolant_level_warning",
+          "start_bit": 20,
+          "length": 2,
+          "description": "00 = Coolant OK, 01 = Low coolant level"
+        },
+        {
+          "name": "hot_water_priority",
+          "start_bit": 22,
+          "length": 2,
+          "description": "00 = Domestic water priority, 01 = Heating priority"
+        },
+        {
+          "name": "burner_status",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = Burner off, 01 = Burner on"
+        },
+        {
+          "name": "burner_indicator",
+          "start_bit": 26,
+          "length": 2,
+          "description": "00 = Off, 01 = On (indicator)"
+        },
+        {
+          "name": "electric_low_overcurrent",
+          "start_bit": 32,
+          "length": 2,
+          "description": "00 = No overcurrent, 01 = Overcurrent on electric low element"
+        },
+        {
+          "name": "electric_low_undercurrent",
+          "start_bit": 34,
+          "length": 2,
+          "description": "00 = No undercurrent, 01 = Undercurrent on electric low element"
+        },
+        {
+          "name": "electric_low_temperature",
+          "start_bit": 36,
+          "length": 2,
+          "description": "00 = Normal temp, 01 = Temp warning on electric low element"
+        },
+        {
+          "name": "electric_low_input_status",
+          "start_bit": 38,
+          "length": 2,
+          "description": "00 = Inactive, 01 = Active (input present) for electric low"
+        },
+        {
+          "name": "electric_high_overcurrent",
+          "start_bit": 40,
+          "length": 2,
+          "description": "00 = No overcurrent, 01 = Overcurrent on electric high element"
+        },
+        {
+          "name": "electric_high_undercurrent",
+          "start_bit": 42,
+          "length": 2,
+          "description": "00 = No undercurrent, 01 = Undercurrent on electric high element"
+        },
+        {
+          "name": "electric_high_temperature",
+          "start_bit": 44,
+          "length": 2,
+          "description": "00 = Normal temp, 01 = Temp warning on electric high element"
+        },
+        {
+          "name": "electric_high_input_status",
+          "start_bit": 46,
+          "length": 2,
+          "description": "00 = Inactive, 01 = Active (input present) for electric high"
+        }
       ]
     },
     {
@@ -893,13 +663,38 @@
       "length": 8,
       "source_address": "0x99",
       "description": "Circulation Pump Status",
-      "pdf_reference": "Sec. 6.29",
+      "pdf_reference": "Sec. 6.9.6 (DGN 1FE97h)",
       "signals": [
-        { "name": "instance",                "start_bit": 0,  "length": 8 },
-        { "name": "output_status",           "start_bit": 8,  "length": 4 },
-        { "name": "pump_overcurrent_status", "start_bit": 16, "length": 2 },
-        { "name": "pump_undercurrent_status","start_bit": 18, "length": 2 },
-        { "name": "pump_temperature_status", "start_bit": 20, "length": 2 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Pump instance number (0 = all, 1–250 = valid instances)"
+        },
+        {
+          "name": "output_status",
+          "start_bit": 8,
+          "length": 4,
+          "description": "0000 = Off, 0001 = On, 0101 = Test (Forced On)"
+        },
+        {
+          "name": "pump_overcurrent_status",
+          "start_bit": 16,
+          "length": 2,
+          "description": "00 = No overcurrent, 01 = Overcurrent detected"
+        },
+        {
+          "name": "pump_undercurrent_status",
+          "start_bit": 18,
+          "length": 2,
+          "description": "00 = No undercurrent, 01 = Undercurrent detected"
+        },
+        {
+          "name": "pump_temperature_status",
+          "start_bit": 20,
+          "length": 2,
+          "description": "00 = Temperature normal, 01 = Temperature warning"
+        }
       ]
     },
     {
@@ -932,15 +727,51 @@
       "length": 8,
       "source_address": "0x8E",
       "description": "DC Dimmer Status 3",
-      "pdf_reference": "Sec. 6.24",
+      "pdf_reference": "Sec. 6.24.4 (DGN 1FEDA)",
       "signals": [
-        { "name": "instance",         "start_bit": 0,  "length": 8 },
-        { "name": "group",            "start_bit": 8,  "length": 8 },
-        { "name": "operating_status", "start_bit": 16, "length": 8 },
-        { "name": "lock_status",      "start_bit": 24, "length": 2 },
-        { "name": "overcurrent_status","start_bit": 26,"length": 2 },
-        { "name": "override_status",  "start_bit": 28, "length": 2 },
-        { "name": "enable_status",    "start_bit": 30, "length": 2 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Dimmer instance number (1–250 valid, 0 = invalid)"
+        },
+        {
+          "name": "group",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Group bitmap (bits 0–6 = groups 1–7, 255 = no data, 0 = all groups)"
+        },
+        {
+          "name": "operating_status",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "Current output brightness level. Special values: 251 = ramping, 252 = flashing"
+        },
+        {
+          "name": "lock_status",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = Unlocked, 01 = Locked, 11 = Lock unsupported"
+        },
+        {
+          "name": "overcurrent_status",
+          "start_bit": 26,
+          "length": 2,
+          "description": "00 = No overcurrent, 01 = Overcurrent, 11 = Unknown/unsupported"
+        },
+        {
+          "name": "override_status",
+          "start_bit": 28,
+          "length": 2,
+          "description": "00 = No external override, 01 = Override active, 11 = Unknown/unsupported"
+        },
+        {
+          "name": "enable_status",
+          "start_bit": 30,
+          "length": 2,
+          "description": "00 = Enabled, 01 = Disabled, 11 = Unknown/unsupported"
+        }
       ]
     },
     {
@@ -979,69 +810,109 @@
       ]
     },
     {
-      "name": "DC_DIMMER_COMMAND_2_9A",
-      "id": 436132762,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9A",
-      "description": "DC Dimmer Command 2",
-      "pdf_reference": "Sec. 6.24.6",
-      "signals": [
-        { "name": "instance",     "start_bit":   0, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.24.6 Byte 0" },
-        { "name": "dimming_level","start_bit":   8, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit":"%",  "pdf_ref": "6.24.6 Byte 1" }
-      ]
-    },
-    {
-      "name": "DC_DIMMER_COMMAND_2_9D",
+      "name": "DC_DIMMER_COMMAND_2",
       "id": 436132045,
       "extended": true,
       "length": 8,
       "source_address": "0x9D",
       "description": "DC Dimmer Command 2",
-      "pdf_reference": "Sec. 6.24.6",
+      "pdf_reference": "Sec. 6.24.6 (DGN 1FEDD)",
       "signals": [
-        { "name": "instance",      "start_bit": 0,  "length": 8 },
-        { "name": "group",         "start_bit": 8,  "length": 8 },
-        { "name": "desired_level", "start_bit": 16, "length": 8,  "unit": "%" },
-        { "name": "command",       "start_bit": 24, "length": 8 },
-        { "name": "delay_duration","start_bit": 32, "length": 8,  "unit": "s" },
-        { "name": "interlock",     "start_bit": 40, "length": 2 },
-        { "name": "ramp_time",     "start_bit": 48, "length": 8,  "scale": 0.1, "unit": "s" },
-        { "name": "reserved",      "start_bit": 56, "length": 8 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Dimmer instance number (0 = all, 1–250 valid)"
+        },
+        {
+          "name": "group",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Target group (bitmask 0–127), 0 = all, 255 = ignore group"
+        },
+        {
+          "name": "desired_level",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "Target brightness level (0–100%); special: 254 = flash, 255 = ignore"
+        },
+        {
+          "name": "command",
+          "start_bit": 24,
+          "length": 8,
+          "description": "0 = Set level, 1 = Toggle, 2 = Flash, 3 = Fade up/down, 255 = Ignore"
+        },
+        {
+          "name": "delay_duration",
+          "start_bit": 32,
+          "length": 8,
+          "unit": "s",
+          "description": "Delay before applying command (0–255 s)"
+        },
+        {
+          "name": "interlock",
+          "start_bit": 40,
+          "length": 2,
+          "description": "00 = No change, 01 = Interlock off, 10 = Interlock on"
+        },
+        {
+          "name": "ramp_time",
+          "start_bit": 48,
+          "length": 8,
+          "scale": 0.1,
+          "unit": "s",
+          "description": "Fade/ramp time in 0.1s units (0–25.5 s)"
+        },
+        {
+          "name": "reserved",
+          "start_bit": 56,
+          "length": 8,
+          "description": "Reserved (set to 255)"
+        }
       ]
     },
     {
-      "name": "DC_DIMMER_STATUS_3_8F",
-      "id": 436132495,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x8F",
-      "description": "DC Dimmer Status 3",
-      "pdf_reference": "Sec. 6.24.4",
-      "signals": [
-        { "name": "instance",             "start_bit": 0,  "length": 8 },
-        { "name": "group",                "start_bit": 8,  "length": 8 },
-        { "name": "operating_status",     "start_bit": 16, "length": 8 },
-        { "name": "lock_status",          "start_bit": 24, "length": 2 },
-        { "name": "overcurrent_status",   "start_bit": 26, "length": 2 },
-        { "name": "override_status",      "start_bit": 28, "length": 2 },
-        { "name": "enable_status",        "start_bit": 30, "length": 2 }
-      ]
-    },
-    {
-      "name": "TANK_STATUS_AF",
+      "name": "TANK_STATUS",
       "id": 436189103,
       "extended": true,
       "length": 8,
       "source_address": "0xAF",
       "description": "Tank Status",
-      "pdf_reference": "Sec. 6.28.2 (Table 6.28.2b)",
+      "pdf_reference": "Sec. 6.28.2 (DGN 1FFB7h)",
       "signals": [
-        { "name": "instance",        "start_bit": 0,  "length": 8,  "scale": 1, "offset": 0, "unit": null },
-        { "name": "relative_level",  "start_bit": 8,  "length": 8,  "scale": 1, "offset": 0, "unit": null },
-        { "name": "resolution",      "start_bit": 16, "length": 8,  "scale": 1, "offset": 0, "unit": null },
-        { "name": "absolute_level",  "start_bit": 24, "length": 16, "scale": 1, "offset": 0, "unit": "L"   },
-        { "name": "tank_size",       "start_bit": 40, "length": 16, "scale": 1, "offset": 0, "unit": "L"   }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "0 = Fresh water, 1 = Black waste, 2 = Gray waste, 3 = LPG, 16+ = Secondary tanks"
+        },
+        {
+          "name": "relative_level",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Tank level as a fraction of full (divide by resolution)"
+        },
+        {
+          "name": "resolution",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Level resolution divisor (e.g. 2 = halves, 4 = quarters)"
+        },
+        {
+          "name": "absolute_level",
+          "start_bit": 24,
+          "length": 16,
+          "unit": "L",
+          "description": "Actual liquid volume in liters (0–65530)"
+        },
+        {
+          "name": "tank_size",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "L",
+          "description": "Total tank capacity in liters (0–65530)"
+        }
       ]
     },
     {
@@ -1089,15 +960,58 @@
       "length": 8,
       "source_address": "0x9D",
       "description": "AC Load Command",
-      "pdf_reference": "Sec. 6.22.4 (Tables 6.22.4a & 6.22.4b)",
+      "pdf_reference": "Sec. 6.22.4 (DGN 1FFBEh)",
       "signals": [
-        { "name": "instance",                "start_bit":   0, "length": 8, "scale": 1, "offset": 0, "unit": null },
-        { "name": "group",                   "start_bit":   8, "length": 8, "scale": 1, "offset": 0, "unit": null },
-        { "name": "desired_level",           "start_bit":  16, "length": 8, "scale": 1, "offset": 0, "unit": "%"  },
-        { "name": "desired_operating_mode",  "start_bit":  24, "length": 2, "scale": 1, "offset": 0, "unit": null },
-        { "name": "delay",                   "start_bit":  32, "length": 8, "scale": 1, "offset": 0, "unit": "s"  },
-        { "name": "demanded_current",        "start_bit":  40, "length": 8, "scale": 1, "offset": 0, "unit": "A"  },
-        { "name": "present_current",         "start_bit":  48, "length":16, "scale": 1, "offset": 0, "unit": "A"  }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Load instance number (0 = all, 1–250 valid)"
+        },
+        {
+          "name": "group",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Group bitmap: bits 0–6 for groups 1–7; 0 = all groups; 255 = non-group command"
+        },
+        {
+          "name": "desired_level",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "Output level (0–100%). Special values: 250 = Toggle, 251 = Master Memory, 253 = Fault Off, 254 = Error"
+        },
+        {
+          "name": "desired_operating_mode",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = Automatic, 01 = Manual (not shed/added automatically)"
+        },
+        {
+          "name": "interlock",
+          "start_bit": 26,
+          "length": 2,
+          "description": "00 = None, 01 = Interlock A, 10 = Interlock B"
+        },
+        {
+          "name": "priority",
+          "start_bit": 28,
+          "length": 4,
+          "description": "0000 = Highest, 1101 = Lowest, 1110 = Error, 1111 = No data"
+        },
+        {
+          "name": "command",
+          "start_bit": 32,
+          "length": 8,
+          "description": "See Table 6.22.4c. Examples: 0 = Set Level, 1 = On, 2 = On (delay), 3 = Off (delay), 31 = Flash"
+        },
+        {
+          "name": "delay_or_duration",
+          "start_bit": 40,
+          "length": 8,
+          "unit": "s",
+          "description": "Delay before command or duration of temporary command. 0 = momentary, 255 = continuous. 241–250 = 5–14 min"
+        }
       ]
     },
     {
@@ -1107,15 +1021,119 @@
       "length": 8,
       "source_address": "0x9D",
       "description": "AC Load Status",
-      "pdf_reference": "Sec. 6.22.2 (Table 6.22.2)",
+      "pdf_reference": "Sec. 6.22.2 (DGN 1FFBFh)",
       "signals": [
-        { "name": "instance",         "start_bit":   0, "length": 8, "scale": 1, "offset": 0, "unit": null },
-        { "name": "group",            "start_bit":   8, "length": 8, "scale": 1, "offset": 0, "unit": null },
-        { "name": "operating_status", "start_bit":  16, "length": 8, "scale": 1, "offset": 0, "unit": "%"  },
-        { "name": "interlock_status", "start_bit":  24, "length": 2, "scale": 1, "offset": 0, "unit": null },
-        { "name": "delay",            "start_bit":  32, "length": 8, "scale": 1, "offset": 0, "unit": "s"  },
-        { "name": "demanded_current", "start_bit":  40, "length": 8, "scale": 1, "offset": 0, "unit": "A"  },
-        { "name": "present_current",  "start_bit":  48, "length":16, "scale": 1, "offset": 0, "unit": "A"  }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Load instance number (1–250 valid, 0 = invalid)"
+        },
+        {
+          "name": "group",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Group bitmap (bits 0–6 = groups 1–7, 0 = all, 255 = no data)"
+        },
+        {
+          "name": "operating_status",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "Output level (0–100%). Special: 252 = Load delay active"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = Automatic, 01 = Manual (status only changes via command)"
+        },
+        {
+          "name": "variable_level_capability",
+          "start_bit": 26,
+          "length": 2,
+          "description": "00 = Not dimmable, 01 = Dimmable"
+        },
+        {
+          "name": "priority",
+          "start_bit": 28,
+          "length": 4,
+          "description": "0000 = Highest, 1101 = Lowest, 1110 = Error, 1111 = No data"
+        },
+        {
+          "name": "delay",
+          "start_bit": 32,
+          "length": 8,
+          "unit": "s",
+          "description": "Delay before load becomes active after command. 0–240s or 241–250 for 5–14 min"
+        },
+        {
+          "name": "demanded_current",
+          "start_bit": 40,
+          "length": 8,
+          "unit": "A",
+          "description": "Expected current draw of this load"
+        },
+        {
+          "name": "present_current",
+          "start_bit": 48,
+          "length": 16,
+          "unit": "A",
+          "description": "Measured current being used by this load"
+        }
+      ]
+    },
+    {
+      "name": "AC_LOAD_STATUS_2",
+      "id": 419369565,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9D",
+      "description": "AC Load Status 2",
+      "pdf_reference": "Sec. 6.22.3 (DGN 1FFC0)",
+      "signals": [
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Load instance number (1–250 valid, 0 = invalid)"
+        },
+        {
+          "name": "lock_status",
+          "start_bit": 8,
+          "length": 2,
+          "description": "00 = Unlocked, 01 = Locked, 11 = Lock not supported"
+        },
+        {
+          "name": "overcurrent_status",
+          "start_bit": 10,
+          "length": 2,
+          "description": "00 = Normal, 01 = Overcurrent, 11 = Not supported"
+        },
+        {
+          "name": "override_status",
+          "start_bit": 12,
+          "length": 2,
+          "description": "00 = No override, 01 = Override active, 11 = Not supported"
+        },
+        {
+          "name": "enable_status",
+          "start_bit": 14,
+          "length": 2,
+          "description": "00 = Enabled, 01 = Disabled, 11 = Not supported"
+        },
+        {
+          "name": "last_command",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Most recent command issued to this load (see AC_LOAD_COMMAND)"
+        },
+        {
+          "name": "interlock_status",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = No interlock active, 01 = Interlock active, 11 = Not supported"
+        }
       ]
     },
     {
@@ -1159,163 +1177,119 @@
       ]
     },
     {
-      "name": "DATE_TIME_STATUS_96",
+      "name": "DATE_TIME_STATUS",
       "id": 495778870,
       "extended": true,
       "length": 8,
-      "source_address": "0x96",
       "description": "System Date and Time Status",
-      "pdf_reference": "Sec. 6.4.2",
+      "pdf_reference": "Sec. 6.4.2 (DGN 1FEDAh)",
       "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
+        {
+          "name": "year",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Year offset from 2000 (e.g. 24 = 2024)"
+        },
+        {
+          "name": "month",
+          "start_bit": 8,
+          "length": 8,
+          "description": "1 = January, 12 = December"
+        },
+        {
+          "name": "day_of_month",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Day of month (1–31)"
+        },
+        {
+          "name": "day_of_week",
+          "start_bit": 24,
+          "length": 8,
+          "description": "0 = Sunday, 6 = Saturday"
+        },
+        {
+          "name": "hour",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Hour in 24-hour format (0–23)"
+        },
+        {
+          "name": "minute",
+          "start_bit": 40,
+          "length": 8,
+          "description": "Minutes past the hour (0–59)"
+        },
+        {
+          "name": "second",
+          "start_bit": 48,
+          "length": 8,
+          "description": "Seconds past the minute (0–59)"
+        },
+        {
+          "name": "time_zone",
+          "start_bit": 56,
+          "length": 8,
+          "description": "Time zone offset from UTC in 15-minute increments (e.g. -4 hours = -16)"
+        }
       ]
     },
     {
-      "name": "DATE_TIME_STATUS_97",
-      "id": 495778871,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x97",
-      "description": "System Date and Time Status",
-      "pdf_reference": "Sec. 6.4.2",
-      "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "DATE_TIME_STATUS_98",
-      "id": 495778872,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x98",
-      "description": "System Date and Time Status",
-      "pdf_reference": "Sec. 6.4.2",
-      "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "DATE_TIME_STATUS_99",
-      "id": 495778873,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x99",
-      "description": "System Date and Time Status",
-      "pdf_reference": "Sec. 6.4.2",
-      "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "DATE_TIME_STATUS_9A",
-      "id": 495778874,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9A",
-      "description": "System Date and Time Status",
-      "pdf_reference": "Sec. 6.4.2",
-      "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "SET_DATE_TIME_COMMAND_98",
+      "name": "SET_DATE_TIME_COMMAND",
       "id": 502480264,
       "extended": true,
       "length": 8,
-      "source_address": "0x98",
       "description": "Set System Date and Time Command",
-      "pdf_reference": "Sec. 6.4.3",
+      "pdf_reference": "Sec. 6.4.3 (DGN 1FEE8)",
       "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "SET_DATE_TIME_COMMAND_9A",
-      "id": 502480266,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9A",
-      "description": "Set System Date and Time Command",
-      "pdf_reference": "Sec. 6.4.3",
-      "signals": [
-        { "name": "year",        "start_bit":   0, "length": 8 },
-        { "name": "month",       "start_bit":   8, "length": 8 },
-        { "name": "day_of_month","start_bit":  16, "length": 8 },
-        { "name": "day_of_week", "start_bit":  24, "length": 8 },
-        { "name": "hour",        "start_bit":  32, "length": 8 },
-        { "name": "minute",      "start_bit":  40, "length": 8 },
-        { "name": "second",      "start_bit":  48, "length": 8 },
-        { "name": "time_zone",   "start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "WATERHEATER_STATUS_99",
-      "id": 434292105,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x99",
-      "description": "Water Heater Status",
-      "pdf_reference": "Sec. 6.9.2",
-      "signals": [
-        { "name": "instance",                   "start_bit":   0, "length": 8 },
-        { "name": "electric_element_level",     "start_bit":   8, "length": 4 },
-        { "name": "max_electric_element_level", "start_bit":  12, "length": 4 },
-        { "name": "engine_preheat",             "start_bit":  16, "length": 4 },
-        { "name": "coolant_level_warning",      "start_bit":  20, "length": 2 },
-        { "name": "hot_water_priority",         "start_bit":  22, "length": 2 },
-        { "name": "burner_status",              "start_bit":  24, "length": 2 },
-        { "name": "burner_indicator",           "start_bit":  26, "length": 2 },
-        { "name": "electric_low_overcurrent",   "start_bit":  32, "length": 2 },
-        { "name": "electric_low_undercurrent",  "start_bit":  34, "length": 2 },
-        { "name": "electric_low_temperature",   "start_bit":  36, "length": 2 },
-        { "name": "electric_low_input_status",  "start_bit":  38, "length": 2 },
-        { "name": "electric_high_overcurrent",  "start_bit":  40, "length": 2 },
-        { "name": "electric_high_undercurrent", "start_bit":  42, "length": 2 },
-        { "name": "electric_high_temperature",  "start_bit":  44, "length": 2 },
-        { "name": "electric_high_input_status", "start_bit":  46, "length": 2 }
+        {
+          "name": "year",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Year offset from 2000 (e.g., 24 = 2024)"
+        },
+        {
+          "name": "month",
+          "start_bit": 8,
+          "length": 8,
+          "description": "1 = January, 12 = December"
+        },
+        {
+          "name": "day_of_month",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Day of month (1–31)"
+        },
+        {
+          "name": "day_of_week",
+          "start_bit": 24,
+          "length": 8,
+          "description": "0 = Sunday, 6 = Saturday"
+        },
+        {
+          "name": "hour",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Hour in 24-hour format (0–23)"
+        },
+        {
+          "name": "minute",
+          "start_bit": 40,
+          "length": 8,
+          "description": "Minutes past the hour (0–59)"
+        },
+        {
+          "name": "second",
+          "start_bit": 48,
+          "length": 8,
+          "description": "Seconds past the minute (0–59)"
+        },
+        {
+          "name": "time_zone",
+          "start_bit": 56,
+          "length": 8,
+          "description": "Time zone offset from UTC in 15-minute increments (e.g. -4 hours = -16)"
+        }
       ]
     },
     {
@@ -1338,33 +1312,49 @@
       "length": 8,
       "source_address": "0x9D",
       "description": "DC Source Status 2",
-      "pdf_reference": "Sec. 6.5.3",
+      "pdf_reference": "Sec. 6.5.3 (DGN 1FFFC)",
       "signals": [
-        { "name": "dc_instance",        "start_bit":   0, "length": 8 },
-        { "name": "device_priority",    "start_bit":   8, "length": 8 },
-        { "name": "source_temperature", "start_bit":  16, "length":16, "byte_order": "little_endian" },
-        { "name": "state_of_charge",    "start_bit":  32, "length": 8 },
-        { "name": "time_remaining",     "start_bit":  40, "length":16, "byte_order": "little_endian" },
-        { "name": "time_remaining_flag","start_bit":  56, "length": 2 }
-      ]
-    },
-    {
-      "name": "WATERHEATER_COMMAND_2",
-      "id": 436115613,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9D",
-      "description": "Water Heater Command 2",
-      "pdf_reference": "Sec. 6.9.5 (Tables 6.9.5a & 6.9.5b)",
-      "signals": [
-        { "name": "instance",               "start_bit": 0,  "length": 8 },
-        { "name": "operating_modes",        "start_bit": 8,  "length": 8 },
-        { "name": "electric_element_enable","start_bit": 16, "length": 2 },
-        { "name": "igniter_enable",         "start_bit": 18, "length": 2 },
-        { "name": "pump_enable",            "start_bit": 20, "length": 2 },
-        { "name": "fuel_valve_enable",      "start_bit": 22, "length": 2 },
-        { "name": "preheat_time",           "start_bit": 24, "length": 16, "unit": "s", "byte_order": "little_endian" },
-        { "name": "lockout_time",           "start_bit": 40, "length": 16, "unit": "s", "byte_order": "little_endian" }
+        {
+          "name": "dc_instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "DC source instance (same meaning as in DC_SOURCE_STATUS_1)"
+        },
+        {
+          "name": "device_priority",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Device priority. 120 = SOC/BMS, 100 = Inverter/Charger, 80 = Charger, 60 = Inverter, etc."
+        },
+        {
+          "name": "source_temperature",
+          "start_bit": 16,
+          "length": 16,
+          "unit": "°C",
+          "byte_order": "little_endian",
+          "description": "Temperature of the source (battery, etc.)"
+        },
+        {
+          "name": "state_of_charge",
+          "start_bit": 32,
+          "length": 8,
+          "unit": "%",
+          "description": "Current state of charge (SOC) of the source"
+        },
+        {
+          "name": "time_remaining",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "min",
+          "byte_order": "little_endian",
+          "description": "Estimated time to empty or full, depending on interpretation"
+        },
+        {
+          "name": "time_remaining_flag",
+          "start_bit": 56,
+          "length": 2,
+          "description": "00 = Time to Empty, 01 = Time to Full, 11 = Unspecified (default to Time to Empty)"
+        }
       ]
     },
     {
@@ -1387,14 +1377,48 @@
       "length": 8,
       "source_address": "0x9D",
       "description": "Thermostat Ambient Status",
-      "pdf_reference": "Sec. 6.16.11",
+      "pdf_reference": "Sec. 6.16.11 (DGN 1FF9Ch)",
       "signals": [
-        { "name": "instance",                "start_bit": 0,  "length": 8 },
-        { "name": "coolant_low_limit",       "start_bit": 8,  "length": 6,  "scale": 1, "unit": "°C" },
-        { "name": "coolant_high_limit",      "start_bit": 16, "length": 6,  "scale": 1, "unit": "°C" },
-        { "name": "control_mode",            "start_bit": 24, "length": 8 },
-        { "name": "status_flags",            "start_bit": 32, "length": 8 },
-        { "name": "ambient_temperature",     "start_bit": 40, "length": 16, "scale": 1, "unit": "°C", "byte_order": "little_endian" }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat instance (typically used as zone number)"
+        },
+        {
+          "name": "coolant_low_limit",
+          "start_bit": 8,
+          "length": 6,
+          "unit": "°C",
+          "description": "Low temperature threshold to trigger heating behavior"
+        },
+        {
+          "name": "coolant_high_limit",
+          "start_bit": 16,
+          "length": 6,
+          "unit": "°C",
+          "description": "High temperature threshold to trigger cooling behavior"
+        },
+        {
+          "name": "control_mode",
+          "start_bit": 24,
+          "length": 8,
+          "description": "Control strategy or operational override (implementation-specific)"
+        },
+        {
+          "name": "status_flags",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Bitfield representing override, error, or status conditions"
+        },
+        {
+          "name": "ambient_temperature",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "°C",
+          "byte_order": "little_endian",
+          "description": "Current ambient temperature reading"
+        }
       ]
     },
     {
@@ -1403,13 +1427,13 @@
       "extended": true,
       "length": 8,
       "description": "Generator Control Command",
-      "pdf_reference": "Sec. 6.18.21",
+      "pdf_reference": "Sec. 6.18.21 (DGN 1FFDA)",
       "signals": [
         {
           "name": "instance",
           "start_bit": 0,
           "length": 8,
-          "description": "Instance ID for the generator device"
+          "description": "Generator instance number (0 = all)"
         },
         {
           "name": "command",
@@ -1428,10 +1452,38 @@
       "description": "Generator Status 1",
       "pdf_reference": "Sec. 6.18.23",
       "signals": [
-        { "name": "status",                  "start_bit": 0,  "length": 8 },
-        { "name": "engine_run_time",         "start_bit": 8,  "length": 32, "scale": 1, "unit": "min", "byte_order": "little_endian" },
-        { "name": "engine_load",             "start_bit": 40, "length": 8,  "scale": 1, "unit": "%"   },
-        { "name": "start_battery_voltage",   "start_bit": 48, "length": 16, "scale": 1, "unit": "Vdc", "byte_order": "little_endian" }
+        {
+          "name": "status",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Bitfield: generator running, faults, etc. (vendor-specific details)"
+        },
+        {
+          "name": "engine_run_time",
+          "start_bit": 8,
+          "length": 32,
+          "scale": 1,
+          "unit": "min",
+          "byte_order": "little_endian",
+          "description": "Total generator runtime in minutes"
+        },
+        {
+          "name": "engine_load",
+          "start_bit": 40,
+          "length": 8,
+          "scale": 1,
+          "unit": "%",
+          "description": "Current engine load"
+        },
+        {
+          "name": "start_battery_voltage",
+          "start_bit": 48,
+          "length": 16,
+          "scale": 1,
+          "unit": "Vdc",
+          "byte_order": "little_endian",
+          "description": "Voltage of the generator's start battery"
+        }
       ]
     },
     {
@@ -1442,10 +1494,38 @@
       "description": "Generator Status 2",
       "pdf_reference": "Sec. 6.18.24",
       "signals": [
-        { "name": "engine_rpm",        "start_bit": 0,  "length": 16, "scale": 0.125, "unit": "RPM", "byte_order": "little_endian" },
-        { "name": "coolant_temp",      "start_bit": 16, "length": 8,  "scale": 1,     "unit": "°C" },
-        { "name": "fuel_rate",         "start_bit": 24, "length": 16, "scale": 0.1,   "unit": "L/h", "byte_order": "little_endian" },
-        { "name": "shutdown_flags",    "start_bit": 40, "length": 8 }
+        {
+          "name": "engine_rpm",
+          "start_bit": 0,
+          "length": 16,
+          "scale": 0.125,
+          "unit": "RPM",
+          "byte_order": "little_endian",
+          "description": "Current engine speed"
+        },
+        {
+          "name": "coolant_temp",
+          "start_bit": 16,
+          "length": 8,
+          "scale": 1,
+          "unit": "°C",
+          "description": "Coolant temperature"
+        },
+        {
+          "name": "fuel_rate",
+          "start_bit": 24,
+          "length": 16,
+          "scale": 0.1,
+          "unit": "L/h",
+          "byte_order": "little_endian",
+          "description": "Fuel consumption rate"
+        },
+        {
+          "name": "shutdown_flags",
+          "start_bit": 40,
+          "length": 8,
+          "description": "Bitfield: indicates reason for shutdown or faults"
+        }
       ]
     },
     {
@@ -1454,13 +1534,13 @@
       "extended": true,
       "length": 8,
       "description": "Generator Demand Command",
-      "pdf_reference": "Sec. 6.18.18",
+      "pdf_reference": "Sec. 6.18.18 (DGN 1FEFF)",
       "signals": [
         {
           "name": "instance",
           "start_bit": 0,
           "length": 8,
-          "description": "Instance ID for the generator device"
+          "description": "Generator instance (0 = all)"
         },
         {
           "name": "demand",
@@ -1477,9 +1557,15 @@
       "length": 8,
       "source_address": "0x9A",
       "description": "Firmware Version",
-      "pdf_reference": "Sec. 6.46.3",
+      "pdf_reference": "Sec. 6.46.3 (DGN 1FF8A)",
       "signals": [
-        { "name": "version",                 "start_bit": 0,  "length": 64, "byte_order": "little_endian" }
+        {
+          "name": "version",
+          "start_bit": 0,
+          "length": 64,
+          "byte_order": "little_endian",
+          "description": "ASCII firmware version string. If shorter than 8 bytes, remaining bytes should be 0xFF."
+        }
       ]
     },
     {
@@ -1501,303 +1587,293 @@
       ]
     },
     {
+      "name": "THERMOSTAT_COMMAND_1",
+      "id": 419362333,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9D",
+      "description": "Thermostat Control Command",
+      "pdf_reference": "Sec. 6.16.4 (DGN 1FEF9)",
+      "signals": [
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat zone/instance number"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 4,
+          "description": "0000 = Off, 0001 = Cool, 0010 = Heat, etc."
+        },
+        {
+          "name": "fan_mode",
+          "start_bit": 12,
+          "length": 2,
+          "description": "00 = Auto, 01 = On"
+        },
+        {
+          "name": "schedule_mode",
+          "start_bit": 14,
+          "length": 2,
+          "description": "00 = Schedule Disabled, 01 = Enabled"
+        },
+        {
+          "name": "fan_speed",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "0 = Auto, >0 = Manual override (1–100%)"
+        },
+        {
+          "name": "setpoint_heat",
+          "start_bit": 24,
+          "length": 16,
+          "unit": "°C",
+          "description": "Heat setpoint in tenths of °C"
+        },
+        {
+          "name": "setpoint_cool",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "°C",
+          "description": "Cool setpoint in tenths of °C"
+        }
+      ]
+    },
+    {
+      "name": "THERMOSTAT_SCHEDULE_COMMAND_2",
+      "id": 419362589,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9D",
+      "description": "Thermostat Schedule Command 2",
+      "pdf_reference": "Sec. 6.16.10 (DGN 1FEF4)",
+      "signals": [
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat zone instance"
+        },
+        {
+          "name": "schedule_mode_instance",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Schedule profile index (e.g. 0 = Sleep, 1 = Wake, etc.)"
+        },
+        {
+          "name": "day_bitmap",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Bitmask of days: 0x01 = Sun, 0x02 = Mon, ..., 0x40 = Sat"
+        }
+      ]
+    },
+    {
       "name": "THERMOSTAT_STATUS_1",
       "id": 436200093,
       "extended": true,
       "length": 8,
       "source_address": "0x9D",
       "description": "Thermostat Status 1",
-      "pdf_reference": "Sec. 6.16.2",
+      "pdf_reference": "Sec. 6.16.2 (DGN 1FFE2h)",
       "signals": [
-        { "name": "instance",                "start_bit": 0,  "length": 8 },
-        { "name": "mode",                    "start_bit": 8,  "length": 2 },
-        { "name": "coolant_low_limit",       "start_bit": 10, "length": 6,  "scale": 1, "unit": "°C" },
-        { "name": "coolant_high_limit",      "start_bit": 16, "length": 6,  "scale": 1, "unit": "°C" },
-        { "name": "control_mode",            "start_bit": 24, "length": 8 },
-        { "name": "status_flags",            "start_bit": 32, "length": 8 },
-        { "name": "ambient_temperature",     "start_bit": 40, "length": 16, "scale": 1, "unit": "°C", "byte_order": "little_endian" }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat zone/instance number"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 4,
+          "description": "0000 = Off, 0001 = Cool, 0010 = Heat, 0011 = Auto Heat/Cool, 0100 = Fan Only, 0101 = Aux Heat, 0110 = Window Defrost"
+        },
+        {
+          "name": "fan_mode",
+          "start_bit": 12,
+          "length": 2,
+          "description": "00 = Auto, 01 = On (always run), 10/11 = Reserved"
+        },
+        {
+          "name": "schedule_mode",
+          "start_bit": 14,
+          "length": 2,
+          "description": "00 = Schedule Disabled, 01 = Enabled"
+        },
+        {
+          "name": "fan_speed",
+          "start_bit": 16,
+          "length": 8,
+          "unit": "%",
+          "description": "0 = Automatic fan speed; >0 = manual override"
+        },
+        {
+          "name": "setpoint_heat",
+          "start_bit": 24,
+          "length": 16,
+          "unit": "°C",
+          "description": "Setpoint for heating (°C × 10); e.g. 215 = 21.5°C"
+        },
+        {
+          "name": "setpoint_cool",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "°C",
+          "description": "Setpoint for cooling (°C × 10); e.g. 245 = 24.5°C"
+        }
       ]
     },
     {
-      "name": "DC_DIMMER_COMMAND_2_95",
-      "id": 436132757,
+      "name": "THERMOSTAT_STATUS_2",
+      "id": 130810,
       "extended": true,
       "length": 8,
-      "source_address": "0x95",
-      "description": "DC Dimmer Command 2",
-      "pdf_reference": "Sec. 6.24.6",
+      "description": "Thermostat Status 2",
+      "pdf_reference": "Sec. 6.16.3 (DGN 1FEFA)",
       "signals": [
-        { "name": "instance",        "start_bit":   0, "length": 8 },
-        { "name": "group",           "start_bit":   8, "length": 8 },
-        { "name": "desired_level",   "start_bit":  16, "length": 8, "unit": "%" },
-        { "name": "command",         "start_bit":  24, "length": 8 },
-        { "name": "delay_duration",  "start_bit":  32, "length": 8, "unit": "s" },
-        { "name": "interlock",       "start_bit":  40, "length": 2 },
-        { "name": "ramp_time",       "start_bit":  48, "length": 8, "unit": "0.1 s" },
-        { "name": "reserved",        "start_bit":  56, "length": 8 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat zone/instance number"
+        },
+        {
+          "name": "current_schedule_instance",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Currently active schedule (0 = Sleep, 1 = Wake, 2 = Away, 3 = Return, 250 = Storage)"
+        },
+        {
+          "name": "total_schedule_instances",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Total number of defined schedule instances"
+        },
+        {
+          "name": "reduced_noise_mode",
+          "start_bit": 24,
+          "length": 2,
+          "description": "00 = Disabled, 01 = Enabled"
+        }
       ]
     },
     {
-      "name": "GENERIC_CONFIGURATION_STATUS_94",
-      "id": 436131988,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x94",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "instance",    "start_bit":   0, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.3.2 Byte 0" },
-        { "name": "config_code","start_bit":   8, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.3.2 Byte 1" },
-        { "name": "value",      "start_bit":  16, "length": 16,"byte_order": "little_endian","scale":1, "offset":0, "unit": null, "pdf_ref": "6.3.2 Bytes 2–3" }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_96",
-      "id": 436131990,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x96",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_97",
-      "id": 436131991,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x97",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_98",
-      "id": 436131992,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x98",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_99",
-      "id": 436131993,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x99",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9A",
-      "id": 436131994,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9A",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9B",
-      "id": 436131995,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9B",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9C",
-      "id": 436131996,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9C",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9D",
-      "id": 436131997,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9D",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9E",
-      "id": 436131998,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9E",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "GENERIC_CONFIGURATION_STATUS_9F",
-      "id": 436131999,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9F",
-      "description": "Generic Configuration Status",
-      "pdf_reference": "Sec. 6.3.2",
-      "signals": [
-        { "name": "manufacturer_code_lsb", "start_bit":   0, "length": 8 },
-        { "name": "manufacturer_code_msb", "start_bit":   8, "length": 3 },
-        { "name": "function_instance",     "start_bit":  11, "length": 5 },
-        { "name": "function_code",         "start_bit":  16, "length": 8 },
-        { "name": "firmware_revision",     "start_bit":  24, "length": 8 },
-        { "name": "configuration_type_lsb","start_bit":  32, "length": 8 },
-        { "name": "configuration_type_mid","start_bit":  40, "length": 8 },
-        { "name": "configuration_type_msb","start_bit":  48, "length": 8 },
-        { "name": "configuration_revision","start_bit":  56, "length": 8 }
-      ]
-    },
-    {
-      "name": "FLOOR_HEAT_STATUS_9F",
-      "id": 419363999,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9F",
-      "description": "Floor Heat Status",
-      "pdf_reference": "Sec. 6.36.2",
-      "signals": [
-        { "name": "instance",             "start_bit":   0, "length": 8, "byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": null, "pdf_ref": "6.36.2b Byte 0" },
-        { "name": "operating_mode",       "start_bit":   8, "length": 2, "byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": null, "pdf_ref": "6.36.2b bits 0–1 of Byte 1" },
-        { "name": "operating_status",     "start_bit":  10, "length": 2, "byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": null, "pdf_ref": "6.36.2b bits 2–3 of Byte 1" },
-        { "name": "heat_element_status",  "start_bit":  12, "length": 2, "byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": null, "pdf_ref": "6.36.2b bits 4–5 of Byte 1" },
-        { "name": "schedule_mode",        "start_bit":  14, "length": 2, "byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": null, "pdf_ref": "6.36.2b bits 6–7 of Byte 1" },
-        { "name": "measured_temperature", "start_bit":  16, "length": 16,"byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": "°C", "pdf_ref": "6.36.2b Bytes 2–3" },
-        { "name": "set_point",            "start_bit":  32, "length": 16,"byte_order": "little_endian", "scale": 1,  "offset": 0, "unit": "°C", "pdf_ref": "6.36.2b Bytes 4–5" },
-        { "name": "dead_band",            "start_bit":  48, "length": 8, "byte_order": "little_endian", "scale": 0.1,"offset": 0, "unit": "°C", "pdf_ref": "6.36.2b Byte 6" }
-      ]
-    },
-    {
-      "name": "THERMOSTAT_SCHEDULE_COMMAND_1_9F",
+      "name": "THERMOSTAT_SCHEDULE_COMMAND_1",
       "id": 419362207,
       "extended": true,
       "length": 8,
       "source_address": "0x9F",
       "description": "Thermostat Schedule Command 1",
-      "pdf_reference": "Sec. 6.16.9",
+      "pdf_reference": "Sec. 6.16.9 (DGN 1FEF5)",
       "signals": [
-        { "name": "instance",            "start_bit":   0, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.16.9 Byte 0" },
-        { "name": "day_of_week",         "start_bit":   8, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.16.9 Byte 1" },
-        { "name": "period_index",        "start_bit":  16, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.16.9 Byte 2" },
-        { "name": "set_point_heat",      "start_bit":  24, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit":"°C", "pdf_ref": "6.16.9 Byte 3" },
-        { "name": "set_point_cool",      "start_bit":  32, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit":"°C", "pdf_ref": "6.16.9 Byte 4" },
-        { "name": "start_time",          "start_bit":  40, "length": 16,"byte_order": "little_endian", "scale":1, "offset":0, "unit": "minutes since midnight", "pdf_ref": "6.16.9 Bytes 5–6" }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Thermostat zone/instance number"
+        },
+        {
+          "name": "day_of_week",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = Sunday, 1 = Monday, ..., 6 = Saturday"
+        },
+        {
+          "name": "period_index",
+          "start_bit": 16,
+          "length": 8,
+          "description": "Which scheduled period is being set (e.g. 0 = Wake, 1 = Sleep)"
+        },
+        {
+          "name": "set_point_heat",
+          "start_bit": 24,
+          "length": 8,
+          "unit": "°C",
+          "description": "Heat setpoint (°C × 1)"
+        },
+        {
+          "name": "set_point_cool",
+          "start_bit": 32,
+          "length": 8,
+          "unit": "°C",
+          "description": "Cool setpoint (°C × 1)"
+        },
+        {
+          "name": "start_time",
+          "start_bit": 40,
+          "length": 16,
+          "unit": "min",
+          "byte_order": "little_endian",
+          "description": "Start time in minutes since midnight (0–1439)"
+        }
       ]
     },
     {
-      "name": "GENERIC_INDICATOR_COMMAND_95",
-      "id": 436132245,
+      "name": "GENERIC_CONFIGURATION_STATUS",
+      "id": 436131999,
       "extended": true,
       "length": 8,
-      "source_address": "0x95",
-      "description": "Generic Indicator Command",
-      "pdf_reference": "Sec. 6.26.3",
+      "description": "Generic Configuration Status",
+      "pdf_reference": "Sec. 6.3.2 (DGN 1FECF)",
       "signals": [
-        { "name": "instance",      "start_bit":   0, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.26.3 Byte 0" },
-        { "name": "indicator_state","start_bit":  8, "length": 8, "byte_order": "little_endian", "scale":1, "offset":0, "unit": null, "pdf_ref": "6.26.3 Byte 1" }
+        {
+          "name": "manufacturer_code_lsb",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Least significant byte of Manufacturer Code"
+        },
+        {
+          "name": "manufacturer_code_msb",
+          "start_bit": 8,
+          "length": 3,
+          "description": "Most significant 3 bits of Manufacturer Code"
+        },
+        {
+          "name": "function_instance",
+          "start_bit": 11,
+          "length": 5,
+          "description": "Instance of the device's function (0–31)"
+        },
+        {
+          "name": "function_code",
+          "start_bit": 16,
+          "length": 8,
+          "description": "SAE-defined Function Code (e.g. 0x30 = AC Inverter)"
+        },
+        {
+          "name": "firmware_revision",
+          "start_bit": 24,
+          "length": 8,
+          "description": "Numeric revision number of the device's firmware"
+        },
+        {
+          "name": "configuration_type_lsb",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Least significant byte of configuration type"
+        },
+        {
+          "name": "configuration_type_mid",
+          "start_bit": 40,
+          "length": 8,
+          "description": "Middle byte of configuration type"
+        },
+        {
+          "name": "configuration_type_msb",
+          "start_bit": 48,
+          "length": 8,
+          "description": "Most significant byte of configuration type"
+        },
+        {
+          "name": "configuration_revision",
+          "start_bit": 56,
+          "length": 8,
+          "description": "Revision level of the configuration block"
+        }
       ]
     },
     {
@@ -1806,15 +1882,46 @@
       "extended": true,
       "length": 8,
       "source_address": "0x9F",
-      "description": "ACK/NAK, global destination",
-      "pdf_reference": "Sec. 3.2.4.4a & 3.2.4.4b",
+      "description": "Acknowledgment or Negative Acknowledgment (global)",
+      "pdf_reference": "Sec. 3.2.4.4a & 3.2.4.4b (DGN E800h)",
       "signals": [
-        { "name": "ack_code",       "start_bit":   0, "length": 8 },
-        { "name": "instance",       "start_bit":   8, "length": 8 },
-        { "name": "instance_bank",  "start_bit":  16, "length": 4 },
-        { "name": "reserved",       "start_bit":  20, "length": 4 },
-        { "name": "source_address", "start_bit":  32, "length": 8 },
-        { "name": "dgn_acked",      "start_bit":  40, "length": 24, "byte_order": "little_endian" }
+        {
+          "name": "ack_code",
+          "start_bit": 0,
+          "length": 8,
+          "description": "0 = ACK, 1+ = NAK (see Table 7.5 for reasons)"
+        },
+        {
+          "name": "instance",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Instance of transmitter sending ACK/NAK (255 = not multi-instanced)"
+        },
+        {
+          "name": "instance_bank",
+          "start_bit": 16,
+          "length": 4,
+          "description": "Optional secondary instance (0–15)"
+        },
+        {
+          "name": "reserved",
+          "start_bit": 20,
+          "length": 4,
+          "description": "Reserved for SAE compatibility (ignore)"
+        },
+        {
+          "name": "source_address",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Source address of node being acknowledged"
+        },
+        {
+          "name": "dgn_acked",
+          "start_bit": 40,
+          "length": 24,
+          "byte_order": "little_endian",
+          "description": "The DGN (PGN) that triggered this ACK/NAK"
+        }
       ]
     },
     {
@@ -1823,17 +1930,57 @@
       "extended": true,
       "length": 8,
       "source_address": "0x9B",
-      "description": "Terminal",
-      "pdf_reference": "Sec. 6.2.3",
+      "description": "Terminal (Virtual Terminal Text Message)",
+      "pdf_reference": "Sec. 6.2.3 (DGN 17E00h)",
       "signals": [
-        { "name": "char_0", "start_bit":   0, "length": 8 },
-        { "name": "char_1", "start_bit":   8, "length": 8 },
-        { "name": "char_2", "start_bit":  16, "length": 8 },
-        { "name": "char_3", "start_bit":  24, "length": 8 },
-        { "name": "char_4", "start_bit":  32, "length": 8 },
-        { "name": "char_5", "start_bit":  40, "length": 8 },
-        { "name": "char_6", "start_bit":  48, "length": 8 },
-        { "name": "char_7", "start_bit":  56, "length": 8 }
+        {
+          "name": "char_0",
+          "start_bit": 0,
+          "length": 8,
+          "description": "ASCII character 1 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_1",
+          "start_bit": 8,
+          "length": 8,
+          "description": "ASCII character 2 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_2",
+          "start_bit": 16,
+          "length": 8,
+          "description": "ASCII character 3 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_3",
+          "start_bit": 24,
+          "length": 8,
+          "description": "ASCII character 4 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_4",
+          "start_bit": 32,
+          "length": 8,
+          "description": "ASCII character 5 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_5",
+          "start_bit": 40,
+          "length": 8,
+          "description": "ASCII character 6 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_6",
+          "start_bit": 48,
+          "length": 8,
+          "description": "ASCII character 7 (or 0xFF if unused)"
+        },
+        {
+          "name": "char_7",
+          "start_bit": 56,
+          "length": 8,
+          "description": "ASCII character 8 (or 0xFF if unused)"
+        }
       ]
     },
     {
