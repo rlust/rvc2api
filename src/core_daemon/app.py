@@ -981,26 +981,23 @@ async def control_entity(
 
     # --- Read Current State ---
     current_state_data = state.get(entity_id, {})
-
-    # Determine current_on using the reader's pre-calculated "state" field
-    current_on_str = current_state_data.get("state", "off") # Default to "off" if not found
+    current_on_str = current_state_data.get("state", "off") 
     current_on = current_on_str.lower() == "on"
-
-    logger.debug(f"Control for {entity_id}: current_on_str='{current_on_str}', current_on={current_on}")
-
-    # Determine current_brightness_ui using the correct signal name from raw data
     current_raw_values = current_state_data.get("raw", {})
-    # The reader thread in app.py uses "operating_status" to determine its "state" field.
-    # We rely on that key for the current raw brightness value.
-    # Assuming raw 0-200 maps to UI 0-100%
-    current_brightness_raw = current_raw_values.get("operating_status", 0) # Changed key. Default to 0 if key not found
-    
+    current_brightness_raw = current_raw_values.get("operating_status", 0)
     current_brightness_ui = 0
-    # Ensure raw value is treated as a number, scale it to UI percentage (0-100)
     if isinstance(current_brightness_raw, (int, float)):
         current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+
+    # Get or initialize last known brightness for this entity
+    last_known_brightness_key = f"{entity_id}_last_brightness"
+    # Ensure state dictionary has a sub-dictionary for app-specific data if not present
+    if '_app_data' not in state:
+        state['_app_data'] = {}
     
-    logger.debug(f"Control for {entity_id}: current_brightness_raw='{current_brightness_raw}', current_brightness_ui={current_brightness_ui}%")
+    last_brightness_ui = state['_app_data'].get(last_known_brightness_key, 100) # Default to 100 if never set
+
+    logger.debug(f"Control for {entity_id}: current_on_str='{current_on_str}', current_on={current_on}, current_brightness_ui={current_brightness_ui}%, last_known_brightness_ui={last_brightness_ui}%")
     
     # --- Determine Target State ---
     target_brightness_ui = current_brightness_ui # Default: no change in brightness if already on
@@ -1012,25 +1009,32 @@ async def control_entity(
         if cmd.state == "on":
             # If brightness is specified, use it. 
             # Else, if light is already on, keep its current brightness.
-            # Else (light is off and turning on without specific brightness), set to 100%.
+            # Else (light is off and turning on without specific brightness), restore last known brightness.
             if cmd.brightness is not None:
                 target_brightness_ui = cmd.brightness
             elif not current_on: # Turning on from off state, and no brightness specified
-                target_brightness_ui = 100
+                target_brightness_ui = last_brightness_ui # Restore last known brightness
             # If current_on is true and cmd.brightness is None, target_brightness_ui remains current_brightness_ui (no change)
             action = f"Set ON to {target_brightness_ui}%"
         else: # cmd.state == "off"
+            # Store current brightness before turning off, if it was on
+            if current_on and current_brightness_ui > 0:
+                state['_app_data'][last_known_brightness_key] = current_brightness_ui
+                logger.info(f"Stored last brightness for {entity_id}: {current_brightness_ui}%")
             target_brightness_ui = 0
             action = "Set OFF"
 
     elif cmd.command == "toggle":
         if current_on:
+            # Store current brightness before toggling off
+            if current_brightness_ui > 0:
+                state['_app_data'][last_known_brightness_key] = current_brightness_ui
+                logger.info(f"Stored last brightness for {entity_id} before toggle OFF: {current_brightness_ui}%")
             target_brightness_ui = 0
             action = "Toggle OFF"
         else:
-            # When toggling ON from OFF state, set to 100%.
-            # (rvc-console might try to restore previous brightness, app.py currently uses 100%)
-            target_brightness_ui = 100
+            # When toggling ON from OFF state, restore last known brightness.
+            target_brightness_ui = last_brightness_ui
             action = f"Toggle ON to {target_brightness_ui}%"
 
     elif cmd.command == "brightness_up":
@@ -1047,6 +1051,10 @@ async def control_entity(
         raise HTTPException(status_code=400, detail=f"Invalid command: {cmd.command}")
 
     # --- Use Helper to Send CAN Message and Update State ---
+    if target_brightness_ui > 0:
+        state['_app_data'][last_known_brightness_key] = target_brightness_ui # Store brightness if setting to a value > 0
+        logger.info(f"Stored/updated last brightness for {entity_id} after command: {target_brightness_ui}%")
+
     if not await _send_light_can_command(entity_id, target_brightness_ui, action):
         raise HTTPException(status_code=500, detail=f"Failed to send CAN command for {entity_id} (Action: {action})")
 

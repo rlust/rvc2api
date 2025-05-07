@@ -847,7 +847,7 @@
               <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
               <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" 
                      class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider" 
-                     min="0" max="100" value="${currentBrightnessPercent}" ${state.toLowerCase() !== 'on' ? 'disabled' : ''}>
+                     min="0" max="100" value="${currentBrightnessPercent}">
             </div>
           `;
         }
