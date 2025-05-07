@@ -15,6 +15,17 @@ def configure_logger():
     # Set logger level to the value of log_level variable
     logger.setLevel(log_level)
 
+    # Add a separate handler for system-level logs
+    system_handler = logging.StreamHandler()
+    system_handler.setLevel(log_level)  # Set to INFO or the value of LOG_LEVEL
+    system_handler.setFormatter(logging.Formatter(log_format))
+
+    # Add the system-level handler to the root logger
+    logger.addHandler(system_handler)
+
+    # Keep the root logger at DEBUG to generate all log levels
+    logger.setLevel(logging.DEBUG)
+
     return logger
 
 
