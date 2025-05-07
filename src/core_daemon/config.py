@@ -1,10 +1,9 @@
-import asyncio
 import logging
 import os
 
 import coloredlogs
 
-from core_daemon.models import WebSocketLogHandler
+# Removed WebSocketLogHandler import as it's handled in main.py
 
 # ── Logging Configuration ──────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
@@ -33,17 +32,8 @@ def configure_logger():
     system_handler.addFilter(InfoAndAboveFilter())
     logger.addHandler(system_handler)
 
-    # WebSocket log handler for Web UI
-    try:
-        main_loop = asyncio.get_running_loop()
-        log_ws_handler = WebSocketLogHandler(loop=main_loop)
-        log_ws_handler.setLevel(logging.DEBUG)  # Always capture DEBUG logs
-        log_ws_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-        )
-        logger.addHandler(log_ws_handler)
-    except Exception as e:
-        logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
+    # WebSocket log handler setup has been removed from here.
+    # It is now handled in main.py by the setup_websocket_logging function.
 
     # Enhance logging with coloredlogs for console output
     coloredlogs.install(
