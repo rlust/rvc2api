@@ -673,6 +673,53 @@
       ]
     },
     {
+      "name": "ATS_COMMAND",
+      "id": 436185501,
+      "extended": true,
+      "length": 8,
+      "source_address": "0x9D",
+      "description": "Transfer Switch Command",
+      "pdf_reference": "Sec. 6.32.5 (DGN 1FFA9h)",
+      "signals": [
+        {
+          "name": "transfer_switch_instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Instance ID of the ATS (1–6 valid, 0/7–255 invalid)"
+        },
+        {
+          "name": "source_to_use",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0–6 = Valid sources; 253 = No source active; Ignored if mode is set to automatic"
+        },
+        {
+          "name": "mode",
+          "start_bit": 16,
+          "length": 2,
+          "description": "0b = Automatic (source is ignored), 1b = Manual (use selected source)"
+        },
+        {
+          "name": "reserved",
+          "start_bit": 18,
+          "length": 14,
+          "description": "Reserved bits — should be set to 0"
+        },
+        {
+          "name": "fault_nak_code",
+          "start_bit": 32,
+          "length": 8,
+          "description": "Used when rejecting a command; 0 if accepted"
+        },
+        {
+          "name": "requesting_source_address",
+          "start_bit": 40,
+          "length": 8,
+          "description": "Source address of the device requesting the switch"
+        }
+      ]
+    },
+    {
       "name": "ATS_STATUS",
       "id": 436185679,
       "extended": true,
@@ -681,10 +728,30 @@
       "description": "Transfer Switch Status",
       "pdf_reference": "Sec. 6.32.4 (DGN 1FFAAh)",
       "signals": [
-        { "name": "instance",      "start_bit":   0, "length": 8 },
-        { "name": "source_in_use", "start_bit":   8, "length": 8 },
-        { "name": "mode",          "start_bit":  16, "length": 2 },
-        { "name": "reserved",      "start_bit":  18, "length": 6 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "ATS instance number (1–6 valid, 0 and 7–255 invalid)"
+        },
+        {
+          "name": "source_in_use",
+          "start_bit": 8,
+          "length": 8,
+          "description": "Current input source in use: 0–6 = valid sources, 253 = no source active"
+        },
+        {
+          "name": "mode",
+          "start_bit": 16,
+          "length": 2,
+          "description": "0b = Automatic mode, 1b = Manual mode"
+        },
+        {
+          "name": "reserved",
+          "start_bit": 18,
+          "length": 6,
+          "description": "Reserved bits (should be ignored)"
+        }
       ]
     },
     {
@@ -693,20 +760,20 @@
       "extended": true,
       "length": 8,
       "source_address": "0x4F",
-      "description": "Transfer Switch AC Status 1 (Voltage/Current/Frequency/Faults)",
-      "pdf_reference": "Sec. 6.32.2 (Tables 6.32.2a & 6.32.2b) + AC Point Status 1 format",
+      "description": "Transfer Switch AC Status 1 (RMS voltage/current, frequency, fault flags)",
+      "pdf_reference": "Sec. 6.32.2 (DGN 1FFADh)",
       "signals": [
-        { "name": "transfer_switch_instance", "start_bit":   0, "length": 3 },
-        { "name": "io_type",                   "start_bit":   3, "length": 1 },
-        { "name": "source",                    "start_bit":   4, "length": 3 },
-        { "name": "leg",                       "start_bit":   7, "length": 1 },
-        { "name": "rms_voltage",               "start_bit":   8, "length": 16, "unit": "Vac" },
-        { "name": "rms_current",               "start_bit":  24, "length": 16, "unit": "Aac" },
-        { "name": "frequency",                 "start_bit":  40, "length": 16, "unit": "Hz" },
-        { "name": "fault_open_ground",         "start_bit":  56, "length":  2 },
-        { "name": "fault_open_neutral",        "start_bit":  58, "length":  2 },
-        { "name": "fault_reverse_polarity",    "start_bit":  60, "length":  2 },
-        { "name": "fault_ground_current",      "start_bit":  62, "length":  2 }
+        { "name": "transfer_switch_instance", "start_bit": 0, "length": 3, "description": "Transfer switch instance (1–6 valid)" },
+        { "name": "io_type", "start_bit": 3, "length": 1, "description": "0 = Input, 1 = Output" },
+        { "name": "source", "start_bit": 4, "length": 3, "description": "000 = Primary, 001 = Secondary, 111 = Invalid" },
+        { "name": "leg", "start_bit": 7, "length": 1, "description": "0 = Leg 1, 1 = Leg 2" },
+        { "name": "rms_voltage", "start_bit": 8, "length": 16, "unit": "Vac", "description": "Root Mean Square Voltage" },
+        { "name": "rms_current", "start_bit": 24, "length": 16, "unit": "Aac", "description": "Root Mean Square Current" },
+        { "name": "frequency", "start_bit": 40, "length": 16, "unit": "Hz", "description": "AC frequency (typically 50/60Hz)" },
+        { "name": "fault_open_ground", "start_bit": 56, "length": 2, "description": "00 = No fault, 01 = Open ground fault" },
+        { "name": "fault_open_neutral", "start_bit": 58, "length": 2, "description": "00 = No fault, 01 = Open neutral fault" },
+        { "name": "fault_reverse_polarity", "start_bit": 60, "length": 2, "description": "00 = No fault, 01 = Reversed polarity" },
+        { "name": "fault_ground_current", "start_bit": 62, "length": 2, "description": "00 = No fault, 01 = Ground current detected" }
       ]
     },
     {
@@ -715,34 +782,44 @@
       "extended": true,
       "length": 8,
       "source_address": "0x4F",
-      "description": "Transfer Switch AC Status 2 (Peak Volt/Peak I/Gnd I/Capacity)",
-      "pdf_reference": "Sec. 6.32.2 (Tables 6.32.2a & 6.32.2b) + AC Point Status 2 format",
+      "description": "Transfer Switch AC Status 2 (peak voltage/current, ground current, capacity)",
+      "pdf_reference": "Sec. 6.32.2 (DGN 1FFACh)",
       "signals": [
-        { "name": "transfer_switch_instance", "start_bit":   0, "length": 3 },
-        { "name": "io_type",                   "start_bit":   3, "length": 1 },
-        { "name": "source",                    "start_bit":   4, "length": 3 },
-        { "name": "leg",                       "start_bit":   7, "length": 1 },
-        { "name": "peak_voltage",              "start_bit":   8, "length": 16, "unit": "Vac" },
-        { "name": "peak_current",              "start_bit":  24, "length": 16, "unit": "Aac" },
-        { "name": "ground_current",            "start_bit":  40, "length": 16, "unit": "Aac" },
-        { "name": "capacity",                  "start_bit":  56, "length":  8, "unit": "Aac" }
+        { "name": "transfer_switch_instance", "start_bit": 0, "length": 3, "description": "Transfer switch instance (1–6 valid)" },
+        { "name": "io_type", "start_bit": 3, "length": 1, "description": "0 = Input, 1 = Output" },
+        { "name": "source", "start_bit": 4, "length": 3, "description": "000 = Primary, 001 = Secondary, 111 = Invalid" },
+        { "name": "leg", "start_bit": 7, "length": 1, "description": "0 = Leg 1, 1 = Leg 2" },
+        { "name": "peak_voltage", "start_bit": 8, "length": 16, "unit": "Vac", "description": "Peak voltage measured" },
+        { "name": "peak_current", "start_bit": 24, "length": 16, "unit": "Aac", "description": "Peak current measured" },
+        { "name": "ground_current", "start_bit": 40, "length": 16, "unit": "Aac", "description": "Leakage/ground current detected" },
+        { "name": "capacity", "start_bit": 56, "length": 8, "unit": "Aac", "description": "Configured breaker or current limit capacity" }
       ]
-    },
+    },    
     {
       "name": "ATS_AC_STATUS_3",
       "id": 234859343,
       "extended": true,
       "length": 8,
       "source_address": "0x4F",
-      "description": "Transfer Switch AC Status 3 (Waveform/Phase Relationship)",
-      "pdf_reference": "Sec. 6.32.2 (Tables 6.32.2a & 6.32.2b) + AC Point Status 3 format",
+      "description": "Transfer Switch AC Status 3 (waveform quality, phase sync)",
+      "pdf_reference": "Sec. 6.32.2 (DGN 1FFABh)",
       "signals": [
-        { "name": "transfer_switch_instance", "start_bit":   0, "length": 3 },
-        { "name": "io_type",                   "start_bit":   3, "length": 1 },
-        { "name": "source",                    "start_bit":   4, "length": 3 },
-        { "name": "leg",                       "start_bit":   7, "length": 1 },
-        { "name": "waveform",                  "start_bit":   8, "length": 2 },
-        { "name": "phase_status",              "start_bit":  10, "length": 4 }
+        { "name": "transfer_switch_instance", "start_bit": 0, "length": 3, "description": "Transfer switch instance (1–6 valid)" },
+        { "name": "io_type", "start_bit": 3, "length": 1, "description": "0 = Input, 1 = Output" },
+        { "name": "source", "start_bit": 4, "length": 3, "description": "000 = Primary, 001 = Secondary, 111 = Invalid" },
+        { "name": "leg", "start_bit": 7, "length": 1, "description": "0 = Leg 1, 1 = Leg 2" },
+        {
+          "name": "waveform",
+          "start_bit": 8,
+          "length": 2,
+          "description": "00 = True sine wave, 01 = Modified/quasi-sine, 10/11 = Reserved"
+        },
+        {
+          "name": "phase_status",
+          "start_bit": 10,
+          "length": 4,
+          "description": "0001 = In phase (120V only), 0010 = 180° out (240V capable), 0011 = Variable phase, 1110 = Error, 1111 = No data"
+        }
       ]
     },
     {
@@ -751,17 +828,35 @@
       "extended": true,
       "length": 8,
       "source_address": "0x4F",
-      "description": "Transfer Switch AC Status 4 (Real/Reactive Power, Harmonics)",
-      "pdf_reference": "Sec. 6.32.2 (Tables 6.32.2a & 6.32.2b) + AC Point Status 4 format",
+      "description": "Transfer Switch AC Status 4 (real/reactive power, harmonics)",
+      "pdf_reference": "Sec. 6.32.2 (DGN 1FF85h)",
       "signals": [
-        { "name": "transfer_switch_instance", "start_bit":   0, "length": 3 },
-        { "name": "io_type",                   "start_bit":   3, "length": 1 },
-        { "name": "source",                    "start_bit":   4, "length": 3 },
-        { "name": "leg",                       "start_bit":   7, "length": 1 },
-        { "name": "real_power",                "start_bit":   8, "length": 16, "unit": "W" },
-        { "name": "reactive_power",            "start_bit":  24, "length": 16, "unit": "VAr", "signed": true },
-        { "name": "harmonic_distortion",       "start_bit":  40, "length":  8, "unit": "%" },
-        { "name": "complementary_leg",         "start_bit":  48, "length":  8 }
+        { "name": "transfer_switch_instance", "start_bit": 0, "length": 3, "description": "Transfer switch instance (1–6 valid)" },
+        { "name": "io_type", "start_bit": 3, "length": 1, "description": "0 = Input, 1 = Output" },
+        { "name": "source", "start_bit": 4, "length": 3, "description": "000 = Primary, 001 = Secondary, 111 = Invalid" },
+        { "name": "leg", "start_bit": 7, "length": 1, "description": "0 = Leg 1, 1 = Leg 2" },
+        { "name": "real_power", "start_bit": 8, "length": 16, "unit": "W", "description": "Real power draw (watts)" },
+        {
+          "name": "reactive_power",
+          "start_bit": 24,
+          "length": 16,
+          "unit": "VAr",
+          "signed": true,
+          "description": "Reactive power (negative = lagging, positive = leading)"
+        },
+        {
+          "name": "harmonic_distortion",
+          "start_bit": 40,
+          "length": 8,
+          "unit": "%",
+          "description": "Total harmonic distortion (THD)"
+        },
+        {
+          "name": "complementary_leg",
+          "start_bit": 48,
+          "length": 8,
+          "description": "Instance number of the other leg in a 240V system (0 = none)"
+        }
       ]
     },
     {
@@ -1251,22 +1346,6 @@
         { "name": "state_of_charge",    "start_bit":  32, "length": 8 },
         { "name": "time_remaining",     "start_bit":  40, "length":16, "byte_order": "little_endian" },
         { "name": "time_remaining_flag","start_bit":  56, "length": 2 }
-      ]
-    },
-    {
-      "name": "ATS_COMMAND",
-      "id": 436185501,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x9D",
-      "description": "Transfer Switch Command",
-      "pdf_reference": "Sec. 6.32.5 (Tables 6.32.5a & 6.32.5b)",
-      "signals": [
-        { "name": "transfer_switch_instance",  "start_bit": 0,  "length": 8 },
-        { "name": "command",                    "start_bit": 8,  "length": 8 },
-        { "name": "operation_time",             "start_bit": 16, "length": 16, "unit": "s", "byte_order": "little_endian" },
-        { "name": "fault_nak_code",             "start_bit": 32, "length": 8 },
-        { "name": "requesting_source_address",  "start_bit": 40, "length": 8 }
       ]
     },
     {
