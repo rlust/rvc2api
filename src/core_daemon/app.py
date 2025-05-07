@@ -10,7 +10,8 @@ import coloredlogs
 # Removed shutil import
 from typing import Dict, Any, Optional, List
 from collections import deque
-from pathlib import Path
+
+# Removed unused pathlib.Path import
 
 import can
 from can.exceptions import CanInterfaceNotImplementedError
@@ -59,10 +60,12 @@ if spec_override_env:
         actual_spec_path_for_ui = spec_override_env
     else:
         logger.warning(
-            f"Override RVC Spec Path '{spec_override_env}' is missing or unreadable. "
-            f"Core logic will attempt to use bundled default: '{_decoder_default_spec_path}'"
+            f"Override RVC Spec Path '{spec_override_env}' is missing or "
+            f"unreadable. Core logic will attempt to use bundled default: "
+            f"'{_decoder_default_spec_path}'"
         )
-        # actual_spec_path_for_ui remains _decoder_default_spec_path for UI consistency if override fails for core logic
+        # actual_spec_path_for_ui remains _decoder_default_spec_path for UI
+        # consistency if override fails for core logic
 
 # Determine actual mapping path that will be used by load_config_data and for UI
 actual_map_path_for_ui = _decoder_default_map_path
@@ -71,10 +74,12 @@ if mapping_override_env:
         actual_map_path_for_ui = mapping_override_env
     else:
         logger.warning(
-            f"Override Device Mapping Path '{mapping_override_env}' is missing or unreadable. "
-            f"Core logic will attempt to use bundled default: '{_decoder_default_map_path}'"
+            f"Override Device Mapping Path '{mapping_override_env}' is missing "
+            f"or unreadable. Core logic will attempt to use bundled default: "
+            f"'{_decoder_default_map_path}'"
         )
-        # actual_map_path_for_ui remains _decoder_default_map_path for UI consistency if override fails for core logic
+        # actual_map_path_for_ui remains _decoder_default_map_path for UI
+        # consistency if override fails for core logic
 
 logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
 logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
@@ -82,7 +87,9 @@ logger.info(f"UI will attempt to display device mapping from: {actual_map_path_f
 # ── Load spec & mappings for core logic ──────────────────────────────────────
 # load_config_data will perform its own logging regarding path resolution
 logger.info(
-    f"Core logic attempting to load CAN spec from: {spec_override_env or '(default)'}, mapping from: {mapping_override_env or '(default)'}"
+    f"Core logic attempting to load CAN spec from: "
+    f"{spec_override_env or '(default)'}, mapping from: "
+    f"{mapping_override_env or '(default)'}"
 )
 (
     decoder_map,
@@ -134,7 +141,9 @@ class ControlCommand(BaseModel):
         None,
         ge=0,
         le=100,
-        description="Brightness percent (0–100). Only used when command is 'set' and state is 'on'.",
+        description=(
+            "Brightness percent (0–100). Only used when command is 'set' and " "state is 'on'."
+        ),
     )
 
 
@@ -148,7 +157,9 @@ class UnmappedEntryModel(BaseModel):
     pgn_hex: str
     pgn_name: Optional[str] = Field(
         None,
-        description="The human-readable name of the PGN (from arbitration ID), if known from the spec.",
+        description=(
+            "The human-readable name of the PGN (from arbitration ID), " "if known from the spec."
+        ),
     )
     dgn_hex: str
     dgn_name: Optional[str] = Field(
@@ -162,7 +173,8 @@ class UnmappedEntryModel(BaseModel):
     count: int
     suggestions: Optional[List[SuggestedMapping]] = None  # Added for suggestions
     spec_entry: Optional[Dict[str, Any]] = Field(
-        None, description="The raw rvc.json spec entry used for decoding, if PGN was known."
+        None,
+        description=("The raw rvc.json spec entry used for decoding, if PGN was known."),
     )
 
 
@@ -172,6 +184,14 @@ class BulkLightControlResponse(BaseModel):
     lights_processed: int
     lights_commanded: int
     errors: List[str] = []
+
+
+class ControlEntityResponse(BaseModel):
+    status: str
+    entity_id: str
+    command: str
+    brightness: int
+    action: str
 
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
@@ -309,13 +329,15 @@ async def can_writer():
 
             try:
                 bus.send(msg)
-                logger.info(
-                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} Data: {msg.data.hex().upper()}"
+                logger.info(  # Split long log line
+                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} "
+                    f"Data: {msg.data.hex().upper()}"
                 )  # Log first send
                 await asyncio.sleep(0.05)  # RV-C spec recommends sending commands twice
                 bus.send(msg)
-                logger.info(
-                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} Data: {msg.data.hex().upper()}"
+                logger.info(  # Split long log line (consistent with the one above)
+                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} "
+                    f"Data: {msg.data.hex().upper()}"
                 )  # Log second send
             except Exception as e:
                 logger.error(f"CAN writer failed to send message on {interface}: {e}")
@@ -437,12 +459,13 @@ async def start_can_readers():
     bustype = os.getenv("CAN_BUSTYPE", "socketcan")
     bitrate = int(os.getenv("CAN_BITRATE", "500000"))
     logger.info(
-        f"Preparing CAN readers for interfaces: {interfaces}, bustype: {bustype}, bitrate: {bitrate}"
+        f"Preparing CAN readers for interfaces: {interfaces}, "
+        f"bustype: {bustype}, bitrate: {bitrate}"
     )
 
     for iface in interfaces:
 
-        def reader(iface=iface):
+        def reader(iface: str) -> None:
             try:
                 bus = can.interface.Bus(channel=iface, bustype=bustype, bitrate=bitrate)
                 buses[iface] = bus
@@ -451,7 +474,8 @@ async def start_can_readers():
                 return
             except Exception as e:
                 logger.error(
-                    f"Failed to initialize CAN bus '{iface}' ({bustype}, {bitrate}bps) due to an unexpected error: {e}"
+                    f"Failed to initialize CAN bus '{iface}' ({bustype}, "
+                    f"{bitrate}bps) due to an unexpected error: {e}"
                 )
                 return
 
@@ -482,7 +506,9 @@ async def start_can_readers():
                     if not entry:
                         LOOKUP_MISSES.inc()
                         # Store unmapped entry for unknown PGN
-                        unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}"  # Ensure unique key for PGN unknown
+                        unmapped_key_str = (
+                            f"PGN_UNKNOWN-{msg.arbitration_id:X}"  # Ensure unique key
+                        )
                         now_ts = time.time()
 
                         model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
@@ -515,7 +541,6 @@ async def start_can_readers():
                             current_unmapped.count += 1
                             if model_pgn_name and not current_unmapped.pgn_name:
                                 current_unmapped.pgn_name = model_pgn_name
-                            # dgn_hex and dgn_name for PGN_UNKNOWN don't change on subsequent messages
                         continue  # Skip further processing
 
                     # PGN is known, attempt to decode
@@ -537,11 +562,16 @@ async def start_can_readers():
                 if not dgn or inst is None:
                     LOOKUP_MISSES.inc()
                     logger.debug(
-                        f"DGN or instance missing in decoded payload for PGN 0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). DGN from payload: {dgn}, Instance from payload: {inst}"
+                        f"DGN or instance missing in decoded payload for PGN "
+                        f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
+                        f"DGN from payload: {dgn}, Instance from payload: {inst}"
                     )
-                    # Potentially log this as a specific type of unmapped if DGN/Inst couldn't be derived from a known PGN's signals
-                    # For now, we assume `decode_payload` populates `raw` with `instance` if the PGN spec defines it.
-                    # If `dgn` from spec or `instance` from raw signals is missing, it's a config/spec issue or unexpected payload.
+                    # Potentially log this as a specific type of unmapped if DGN/Inst
+                    # couldn't be derived from a known PGN's signals
+                    # For now, we assume `decode_payload` populates `raw` with `instance`
+                    # if the PGN spec defines it.
+                    # If `dgn` from spec or `instance` from raw signals is missing,
+                    # it's a config/spec issue or unexpected payload.
                     continue
 
                 key = (dgn.upper(), str(inst))
@@ -562,12 +592,14 @@ async def start_can_readers():
                 if not matching_devices:
                     LOOKUP_MISSES.inc()
                     logger.debug(
-                        f"No device config for DGN={dgn}, Inst={inst} (PGN 0x{msg.arbitration_id:X})"
+                        f"No device config for DGN={dgn}, Inst={inst} "
+                        f"(PGN 0x{msg.arbitration_id:X})"
                     )
 
                     unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
                     # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
-                    # pgn_name_from_spec was entry.get('name'), which is better suited for dgn_name
+                    # pgn_name_from_spec was entry.get('name'),
+                    # which is better suited for dgn_name
 
                     model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
                     model_pgn_name = pgn_hex_to_name_map.get(
@@ -575,7 +607,7 @@ async def start_can_readers():
                     )  # Name of the PGN part of ArbID
 
                     model_dgn_hex = dgn.upper()  # dgn here is entry.get("dgn_hex")
-                    model_dgn_name = entry.get("name")  # Name from spec entry is the DGN's name
+                    model_dgn_name = entry.get("name")  # Name from spec entry is DGN's name
 
                     now_ts = time.time()
 
@@ -602,7 +634,7 @@ async def start_can_readers():
                             dgn_name=model_dgn_name,
                             instance=str(inst),
                             last_data_hex=msg.data.hex().upper(),
-                            decoded_signals=decoded_payload_for_unmapped,  # Store the decoded signals
+                            decoded_signals=decoded_payload_for_unmapped,  # Store decoded
                             first_seen_timestamp=now_ts,
                             last_seen_timestamp=now_ts,
                             count=1,
@@ -722,7 +754,11 @@ async def get_history(
     entries = list(history[entity_id])
     if since is not None:
         entries = [e for e in entries if e["timestamp"] > since]
-    return entries[-limit:]
+
+    # FastAPI Query provides a default, so limit should be int.
+    # This reassures MyPy about Optional[int] for the unary minus in slicing.
+    actual_limit = limit if limit is not None else 1000
+    return entries[-actual_limit:]
 
 
 @app.get("/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])  # Removed /api/ prefix
@@ -765,14 +801,9 @@ async def list_lights(
             val = ent.get("state")
             if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
-        results[eid] = {
-            **ent,  # Corrected from ...ent
-            "suggested_area": cfg.get("suggested_area", "Unknown"),
-            "device_type": cfg.get("device_type", "unknown"),
-            "capabilities": cfg.get("capabilities", []),
-            "friendly_name": cfg.get("friendly_name", None),
-            "groups": cfg.get("groups", []),  # Changed from locations to groups
-        }
+        # Construct Entity from ent, which should conform to Entity structure
+        # The existing ent already contains suggested_area, device_type etc. from its creation.
+        results[eid] = Entity(**ent)
     return results
 
 
@@ -865,14 +896,15 @@ async def get_device_mapping_config_content_api():
                 return PlainTextResponse(f.read())
         except Exception as e:
             logger.error(
-                f"API Error: Could not read device mapping from '{actual_map_path_for_ui}': {e}"
+                f"API Error: Could not read device mapping from " f"'{actual_map_path_for_ui}': {e}"
             )
             raise HTTPException(
                 status_code=500, detail=f"Error reading device mapping file: {str(e)}"
             )
     else:
         logger.error(
-            f"API Error: Device mapping file not found for UI display at '{actual_map_path_for_ui}'"
+            f"API Error: Device mapping file not found for UI display at "
+            f"'{actual_map_path_for_ui}'"
         )
         raise HTTPException(status_code=404, detail="Device mapping file not found.")
 
@@ -886,7 +918,7 @@ async def get_rvc_spec_details():
     # Use actual_spec_path_for_ui which is determined at startup
     if not os.path.exists(actual_spec_path_for_ui):
         logger.error(
-            f"RVC spec file not found at {actual_spec_path_for_ui} for spec details endpoint"
+            f"RVC spec file not found at {actual_spec_path_for_ui} " f"for spec details endpoint"
         )
         raise HTTPException(
             status_code=404, detail=f"RVC spec file not found at {actual_spec_path_for_ui}"
@@ -911,7 +943,8 @@ async def get_rvc_spec_metadata():
     """Returns metadata (version and spec_document URL) from the rvc.json spec file."""
     if not os.path.exists(actual_spec_path_for_ui):
         logger.error(
-            f"API Error: RVC spec file not found at '{actual_spec_path_for_ui}' for metadata endpoint"
+            f"API Error: RVC spec file not found at '{actual_spec_path_for_ui}' "
+            f"for metadata endpoint"
         )
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
     try:
@@ -938,12 +971,12 @@ async def get_rvc_spec_config_content_api():
                 return PlainTextResponse(f.read())
         except Exception as e:
             logger.error(
-                f"API Error: Could not read RVC spec from '{actual_spec_path_for_ui}': {e}"
+                f"API Error: Could not read RVC spec from " f"'{actual_spec_path_for_ui}': {e}"
             )
             raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
     else:
         logger.error(
-            f"API Error: RVC spec file not found for UI display at '{actual_spec_path_for_ui}'"
+            f"API Error: RVC spec file not found for UI display at " f"'{actual_spec_path_for_ui}'"
         )
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
 
@@ -998,16 +1031,18 @@ async def _send_light_can_command(
     """
     if entity_id not in light_command_info:
         logger.error(
-            f"Control Error: {entity_id} not found in light_command_info for action '{action_description}'."
+            f"Control Error: {entity_id} not found in light_command_info for "
+            f"action '{action_description}'."
         )
         return False
 
     info = light_command_info[entity_id]
-    pgn = info["dgn"]
-    instance = info["instance"]
-    interface = info["interface"]
+    pgn = info["dgn"]  # Reinstate pgn
+    instance = info["instance"]  # Reinstate instance
+    interface = info["interface"]  # This is still used below
 
-    # Scale UI brightness (0-100) to CAN brightness level (0-200, capped at 0xC8 as per RV-C for 100%)
+    # Scale UI brightness (0-100) to CAN brightness level
+    # (0-200, capped at 0xC8 as per RV-C for 100%)
     brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
     prio = 6
@@ -1036,7 +1071,10 @@ async def _send_light_can_command(
     )
 
     logger.info(
-        f"CAN CMD OUT (Helper): entity_id={entity_id}, arbitration_id=0x{arbitration_id:08X}, data={payload_data.hex().upper()}, instance={instance}, action='{action_description}'"
+        f"CAN CMD OUT (Helper): entity_id={entity_id}, "
+        f"arbitration_id=0x{arbitration_id:08X}, "
+        f"data={payload_data.hex().upper()}, instance={instance}, "
+        f"action='{action_description}'"
     )
 
     try:
@@ -1046,20 +1084,21 @@ async def _send_light_can_command(
             CAN_TX_ENQUEUE_TOTAL.inc()
         CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
         logger.info(
-            f"CAN CMD Queued (Helper): '{action_description}' for {entity_id} (CAN Lvl: {brightness_can_level}) -> {interface}"
+            f"CAN CMD Queued (Helper): '{action_description}' for {entity_id} "
+            f"(CAN Lvl: {brightness_can_level}) -> {interface}"
         )
 
         # Optimistic State Update
         optimistic_state_str = "on" if target_brightness_ui > 0 else "off"
         optimistic_raw_val = {
             "operating_status": brightness_can_level,
-            "instance": instance,
+            "instance": instance,  # Reinstate instance here
             "group": 0x7C,
         }
         # Ensure 'value' reflects the UI-scale brightness (0-100) for operating_status
         optimistic_value_val = {
             "operating_status": str(target_brightness_ui),
-            "instance": str(instance),
+            "instance": str(instance),  # Reinstate instance here
             "group": str(0x7C),
         }
         ts = time.time()
@@ -1106,13 +1145,14 @@ async def _send_light_can_command(
         return True
     except Exception as e:
         logger.error(
-            f"Failed to enqueue or optimistically update CAN control for {entity_id} (Action: '{action_description}'): {e}",
+            f"Failed to enqueue or optimistically update CAN control for {entity_id} "
+            f"(Action: '{action_description}'): {e}",  # Split long f-string
             exc_info=True,
         )
         return False
 
 
-@app.post("/entities/{entity_id}/control")
+@app.post("/entities/{entity_id}/control", response_model=ControlEntityResponse)
 async def control_entity(
     entity_id: str,
     cmd: ControlCommand = Body(
@@ -1135,7 +1175,7 @@ async def control_entity(
             },
         },
     ),
-):
+) -> ControlEntityResponse:
     device = entity_id_lookup.get(entity_id)
     if not device:
         logger.debug(f"Control command for unknown entity_id: {entity_id}")
@@ -1146,20 +1186,23 @@ async def control_entity(
         raise HTTPException(status_code=400, detail="Entity is not controllable")
 
     logger.info(
-        f"HTTP CMD RX: entity_id='{entity_id}', command='{cmd.command}', state='{cmd.state}', brightness='{cmd.brightness}'"
+        f"HTTP CMD RX: entity_id='{entity_id}', command='{cmd.command}', "
+        f"state='{cmd.state}', brightness='{cmd.brightness}'"
     )
 
-    info = light_command_info[entity_id]
-    pgn = info["dgn"]  # This is the PGN, e.g., 0x1FEDB for DC_DIMMER_COMMAND_2
-    instance = info["instance"]
-    interface = info["interface"]
+    # info = light_command_info[entity_id]
+    # pgn = info["dgn"]  # This is the PGN, e.g., 0x1FEDB for DC_DIMMER_COMMAND_2
+    # instance = info["instance"] # instance was removed
+    # interface = info["interface"] # interface was removed
 
     # --- Read Current State ---
     current_state_data = state.get(entity_id, {})
     current_on_str = current_state_data.get("state", "off")
     current_on = current_on_str.lower() == "on"
     current_raw_values = current_state_data.get("raw", {})
+    # current_brightness_raw = current_raw_values.get("operating_status", 0) # instance was removed
     current_brightness_raw = current_raw_values.get("operating_status", 0)
+
     current_brightness_ui = 0
     if isinstance(current_brightness_raw, (int, float)):
         current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
@@ -1175,7 +1218,9 @@ async def control_entity(
     )  # Default to 100 if never set
 
     logger.debug(
-        f"Control for {entity_id}: current_on_str='{current_on_str}', current_on={current_on}, current_brightness_ui={current_brightness_ui}%, last_known_brightness_ui={last_brightness_ui}%"
+        f"Control for {entity_id}: current_on_str='{current_on_str}', "
+        f"current_on={current_on}, current_brightness_ui={current_brightness_ui}%, "
+        f"last_known_brightness_ui={last_brightness_ui}%"
     )
 
     # --- Determine Target State ---
@@ -1190,12 +1235,14 @@ async def control_entity(
         if cmd.state == "on":
             # If brightness is specified, use it.
             # Else, if light is already on, keep its current brightness.
-            # Else (light is off and turning on without specific brightness), restore last known brightness.
+            # Else (light is off and turning on without specific brightness),
+            # restore last known brightness.
             if cmd.brightness is not None:
                 target_brightness_ui = cmd.brightness
             elif not current_on:  # Turning on from off state, and no brightness specified
                 target_brightness_ui = last_brightness_ui  # Restore last known brightness
-            # If current_on is true and cmd.brightness is None, target_brightness_ui remains current_brightness_ui (no change)
+            # If current_on is true and cmd.brightness is None,
+            # target_brightness_ui remains current_brightness_ui (no change)
             action = f"Set ON to {target_brightness_ui}%"
         else:  # cmd.state == "off"
             # Store current brightness before turning off, if it was on
@@ -1211,7 +1258,8 @@ async def control_entity(
             if current_brightness_ui > 0:
                 state["_app_data"][last_known_brightness_key] = current_brightness_ui
                 logger.info(
-                    f"Stored last brightness for {entity_id} before toggle OFF: {current_brightness_ui}%"
+                    f"Stored last brightness for {entity_id} before toggle OFF: "
+                    f"{current_brightness_ui}%"
                 )
             target_brightness_ui = 0
             action = "Toggle OFF"
@@ -1239,21 +1287,23 @@ async def control_entity(
             last_known_brightness_key
         ] = target_brightness_ui  # Store brightness if setting to a value > 0
         logger.info(
-            f"Stored/updated last brightness for {entity_id} after command: {target_brightness_ui}%"
+            f"Stored/updated last brightness for {entity_id} after command: "
+            f"{target_brightness_ui}%"
         )
 
     if not await _send_light_can_command(entity_id, target_brightness_ui, action):
         raise HTTPException(
-            status_code=500, detail=f"Failed to send CAN command for {entity_id} (Action: {action})"
+            status_code=500,
+            detail=f"Failed to send CAN command for {entity_id} (Action: {action})",
         )
 
-    return {
-        "status": "sent",  # Or "queued"
-        "entity_id": entity_id,
-        "command": cmd.command,
-        "brightness": target_brightness_ui,
-        "action": action,
-    }
+    return ControlEntityResponse(
+        status="sent",
+        entity_id=entity_id,
+        command=cmd.command,
+        brightness=target_brightness_ui,
+        action=action,
+    )
 
 
 # --- Bulk Light Control Endpoints ---

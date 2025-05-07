@@ -108,7 +108,8 @@ def load_config_data(
             )  # Changed to logger.info
         else:
             logger.warning(  # Changed to logger.warning
-                f"Provided override path for RVC spec is missing or unreadable: {rvc_spec_path_override}. "
+                f"Provided override path for RVC spec is missing or unreadable: "
+                f"{rvc_spec_path_override}. "
                 f"Attempting to use bundled default: {default_spec_path}"
             )
             logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")  # Changed to logger.info
@@ -127,7 +128,8 @@ def load_config_data(
             )  # Changed to logger.info
         else:
             logger.warning(  # Changed to logger.warning
-                f"Provided override path for device mapping is missing or unreadable: {device_mapping_path_override}. "
+                f"Provided override path for device mapping is missing or unreadable: "
+                f"{device_mapping_path_override}. "
                 f"Attempting to use bundled default: {default_mapping_path}"
             )
             logger.info(

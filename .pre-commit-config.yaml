@@ -20,13 +20,13 @@ repos:
     rev: 24.4.2 # Use the version you have in pyproject.toml
     hooks:
     -   id: black
-        args: [--line-length=100]
+        # args: [--line-length=100] # Removed to test pyproject.toml usage
 
 -   repo: https://github.com/PyCQA/flake8
     rev: 7.1.0 # Use a recent version compatible with your flake8 plugins if any
     hooks:
     -   id: flake8
-        # args: [--max-line-length=100] # Flake8 should pick this from pyproject.toml
+        args: [--max-line-length=100] # Explicitly set for flake8
         # additional_dependencies: [flake8-docstrings, ...] # If you use flake8 plugins
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
