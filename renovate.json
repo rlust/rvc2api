@@ -26,7 +26,7 @@
       "addLabels": ["nix"]
     },
     {
-      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest"],
+      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest", "pre-commit"],
       "matchManagers": ["poetry"],
       "matchDepTypes": ["dev"],
       "groupName": "python dev tools (non-major)",
@@ -34,11 +34,16 @@
       "addLabels": ["python", "dev-tools"]
     },
     {
-      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest"],
+      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest", "pre-commit"],
       "matchManagers": ["poetry"],
       "matchDepTypes": ["dev"],
       "matchUpdateTypes": ["major"],
       "addLabels": ["python", "dev-tools", "major"]
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "pre-commit hooks",
+      "addLabels": ["pre-commit", "hooks"]
     }
   ]
 }

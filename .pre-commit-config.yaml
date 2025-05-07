@@ -1,0 +1,38 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+# Default arguments for all hooks
+# default_language_version:
+#   python: python3.12 # Or match your project's version
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0 # Use the latest tag
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: check-merge-conflict
+    -   id: debug-statements
+
+-   repo: https://github.com/psf/black
+    rev: 24.4.2 # Use the version you have in pyproject.toml
+    hooks:
+    -   id: black
+        args: [--line-length=100]
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0 # Use a recent version compatible with your flake8 plugins if any
+    hooks:
+    -   id: flake8
+        # args: [--max-line-length=100] # Flake8 should pick this from pyproject.toml
+        # additional_dependencies: [flake8-docstrings, ...] # If you use flake8 plugins
+
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.1 # Use the version you have in pyproject.toml or a compatible one
+    hooks:
+    -   id: mypy
+        args: [--ignore-missing-imports, --scripts-are-modules, --explicit-package-bases]
+        # You might need to adjust MyPy args based on your project structure and needs
+        # additional_dependencies: [pydantic] # If MyPy needs to understand types from specific libraries

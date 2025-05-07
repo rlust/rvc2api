@@ -48,6 +48,7 @@ pytest = "^8.0" # Updated version
 mypy   = "^1.10" # Updated version
 flake8 = "^7.0" # Updated version
 black = "^24.4.2" # Added Black
+pre-commit = "^3.7.1" # Added pre-commit
 
 [tool.poetry.urls]
 Homepage   = "https://github.com/carpenike/rvc2api"

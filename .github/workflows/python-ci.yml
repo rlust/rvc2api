@@ -36,27 +36,11 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies (including dev)
-      # Install all dependencies including dev for linters and tests
-      # No-root is not used here as we want the project itself to be importable by tests/linters
       run: poetry install --no-interaction
-      # If the above step was slow due to re-installing the project, 
-      # you can split it back into two steps:
-      # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      # run: poetry install --no-interaction --no-root # Install only dependencies
-      # run: poetry install --no-interaction # Ensure project is installed
 
-    - name: Check formatting with Black
+    - name: Run pre-commit checks
       run: |
-        poetry run black --check src tests
-
-    - name: Lint with Flake8
-      # Flake8 will automatically pick up its configuration from pyproject.toml
-      run: |
-        poetry run flake8 src tests
-
-    - name: Check types with MyPy
-      run: |
-        poetry run mypy src
+        poetry run pre-commit run --all-files
 
     - name: Test with Pytest
       run: |
