@@ -1,0 +1,60 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main, master ] # Adjust if your main branch has a different name
+  pull_request:
+    branches: [ main, master ] # Adjust if your main branch has a different name
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"] # Matches your pyproject.toml
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: "1.8.2" # Or your desired Poetry version
+        virtualenvs-create: true
+        virtualenvs-in-project: true # Optional: creates .venv in project root
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        # Simplified quoting for hashFiles, which is often preferred by linters
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+
+    - name: Install project (for linters/tests to pick it up)
+      run: poetry install --no-interaction
+
+    - name: Lint with Flake8
+      run: |
+        poetry run flake8 src tests
+
+    - name: Check types with MyPy
+      run: |
+        poetry run mypy src
+
+    - name: Test with Pytest
+      run: |
+        poetry run pytest
+
+    - name: Build package
+      run: |
+        poetry build
