@@ -13,16 +13,7 @@ from typing import Any, Dict, List, Optional
 import can
 import uvicorn  # Added for main()
 from can.exceptions import CanInterfaceNotImplementedError
-from fastapi import (
-    Body,
-    FastAPI,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, WebSocket
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -61,8 +52,6 @@ from core_daemon.metrics import (
     LOOKUP_MISSES,
     PGN_USAGE_COUNTER,
     SUCCESSFUL_DECODES,
-    WS_CLIENTS,
-    WS_MESSAGES,
 )
 
 # Import Pydantic models from core_daemon.models
@@ -73,6 +62,14 @@ from core_daemon.models import (
     Entity,
     SuggestedMapping,
     UnmappedEntryModel,
+)
+
+# Import WebSocket components
+from core_daemon.websocket import (
+    WebSocketLogHandler,
+    broadcast_to_clients,
+    websocket_endpoint,
+    websocket_logs_endpoint,
 )
 
 # Removed unused pathlib.Path import
@@ -272,64 +269,26 @@ ENTITY_COUNT.set(len(state))
 for eid in history:
     HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(history[eid]))
 
-# ── Active WebSocket clients ────────────────────────────────────────────────
-clients: set[WebSocket] = set()
-
-# ── Log WebSocket clients ──────────────────────────────────────────────────
-log_ws_clients: set[WebSocket] = set()
+# ── WebSocket components are now in core_daemon.websocket ───────────────────
+# Imports moved to the top of the file
 
 
-# ── Log WebSocket Handler ──────────────────────────────────────────────────
-class WebSocketLogHandler(logging.Handler):
-    def __init__(self, loop: asyncio.AbstractEventLoop):
-        super().__init__()
-        self.loop = loop
-
-    def emit(self, record):
-        log_entry = self.format(record)
-        # Iterate over a copy of the set for safe removal if a client disconnects
-        for ws_client in list(log_ws_clients):
-            try:
-                if self.loop and self.loop.is_running():
-                    coro = ws_client.send_text(log_entry)
-                    asyncio.run_coroutine_threadsafe(coro, self.loop)
-                # else: # Loop not running or not available, log silently dropped for WS
-                # print(f"WebSocketLogHandler: Event loop not available. Dropping log: {log_entry}")
-            except Exception:
-                # If send_text fails (e.g., client disconnected abruptly), remove from set
-                log_ws_clients.discard(ws_client)
-
-
+# setup_websocket_logging now uses imported components
 @app.on_event("startup")
 async def setup_websocket_logging():
     """Initializes and adds the WebSocketLogHandler to the root logger."""
     try:
         main_loop = asyncio.get_running_loop()
+        # Use WebSocketLogHandler and log_ws_clients from websocket.py
         log_ws_handler = WebSocketLogHandler(loop=main_loop)
 
-        # Set level to DEBUG so it processes all messages; client-side will filter
         log_ws_handler.setLevel(logging.DEBUG)
-
         formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
         log_ws_handler.setFormatter(formatter)
-
-        # Add to the root logger to capture logs from all modules
         logging.getLogger().addHandler(log_ws_handler)
-
         logger.info("WebSocketLogHandler initialized and added to the root logger.")
     except Exception as e:
         logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
-
-
-# ── Broadcasting ────────────────────────────────────────────────────────────
-async def broadcast_to_clients(text: str):
-    for ws in list(clients):
-        try:
-            await ws.send_text(text)
-            WS_MESSAGES.inc()
-        except Exception:
-            clients.discard(ws)
-    WS_CLIENTS.set(len(clients))
 
 
 # ── CAN Reader Startup ──────────────────────────────────────────────────────
@@ -588,6 +547,7 @@ async def start_can_readers():
                             hq.popleft()
                         HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
                         text = json.dumps(payload)
+                        # Use imported broadcast_to_clients
                         loop.call_soon_threadsafe(
                             lambda t=text: loop.create_task(broadcast_to_clients(t))
                         )
@@ -880,45 +840,15 @@ async def get_rvc_spec_config_content_api():
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
 
 
+# Use imported WebSocket handlers
 @app.websocket("/ws")  # Removed /api/ prefix
-async def websocket_endpoint(ws: WebSocket):
-    """
-    WebSocket endpoint: push every new payload as JSON.
-    """
-    await ws.accept()
-    clients.add(ws)
-    WS_CLIENTS.set(len(clients))
-    logger.info(f"WebSocket client connected: {ws.client.host}:{ws.client.port}")
-    try:
-        while True:
-            await ws.receive_text()
-    except WebSocketDisconnect:
-        clients.discard(ws)
-        WS_CLIENTS.set(len(clients))
-        logger.info(f"WebSocket client disconnected: {ws.client.host}:{ws.client.port}")
-    except Exception as e:
-        clients.discard(ws)
-        WS_CLIENTS.set(len(clients))
-        logger.error(f"WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
+async def serve_websocket_endpoint(ws: WebSocket):
+    await websocket_endpoint(ws)  # Call the correctly imported function
 
 
 @app.websocket("/ws/logs")  # Removed /api/ prefix
-async def websocket_logs(ws: WebSocket):
-    """
-    WebSocket endpoint: stream all log messages in real time.
-    """
-    await ws.accept()
-    log_ws_clients.add(ws)
-    logger.info(f"Log WebSocket client connected: {ws.client.host}:{ws.client.port}")
-    try:
-        while True:
-            await ws.receive_text()  # Keep connection alive
-    except WebSocketDisconnect:
-        log_ws_clients.discard(ws)
-        logger.info(f"Log WebSocket client disconnected: {ws.client.host}:{ws.client.port}")
-    except Exception as e:
-        log_ws_clients.discard(ws)
-        logger.error(f"Log WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
+async def serve_websocket_logs_endpoint(ws: WebSocket):
+    await websocket_logs_endpoint(ws)  # Call the correctly imported function
 
 
 async def _send_light_can_command(
