@@ -570,6 +570,7 @@
           <div class="flex gap-2">
             <button id="log-pause" class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm">Pause</button>
             <button id="log-resume" class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm" disabled>Resume</button>
+            <button id="log-clear" class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm">Clear</button> <!-- Added Clear button -->
           </div>
         </div>
         <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre> <!-- Removed h-full, added flex-1 min-h-0 -->
@@ -602,6 +603,7 @@
       const logsWaitingMessage = document.getElementById('logs-waiting-message');
       const logPauseBtn = document.getElementById('log-pause');
       const logResumeBtn = document.getElementById('log-resume');
+      const logClearBtn = document.getElementById('log-clear'); // Get clear button
 
       const PINNED_LOGS_OPEN_KEY = 'pinnedLogsOpen';
       const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
@@ -969,6 +971,16 @@
         logPauseBtn.disabled = false;
         logResumeBtn.disabled = true;
         logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
+      });
+
+      // Event listener for the Clear Logs button
+      logClearBtn.addEventListener('click', () => {
+        logStream.innerHTML = ''; // Clear the log display
+        // If the log socket is connected and the panel is open, show "Waiting for logs..."
+        if (logSocket && logSocket.readyState === WebSocket.OPEN && !pinnedLogsContent.classList.contains('hidden')) {
+          logsWaitingMessage.classList.remove('hidden');
+        }
+        // No need to pause or resume, just clear the current display
       });
       
       logLevelFilter.addEventListener('change', () => { 
