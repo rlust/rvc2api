@@ -11,7 +11,7 @@
         background-color: #4A5568; /* Tailwind gray-600 */
       }
       /* Collapsed sidebar hover effect */
-      #sidebar.sidebar-collapsed-hoverable { 
+      #sidebar.sidebar-collapsed-hoverable {
         cursor: pointer;
       }
       body.theme-default #sidebar.sidebar-collapsed-hoverable:hover,
@@ -123,11 +123,11 @@
         background-color: var(--ctp-mocha-base);
         color: var(--ctp-mocha-text);
       }
-      body.theme-catppuccin-mocha header, 
-      body.theme-catppuccin-mocha aside, 
-      body.theme-catppuccin-mocha #pinnedLogsContainer, 
-      body.theme-catppuccin-mocha #pinnedLogsContent, 
-      body.theme-catppuccin-mocha .view-section pre, 
+      body.theme-catppuccin-mocha header,
+      body.theme-catppuccin-mocha aside,
+      body.theme-catppuccin-mocha #pinnedLogsContainer,
+      body.theme-catppuccin-mocha #pinnedLogsContent,
+      body.theme-catppuccin-mocha .view-section pre,
       body.theme-catppuccin-mocha .view-section div[class*="bg-gray-800"] /* Approx for general dark cards */ {
         background-color: var(--ctp-mocha-mantle);
         color: var(--ctp-mocha-text);
@@ -136,15 +136,15 @@
       body.theme-catppuccin-mocha .nav-link { color: var(--ctp-mocha-subtext0); }
       body.theme-catppuccin-mocha .nav-link:hover { color: var(--ctp-mocha-text); background-color: var(--ctp-mocha-surface0); }
       body.theme-catppuccin-mocha .nav-link.active-nav { background-color: var(--ctp-mocha-surface1); color: var(--ctp-mocha-mauve); }
-      body.theme-catppuccin-mocha button, 
-      body.theme-catppuccin-mocha select, 
+      body.theme-catppuccin-mocha button,
+      body.theme-catppuccin-mocha select,
       body.theme-catppuccin-mocha input {
         background-color: var(--ctp-mocha-surface0);
         color: var(--ctp-mocha-text);
         border-color: var(--ctp-mocha-surface1);
       }
-      body.theme-catppuccin-mocha button:hover, 
-      body.theme-catppuccin-mocha select:hover, 
+      body.theme-catppuccin-mocha button:hover,
+      body.theme-catppuccin-mocha select:hover,
       body.theme-catppuccin-mocha input:hover {
         border-color: var(--ctp-mocha-overlay0);
       }
@@ -189,11 +189,11 @@
         background-color: var(--ctp-latte-base);
         color: var(--ctp-latte-text);
       }
-      body.theme-catppuccin-latte header, 
-      body.theme-catppuccin-latte aside, 
-      body.theme-catppuccin-latte #pinnedLogsContainer, 
-      body.theme-catppuccin-latte #pinnedLogsContent, 
-      body.theme-catppuccin-latte .view-section pre, 
+      body.theme-catppuccin-latte header,
+      body.theme-catppuccin-latte aside,
+      body.theme-catppuccin-latte #pinnedLogsContainer,
+      body.theme-catppuccin-latte #pinnedLogsContent,
+      body.theme-catppuccin-latte .view-section pre,
       body.theme-catppuccin-latte .view-section div[class*="bg-gray-800"] /* Approx for general light cards */ {
         background-color: var(--ctp-latte-mantle);
         color: var(--ctp-latte-text);
@@ -202,15 +202,15 @@
       body.theme-catppuccin-latte .nav-link { color: var(--ctp-latte-subtext0); }
       body.theme-catppuccin-latte .nav-link:hover { color: var(--ctp-latte-text); background-color: var(--ctp-latte-surface0); }
       body.theme-catppuccin-latte .nav-link.active-nav { background-color: var(--ctp-latte-surface1); color: var(--ctp-latte-mauve); }
-      body.theme-catppuccin-latte button, 
-      body.theme-catppuccin-latte select, 
+      body.theme-catppuccin-latte button,
+      body.theme-catppuccin-latte select,
       body.theme-catppuccin-latte input {
         background-color: var(--ctp-latte-surface0);
         color: var(--ctp-latte-text);
         border-color: var(--ctp-latte-surface1);
       }
-      body.theme-catppuccin-latte button:hover, 
-      body.theme-catppuccin-latte select:hover, 
+      body.theme-catppuccin-latte button:hover,
+      body.theme-catppuccin-latte select:hover,
       body.theme-catppuccin-latte input:hover {
         border-color: var(--ctp-latte-overlay0);
       }
@@ -405,7 +405,7 @@
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar Navigation -->
-      <aside id="sidebar" 
+      <aside id="sidebar"
              class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between">
         <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
           <div class="flex justify-between items-center mb-4">
@@ -418,17 +418,17 @@
             <button data-view="home" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">Home</button>
             <button data-view="lights" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Lights</button>
             <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
-            
+
             <!-- Configuration Section -->
-            <div class="pt-2"> 
+            <div class="pt-2">
               <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">
                 Configuration Files
               </h3>
               <div class="space-y-1">
-                <button data-view="mapping" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"> 
+                <button data-view="mapping" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                   device_mapping.yml
                 </button>
-                <button data-view="spec" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"> 
+                <button data-view="spec" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                   rvc.json
                 </button>
               </div>
@@ -537,7 +537,7 @@
         <section id="unmapped-view" class="view-section hidden">
           <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
           <p class="mb-4 text-gray-400">
-            These are CAN messages received by the system that could not be mapped to a known device based on your 
+            These are CAN messages received by the system that could not be mapped to a known device based on your
             <code>device_mapping.yml</code>. Use this information to help build out your configuration.
           </p>
           <div id="unmapped-entries-container" class="space-y-6">
@@ -662,7 +662,7 @@
           mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT; // Adjust padding for collapsed bar
           pinnedLogsChevronIcon.classList.remove('mdi-chevron-down');
           pinnedLogsChevronIcon.classList.add('mdi-chevron-up');
-          // Consider disconnecting log socket if not needed by any other view, 
+          // Consider disconnecting log socket if not needed by any other view,
           // but for a pinned pane, usually keep it connected if user might reopen.
           // For now, let's keep it simple and not disconnect immediately on collapse.
           // disconnectLogSocket(); // Optional: if you want to save resources
@@ -708,7 +708,7 @@
       // Restore transition after initial setup
       // Use a timeout to ensure the no-transition style is applied before restoring it
       setTimeout(() => {
-        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out'; 
+        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out';
       }, 50);
 
       // Pinned Logs Resizing Logic
@@ -721,7 +721,7 @@
         pinnedLogsContainer.style.height = currentExpandedLogsHeight;
         pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
         mainContent.style.paddingBottom = currentExpandedLogsHeight;
-        
+
         resizeRafId = null; // Reset RAF ID
       }
 
@@ -735,8 +735,8 @@
           originalContainerTransition = pinnedLogsContainer.style.transition;
           pinnedLogsContainer.style.transition = 'none'; // Disable transitions during drag
 
-          document.body.style.userSelect = 'none'; 
-          document.body.style.cursor = 'ns-resize'; 
+          document.body.style.userSelect = 'none';
+          document.body.style.cursor = 'ns-resize';
 
           const onMouseMove = (moveEvent) => {
             if (!isResizingLogs) return;
@@ -745,7 +745,7 @@
 
             const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
             newHeightPx = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(newHeightPx, maxHeightPx));
-            
+
             pendingResizeHeightPx = newHeightPx;
 
             if (resizeRafId === null) {
@@ -763,7 +763,7 @@
                 cancelAnimationFrame(resizeRafId);
                 resizeRafId = null;
               }
-              
+
               // Apply the final height directly to ensure it's set before saving
               // This uses the last value of pendingResizeHeightPx calculated in onMouseMove
               currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
@@ -772,9 +772,9 @@
               mainContent.style.paddingBottom = currentExpandedLogsHeight;
 
               localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, currentExpandedLogsHeight);
-              
-              document.body.style.userSelect = ''; 
-              document.body.style.cursor = ''; 
+
+              document.body.style.userSelect = '';
+              document.body.style.cursor = '';
               pinnedLogsContainer.style.transition = originalContainerTransition || 'height 0.3s ease-in-out'; // Restore transitions
             }
           };
@@ -809,7 +809,7 @@
           console.error('Unknown command for service call:', command);
           return Promise.reject('Unknown command');
         }
-        
+
         return fetch(path, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -817,7 +817,7 @@
         })
         .then(response => {
           if (!response.ok) {
-            return response.json().then(err => { 
+            return response.json().then(err => {
               const errorMsg = `HTTP error ${response.status}: ${err.detail || response.statusText}`;
               console.error(`Service call for ${entityId} (${command}) failed:`, errorMsg, err);
               throw new Error(errorMsg);
@@ -879,13 +879,13 @@
           cardContent += `
             <div class="brightness-control space-y-1 pt-2">
               <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
-              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" 
-                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider" 
+              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}"
+                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider"
                      min="0" max="100" value="${currentBrightnessPercent}">
             </div>
           `;
         }
-        
+
         card.innerHTML = cardContent;
 
         // Make the entire card clickable to toggle on/off
@@ -896,9 +896,9 @@
           }
           const entityId = card.dataset.entityId;
           // Determine current state for toggle logic if needed, or just send 'toggle'
-          // const currentLightState = lightStates[entityId]?.state || 'off'; 
+          // const currentLightState = lightStates[entityId]?.state || 'off';
           // callLightService(entityId, 'set', { state: currentLightState === 'on' ? 'off' : 'on' });
-          callLightService(entityId, 'toggle'); 
+          callLightService(entityId, 'toggle');
         });
 
         if (hasBrightness) {
@@ -912,7 +912,7 @@
             slider.addEventListener('change', (e) => { // 'change' event fires when user releases mouse
               const entityId = e.target.dataset.entityId;
               const brightness = parseInt(e.target.value, 10); // 0-100
-              // When setting brightness, the light should be 'on'. 
+              // When setting brightness, the light should be 'on'.
               // The API's /control endpoint handles this: if brightness is set, state 'on' is implied or can be sent.
               callLightService(entityId, 'set', { state: 'on', brightness: brightness });
             });
@@ -1016,15 +1016,15 @@
         }
         // No need to pause or resume, just clear the current display
       });
-      
-      logLevelFilter.addEventListener('change', () => { 
-        logStream.innerHTML = ''; 
+
+      logLevelFilter.addEventListener('change', () => {
+        logStream.innerHTML = '';
         if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
             logsWaitingMessage.classList.remove('hidden');
         }
       });
       logSearchInput.addEventListener('input', () => {
-        logStream.innerHTML = ''; 
+        logStream.innerHTML = '';
         if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
             logsWaitingMessage.classList.remove('hidden');
         }
@@ -1056,7 +1056,7 @@
 
           const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/);
           const entryLogLevel = levelMatch ? levelMatch[1].toUpperCase() : "UNKNOWN";
-          
+
           const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
           const currentFilterIndex = logLevels.indexOf(currentLogLevel);
           const entryLevelIndex = logLevels.indexOf(entryLogLevel);
@@ -1082,7 +1082,7 @@
         logSocket.onclose = () => {
           console.log("Log WebSocket disconnected");
           // logsWaitingMessage.classList.remove('hidden'); // Show waiting if it was open
-          // logsWaitingMessage.textContent = 'Log stream disconnected. Attempting to reconnect...'; 
+          // logsWaitingMessage.textContent = 'Log stream disconnected. Attempting to reconnect...';
           // Basic auto-reconnect could be added here if desired
         };
       }
@@ -1179,7 +1179,7 @@
       document.querySelectorAll('.nav-link').forEach(btn => {
         btn.addEventListener('click', () => {
           const view = btn.getAttribute('data-view');
-          
+
           // If a main view navigation occurs, and logs are open, ensure logs remain visible
           // The pinned log pane is independent of view sections now.
 
@@ -1197,7 +1197,7 @@
                 document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
                 homeNavLinkFallback.classList.add('active-nav');
             }
-            return; 
+            return;
           }
 
           document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
@@ -1276,7 +1276,7 @@
                 for (const [key, entry] of Object.entries(data)) {
                   const entryDiv = document.createElement('div');
                   entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
-                  
+
                   let decodedSignalsHtml = 'N/A';
                   if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
                     decodedSignalsHtml = '<ul class="list-disc list-inside pl-4 text-sm">';
@@ -1428,7 +1428,7 @@
         }
         adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
       }
-      
+
       // Mobile sidebar toggle
       mobileMenuButton.addEventListener('click', () => {
         sidebar.classList.remove('-translate-x-full');
@@ -1447,7 +1447,7 @@
         // const overlay = document.getElementById('sidebar-overlay');
         // if (overlay) overlay remove();
       });
-      
+
       // Desktop sidebar toggle
       toggleSidebarDesktopButton.addEventListener('click', (event) => {
         event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
@@ -1504,12 +1504,12 @@
           if (lightsView) lightsView.classList.remove('hidden');
           if (lightsNavLink) lightsNavLink.classList.add('active-nav');
         }
-        
+
         setupBulkControlButtons(); // Setup event listeners for the new buttons
 
         // Any other initializations that need to happen after DOM is ready
         // For example, if you still need to fetch initial data for other views:
-        // fetchInitialDataForOtherViews(); 
+        // fetchInitialDataForOtherViews();
       });
 
       // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
@@ -1525,7 +1525,7 @@
 
         const toast = document.createElement('div');
         toast.className = `toast-message toast-${type}`;
-        
+
         const messageSpan = document.createElement('span');
         messageSpan.textContent = message;
         toast.appendChild(messageSpan);

@@ -26,7 +26,7 @@
         { "name": "bank_select",             "start_bit": 56, "length": 4 },
         { "name": "reserved2",               "start_bit": 60, "length": 4 }
       ]
-    },    
+    },
     {
       "name": "PRODUCT_ID",
       "id": 494861974,
@@ -439,7 +439,7 @@
         { "name": "ground_current", "start_bit": 40, "length": 16, "unit": "Aac", "description": "Leakage/ground current detected" },
         { "name": "capacity", "start_bit": 56, "length": 8, "unit": "Aac", "description": "Configured breaker or current limit capacity" }
       ]
-    },    
+    },
     {
       "name": "ATS_AC_STATUS_3",
       "id": 234859343,
