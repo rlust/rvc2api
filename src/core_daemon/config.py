@@ -1,6 +1,8 @@
 import logging
 import os
 
+import coloredlogs
+
 # Add logger initialization at the top of the file
 logger = logging.getLogger(__name__)
 
@@ -31,11 +33,33 @@ def configure_logger():
     # Update the system-level handler filter to use the `log_level` variable
     system_handler.addFilter(ConfigurableLevelFilter(getattr(logging, log_level, logging.INFO)))
 
-    # Add the system-level handler to the root logger
+    # Ensure the root logger's level is set to DEBUG for generating all logs
+    logger.setLevel(logging.DEBUG)
+
+    # Add the system handler after setting the root logger's level
     logger.addHandler(system_handler)
 
-    # Keep the root logger at DEBUG to generate all log levels
-    logger.setLevel(logging.DEBUG)
+    # Update the root logger to respect the LOG_LEVEL environment variable
+    logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+    # Add the WebSocket log handler directly to a logger set to DEBUG
+    websocket_logger = logging.getLogger("websocket")
+    websocket_logger.setLevel(logging.DEBUG)
+    websocket_logger.addHandler(system_handler)
+
+    # Enhance logging with coloredlogs
+    coloredlogs.install(
+        level=log_level,  # Use the log_level variable for consistency
+        fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s",
+        logger=logger,  # Apply to the root logger
+    )
+
+    # Add coloredlogs to the WebSocket logger as well
+    coloredlogs.install(
+        level="DEBUG",  # Always show DEBUG logs for WebSocket
+        fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s",
+        logger=websocket_logger,  # Apply to the WebSocket logger
+    )
 
     return logger
 
