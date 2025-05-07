@@ -28,6 +28,17 @@
 
           format = "pyproject"; # This tells buildPythonPackage to use PEP 517
 
+          propagatedBuildInputs = with pkgs.python3Packages; [
+            fastapi
+            uvicorn
+            python-can
+            pydantic
+            pyyaml
+            prometheus-client # Corrected: hyphenated
+            coloredlogs
+            jinja2
+          ];
+
           # postInstall script is removed; Poetry should handle data files.
           # Ensure Python code uses importlib.resources or similar to access package data.
 
