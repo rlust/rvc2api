@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "commitMessagePrefix": "chore(deps): ",
+  "labels": ["dependencies"],
+  "rebaseWhen": "behind-base-branch",
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "matchManagers": ["poetry"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "python dependencies (non-major)",
+      "addLabels": ["python"]
+    },
+    {
+      "matchPackagePatterns": ["*"],
+      "matchManagers": ["poetry"],
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["python", "major"]
+    },
+    {
+      "matchManagers": ["nix"],
+      "groupName": "nix flake inputs",
+      "addLabels": ["nix"]
+    }
+  ]
+}
