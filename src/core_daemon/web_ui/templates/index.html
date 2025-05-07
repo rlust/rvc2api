@@ -1254,13 +1254,22 @@
                     decodedSignalsHtml = '<span class="text-gray-500">No signals decoded (PGN might be complex or data invalid).</span>';
                   }
 
+                  let suggestionsHtml = '';
+                  if (entry.suggestions && entry.suggestions.length > 0) {
+                    suggestionsHtml = '<div class="mt-3"><p class="font-semibold mb-1 text-blue-300">Mapping Suggestions (other instances of this DGN):</p><ul class="list-disc list-inside pl-4 text-sm">';
+                    entry.suggestions.forEach(sugg => {
+                      suggestionsHtml += `<li>Instance <strong>${sugg.instance}</strong> mapped to: <strong>${sugg.name}</strong> (Area: ${sugg.suggested_area || 'N/A'})</li>`;
+                    });
+                    suggestionsHtml += '</ul></div>';
+                  }
+
                   const yamlSuggestion = generateYamlSuggestion(entry);
 
                   entryDiv.innerHTML = `
                     <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
-                      <p><strong>PGN:</strong> ${entry.pgn_hex}</p>
-                      <p><strong>DGN:</strong> ${entry.dgn_hex}</p>
+                      <p><strong>PGN (from ArbID):</strong> ${entry.pgn_hex} ${entry.pgn_name ? `(${entry.pgn_name})` : ''}</p>
+                      <p><strong>DGN (for mapping):</strong> ${entry.dgn_hex} ${entry.dgn_name ? `(${entry.dgn_name})` : ''}</p>
                       <p><strong>Instance:</strong> ${entry.instance}</p>
                       <p><strong>Count:</strong> ${entry.count}</p>
                       <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
@@ -1271,8 +1280,9 @@
                       <p class="font-semibold mb-1">Decoded Signals (from PGN ${entry.pgn_hex}):</p>
                       ${decodedSignalsHtml}
                     </div>
+                    ${suggestionsHtml}
                     <div>
-                      <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
+                      <p class="font-semibold mt-3 mb-1">Suggested device_mapping.yml entry:</p>
                       <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
                       <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
                     </div>
@@ -1307,40 +1317,46 @@
 
       // Function to generate YAML suggestion
       function generateYamlSuggestion(entry) {
-        const pgnKey = entry.pgn_hex; // This is the DGN for the mapping file
+        const dgnKey = entry.dgn_hex; // Use DGN for the mapping file key
         const instanceKey = String(entry.instance); // Instance ID
 
         // Create a sanitized entity_id suggestion
-        const pgnForId = pgnKey.toLowerCase();
-        const instanceForId = instanceKey.toLowerCase().replace(/[^a-z0-9_]/g, ''); // Basic sanitize for instance part of ID
-        let suggestedEntityId = `unmapped_${pgnForId}_inst${instanceForId}`;
+        const dgnForId = dgnKey.toLowerCase();
+        const instanceForId = instanceKey.toLowerCase().replace(/[^a-z0-9_]/g, ''); // Basic sanitize
+        let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
 
-        let yaml = `# Suggested entry for PGN (used as DGN key): ${pgnKey}, Instance: ${instanceKey}\n`;
+        let yaml = `# Suggested entry for DGN: ${dgnKey}${entry.dgn_name ? ' (' + entry.dgn_name + ')' : ''}, Instance: ${instanceKey}\n`;
+        if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
+          yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${entry.pgn_name ? ' (' + entry.pgn_name + ')' : ''}\n`;
+        }
         yaml += `# First seen: ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}\n`;
         yaml += `# Last seen: ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}\n`;
         yaml += `# Count: ${entry.count}\n`;
         yaml += `# Last Data: ${entry.last_data_hex}\n`;
 
         if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-          yaml += `# Decoded Signals (from PGN ${pgnKey}):\n`;
+          yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
           for (const [key, value] of Object.entries(entry.decoded_signals)) {
             yaml += `#   ${key}: ${value}\n`;
           }
         }
+        if (entry.spec_entry && entry.spec_entry.name) {
+            yaml += `# Matched Spec Entry Name (for DGN): ${entry.spec_entry.name}\n`;
+        }
         yaml += `\n`; // Blank line for readability before the YAML structure
 
         // Start of the structured YAML suggestion
-        yaml += `${pgnKey}:\n`;
+        yaml += `${dgnKey}:\n`;
         yaml += `  ${instanceKey}:\n`; // Instance ID as a key (e.g., 255: or "default":)
         yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
-        yaml += `      friendly_name: "Unmapped ${pgnKey} Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
+        yaml += `      friendly_name: "Unmapped ${entry.dgn_name || dgnKey} Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
         yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
         yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
         yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
         yaml += `      # --- Optional fields based on device_type and system needs ---\n`;
         yaml += `      # interface: canX # TODO: Specify CAN interface if known (e.g., can0, can1)\n`;
-        yaml += `      # status_dgn: '${pgnKey}' # TODO: Confirm status DGN (often same as PGN/command DGN)\n`;
-        yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status PGN\n`;
+        yaml += `      # status_dgn: '${dgnKey}' # Status DGN is typically this DGN key\n`;
+        yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status DGN, specify command PGN\n`;
         yaml += `      # group_mask: '0xXX' # TODO: If part of a command/status group\n`;
         yaml += `      # --- Example for using a YAML template (if defined in your mapping file) ---\n`;
         yaml += `      # <<: *switchable_light  # For on/off lights, if &switchable_light template exists\n`;
