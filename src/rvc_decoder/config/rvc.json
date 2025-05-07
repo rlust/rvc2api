@@ -470,18 +470,70 @@
       "length": 8,
       "source_address": "0x96",
       "description": "Air Conditioner Status",
-      "pdf_reference": "Sec. 6.17",
+      "pdf_reference": "Sec. 6.17.2",
       "signals": [
-        { "name": "instance",                 "start_bit": 0,  "length": 8, "scale": 1,   "offset": 0, "unit": null },
-        { "name": "operating_mode",           "start_bit": 8,  "length": 8, "scale": 1,   "offset": 0, "unit": null },
-        { "name": "max_fan_speed",            "start_bit": 16, "length": 8, "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "max_ac_output_level",      "start_bit": 24, "length": 8, "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "fan_speed",                "start_bit": 32, "length": 8, "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "ac_output_level",          "start_bit": 40, "length": 8, "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "dead_band",                "start_bit": 48, "length": 8, "scale": 0.1, "offset": 0, "unit": "°C" },
-        { "name": "second_stage_dead_band",   "start_bit": 56, "length": 8, "scale": 0.1, "offset": 0, "unit": "°C" }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Instance ID of the air conditioner reporting status (1 = first unit, etc.)"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = Automatic (responding to thermostat), 1 = Manual override"
+        },
+        {
+          "name": "max_fan_speed",
+          "start_bit": 16,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Current cap on fan speed due to internal or external limits"
+        },
+        {
+          "name": "max_ac_output_level",
+          "start_bit": 24,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Maximum allowed compressor output (e.g., due to load management or self-protection)"
+        },
+        {
+          "name": "fan_speed",
+          "start_bit": 32,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Actual fan speed in use"
+        },
+        {
+          "name": "ac_output_level",
+          "start_bit": 40,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Actual compressor output level"
+        },
+        {
+          "name": "dead_band",
+          "start_bit": 48,
+          "length": 8,
+          "scale": 0.1,
+          "unit": "°C",
+          "description": "Temperature swing around the setpoint before the compressor cycles"
+        },
+        {
+          "name": "second_stage_dead_band",
+          "start_bit": 56,
+          "length": 8,
+          "scale": 0.1,
+          "unit": "°C",
+          "description": "Additional offset to trigger a high output mode or second-stage cooling"
+        }
       ]
-    },
+    },    
     {
       "name": "ATS_STATUS",
       "id": 436185679,
@@ -581,18 +633,66 @@
       "length": 8,
       "source_address": "0x9D",
       "description": "Air Conditioner Command",
-      "pdf_reference": "Sec. 6.17",
+      "pdf_reference": "Sec. 6.17.4",
       "signals": [
-        { "name": "instance",               "start_bit": 0,  "length": 8 },
-        { "name": "operating_mode",         "start_bit": 8,  "length": 8 },
-        { "name": "max_fan_speed",          "start_bit": 16, "length": 8, "scale": 0.4, "unit": "%" },
-        { "name": "max_ac_output_level",    "start_bit": 24, "length": 8, "scale": 0.4, "unit": "%" },
-        { "name": "fan_speed",              "start_bit": 32, "length": 8, "scale": 0.4, "unit": "%" },
-        { "name": "ac_output_level",        "start_bit": 40, "length": 8, "scale": 0.4, "unit": "%" },
-        { "name": "dead_band",              "start_bit": 48, "length": 8 },
-        { "name": "second_stage_dead_band", "start_bit": 56, "length": 8 }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Zone instance number for this AC unit (0 = apply to all instances)"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = Automatic (follow thermostat), 1 = Manual (ignore thermostat)"
+        },
+        {
+          "name": "max_fan_speed",
+          "start_bit": 16,
+          "length": 8,
+          "scale": 0.4,
+          "unit": "%",
+          "description": "Limits fan speed output for power-sharing; 255 = don't change"
+        },
+        {
+          "name": "max_ac_output_level",
+          "start_bit": 24,
+          "length": 8,
+          "scale": 0.4,
+          "unit": "%",
+          "description": "Limits compressor output; final level may be affected by internal constraints"
+        },
+        {
+          "name": "fan_speed",
+          "start_bit": 32,
+          "length": 8,
+          "scale": 0.4,
+          "unit": "%",
+          "description": "0 = off or automatic; >0 = manual override"
+        },
+        {
+          "name": "ac_output_level",
+          "start_bit": 40,
+          "length": 8,
+          "scale": 0.4,
+          "unit": "%",
+          "description": "Desired compressor output level; power-sharing and timing delays may alter response"
+        },
+        {
+          "name": "dead_band",
+          "start_bit": 48,
+          "length": 8,
+          "description": "Tolerance band around setpoint; higher values reduce cycling"
+        },
+        {
+          "name": "second_stage_dead_band",
+          "start_bit": 56,
+          "length": 8,
+          "description": "Threshold above setpoint to trigger high-output mode"
+        }
       ]
-    },
+    },    
     {
       "name": "WATERHEATER_STATUS_2",
       "id": 436115865,
@@ -695,25 +795,6 @@
       ]
     },
     {
-      "name": "AIR_CONDITIONER_STATUS_97",
-      "id": 2583683479,
-      "extended": true,
-      "length": 8,
-      "source_address": "0x97",
-      "description": "Air Conditioner Status",
-      "pdf_reference": "Sec. 6.17",
-      "signals": [
-        { "name": "instance",                "start_bit": 0,  "length": 8 },
-        { "name": "operating_mode",          "start_bit": 8,  "length": 8 },
-        { "name": "max_fan_speed",           "start_bit": 16, "length": 8, "scale": 0.5, "unit": "%" },
-        { "name": "max_ac_output_level",     "start_bit": 24, "length": 8, "scale": 0.5, "unit": "%" },
-        { "name": "fan_speed",               "start_bit": 32, "length": 8, "scale": 0.5, "unit": "%" },
-        { "name": "ac_output_level",         "start_bit": 40, "length": 8, "scale": 0.5, "unit": "%" },
-        { "name": "dead_band",               "start_bit": 48, "length": 8, "scale": 0.1, "unit": "°C" },
-        { "name": "second_stage_dead_band",  "start_bit": 56, "length": 8, "scale": 0.1, "unit": "°C" }
-      ]
-    },
-    {
       "name": "CHASSIS_MOBILITY_STATUS_9D",
       "id": 436204701,
       "extended": true,
@@ -804,18 +885,70 @@
       "length": 8,
       "source_address": "0x97",
       "description": "Air Conditioner Status",
-      "pdf_reference": "Sec. 6.17.4 (Table 6.17.4b)",
+      "pdf_reference": "Sec. 6.17.2",
       "signals": [
-        { "name": "instance",                "start_bit": 0,  "length": 8,  "scale": 1,   "offset": 0, "unit": null },
-        { "name": "operating_mode",          "start_bit": 8,  "length": 8,  "scale": 1,   "offset": 0, "unit": null },
-        { "name": "max_fan_speed",           "start_bit": 16, "length": 8,  "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "max_ac_output_level",     "start_bit": 24, "length": 8,  "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "fan_speed",               "start_bit": 32, "length": 8,  "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "ac_output_level",         "start_bit": 40, "length": 8,  "scale": 0.5, "offset": 0, "unit": "%"  },
-        { "name": "dead_band",               "start_bit": 48, "length": 8,  "scale": 0.1, "offset": 0, "unit": "°C" },
-        { "name": "second_stage_dead_band",  "start_bit": 56, "length": 8,  "scale": 0.1, "offset": 0, "unit": "°C" }
+        {
+          "name": "instance",
+          "start_bit": 0,
+          "length": 8,
+          "description": "Instance ID of the air conditioner reporting status (1 = first unit, etc.)"
+        },
+        {
+          "name": "operating_mode",
+          "start_bit": 8,
+          "length": 8,
+          "description": "0 = Automatic (responding to thermostat), 1 = Manual override"
+        },
+        {
+          "name": "max_fan_speed",
+          "start_bit": 16,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Current cap on fan speed due to internal or external limits"
+        },
+        {
+          "name": "max_ac_output_level",
+          "start_bit": 24,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Maximum allowed compressor output (e.g., due to load management or self-protection)"
+        },
+        {
+          "name": "fan_speed",
+          "start_bit": 32,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Actual fan speed in use"
+        },
+        {
+          "name": "ac_output_level",
+          "start_bit": 40,
+          "length": 8,
+          "scale": 0.5,
+          "unit": "%",
+          "description": "Actual compressor output level"
+        },
+        {
+          "name": "dead_band",
+          "start_bit": 48,
+          "length": 8,
+          "scale": 0.1,
+          "unit": "°C",
+          "description": "Temperature swing around the setpoint before the compressor cycles"
+        },
+        {
+          "name": "second_stage_dead_band",
+          "start_bit": 56,
+          "length": 8,
+          "scale": 0.1,
+          "unit": "°C",
+          "description": "Additional offset to trigger a high output mode or second-stage cooling"
+        }
       ]
-    },
+    },    
     {
       "name": "SET_DATE_TIME_COMMAND_75",
       "id": 436207221,
