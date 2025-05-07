@@ -20,6 +20,17 @@ def configure_logger():
     system_handler.setLevel(log_level)  # Set to INFO or the value of LOG_LEVEL
     system_handler.setFormatter(logging.Formatter(log_format))
 
+    # Add a filter to the system-level handler to restrict logs to a configurable level
+    class ConfigurableLevelFilter(logging.Filter):
+        def __init__(self, level):
+            self.level = level
+
+        def filter(self, record):
+            return record.levelno >= self.level
+
+    # Update the system-level handler filter to use the `log_level` variable
+    system_handler.addFilter(ConfigurableLevelFilter(getattr(logging, log_level, logging.INFO)))
+
     # Add the system-level handler to the root logger
     logger.addHandler(system_handler)
 
