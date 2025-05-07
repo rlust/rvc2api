@@ -31,7 +31,12 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, ge
 from pydantic import BaseModel, Field
 from rvc_decoder import decode_payload, load_config_data
 
-from core_daemon.config import configure_logger, get_actual_paths
+from core_daemon.config import (
+    configure_logger,
+    get_actual_paths,
+    get_fastapi_config,
+    get_static_paths,
+)
 
 # Removed unused pathlib.Path import
 
@@ -215,10 +220,11 @@ CAN_TX_ENQUEUE_LATENCY = Histogram(
 )
 
 # ── FastAPI setup ──────────────────────────────────────────────────────────
-# Make FastAPI settings configurable via environment variables
-API_TITLE = os.getenv("RVC2API_TITLE", "rvc2api")
-API_SERVER_DESCRIPTION = os.getenv("RVC2API_SERVER_DESCRIPTION", "RV-C to API Bridge")
-API_ROOT_PATH = os.getenv("RVC2API_ROOT_PATH", "/api")
+# Get FastAPI configuration
+fastapi_config = get_fastapi_config()
+API_TITLE = fastapi_config["title"]
+API_SERVER_DESCRIPTION = fastapi_config["server_description"]
+API_ROOT_PATH = fastapi_config["root_path"]
 
 logger.info(f"API Title: {API_TITLE}")
 logger.info(f"API Server Description: {API_SERVER_DESCRIPTION}")
@@ -229,10 +235,16 @@ app = FastAPI(
     servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],  # URL is relative to root_path
     root_path=API_ROOT_PATH,
 )
-web_ui_dir = os.path.join(os.path.dirname(__file__), "web_ui")
-# Mount static files (if any other static assets are used, otherwise this can be removed too)
-app.mount("/static", StaticFiles(directory=os.path.join(web_ui_dir, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(web_ui_dir, "templates"))
+
+# Get static and template paths
+static_paths = get_static_paths()
+web_ui_dir = static_paths["web_ui_dir"]
+static_dir = static_paths["static_dir"]
+templates_dir = static_paths["templates_dir"]
+
+# Mount static files and templates
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+templates = Jinja2Templates(directory=templates_dir)
 
 
 @app.on_event("startup")

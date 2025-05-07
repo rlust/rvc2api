@@ -66,3 +66,22 @@ def get_actual_paths():
     logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
 
     return actual_spec_path_for_ui, actual_map_path_for_ui
+
+
+# ── FastAPI Configuration ──────────────────────────────────────────────────
+def get_fastapi_config():
+    return {
+        "title": os.getenv("RVC2API_TITLE", "rvc2api"),
+        "server_description": os.getenv("RVC2API_SERVER_DESCRIPTION", "RV-C to API Bridge"),
+        "root_path": os.getenv("RVC2API_ROOT_PATH", "/api"),
+    }
+
+
+# ── Static File and Template Paths ─────────────────────────────────────────
+def get_static_paths():
+    base_dir = os.path.dirname(__file__)
+    return {
+        "web_ui_dir": os.path.join(base_dir, "web_ui"),
+        "static_dir": os.path.join(base_dir, "web_ui", "static"),
+        "templates_dir": os.path.join(base_dir, "web_ui", "templates"),
+    }
