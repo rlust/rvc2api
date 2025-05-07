@@ -550,6 +550,7 @@
 
     <!-- Pinned Logs Container -->
     <div id="pinnedLogsContainer" class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out" style="height: 3rem;"> <!-- Initial height for collapsed header -->
+      <div id="pinnedLogsResizeHandle" class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize" style="z-index: 61;"></div> <!-- Draggable Resize Handle -->
       <div id="pinnedLogsHeader" class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
         <span class="font-semibold text-gray-300 ml-2">Logs</span>
         <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
@@ -606,7 +607,10 @@
       const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
       const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
       const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
+      const MIN_LOGS_PANEL_HEIGHT_PX = 80; // Minimum height in pixels (e.g., header + a bit of content)
+      const MAX_LOGS_PANEL_HEIGHT_VH_PERCENT = 80; // Max height as % of viewport height
       let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
+      let isResizingLogs = false;
 
       // Constants for sidebar widths
       const SIDEBAR_EXPANDED_WIDTH_DESKTOP = '16rem'; // Corresponds to md:w-64
@@ -675,7 +679,23 @@
       // Initialize pinned logs state from localStorage
       const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
       const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
-      if (savedHeight) currentExpandedLogsHeight = savedHeight;
+      if (savedHeight) {
+        // Validate saved height against min/max before applying
+        let heightNum = parseFloat(savedHeight);
+        const unit = savedHeight.replace(/[\d.-]/g, '');
+        if (unit === 'px') {
+            heightNum = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(heightNum, window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100)));
+            currentExpandedLogsHeight = `${heightNum}px`;
+        } else if (unit === 'vh') {
+            heightNum = Math.max((MIN_LOGS_PANEL_HEIGHT_PX / window.innerHeight) * 100, Math.min(heightNum, MAX_LOGS_PANEL_HEIGHT_VH_PERCENT));
+            currentExpandedLogsHeight = `${heightNum}vh`;
+        } else {
+            // default to vh if unit is unknown or invalid
+            currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+        }
+      } else {
+        currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+      }
       // Set initial state without animation for page load
       const originalTransition = pinnedLogsContainer.style.transition;
       pinnedLogsContainer.style.transition = 'none';
@@ -685,6 +705,48 @@
       setTimeout(() => {
         pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out'; 
       }, 50);
+
+      // Pinned Logs Resizing Logic
+      const pinnedLogsResizeHandle = document.getElementById('pinnedLogsResizeHandle');
+      pinnedLogsResizeHandle.addEventListener('mousedown', (e) => {
+        if (!pinnedLogsContent.classList.contains('hidden')) { // Only allow resize if panel is open
+          isResizingLogs = true;
+          const startY = e.clientY;
+          const startHeight = pinnedLogsContainer.offsetHeight; // Get height in pixels
+
+          document.body.style.userSelect = 'none'; // Prevent text selection during resize
+          document.body.style.cursor = 'ns-resize'; // Change cursor for the whole body
+
+          const onMouseMove = (moveEvent) => {
+            if (!isResizingLogs) return;
+            const dy = startY - moveEvent.clientY;
+            let newHeightPx = startHeight + dy;
+
+            // Apply constraints
+            const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+            newHeightPx = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(newHeightPx, maxHeightPx));
+
+            currentExpandedLogsHeight = `${newHeightPx}px`; // Store as pixels for consistency during resize
+            pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+            pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+            mainContent.style.paddingBottom = currentExpandedLogsHeight;
+          };
+
+          const onMouseUp = () => {
+            if (isResizingLogs) {
+              isResizingLogs = false;
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+              document.body.style.userSelect = ''; // Restore text selection
+              document.body.style.cursor = ''; // Restore default cursor
+              localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, currentExpandedLogsHeight); // Save the final height (will be in px)
+            }
+          };
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        }
+      });
 
       // WebSocket for entity updates
       const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
