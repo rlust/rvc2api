@@ -170,14 +170,22 @@ CAN_TX_ENQUEUE_TOTAL = Counter("rvc2api_can_tx_enqueue_total", "Total number of 
 CAN_TX_ENQUEUE_LATENCY = Histogram("rvc2api_can_tx_enqueue_latency_seconds", "Latency for enqueueing CAN control messages")
 
 # ── FastAPI setup ──────────────────────────────────────────────────────────
+# Make FastAPI settings configurable via environment variables
+API_TITLE = os.getenv("RVC2API_TITLE", "rvc2api")
+API_SERVER_DESCRIPTION = os.getenv("RVC2API_SERVER_DESCRIPTION", "RV-C to API Bridge")
+API_ROOT_PATH = os.getenv("RVC2API_ROOT_PATH", "/api")
+
+logger.info(f"API Title: {API_TITLE}")
+logger.info(f"API Server Description: {API_SERVER_DESCRIPTION}")
+logger.info(f"API Root Path: {API_ROOT_PATH}")
+
 app = FastAPI(
-    title="Holtel rvc2api",
-    servers=[{"url": "/", "description": "Holtel de Assfire"}],
-    root_path="/api" # Changed from openapi_prefix to root_path
+    title=API_TITLE,
+    servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}], # URL is relative to root_path
+    root_path=API_ROOT_PATH
 )
 web_ui_dir = os.path.join(os.path.dirname(__file__), "web_ui")
 # Mount static files (if any other static assets are used, otherwise this can be removed too)
-# For now, keep it and ensure the directory exists.
 app.mount("/static", StaticFiles(directory=os.path.join(web_ui_dir, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(web_ui_dir, "templates"))
 
