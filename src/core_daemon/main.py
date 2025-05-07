@@ -34,6 +34,7 @@ from rvc_decoder import decode_payload, load_config_data
 from core_daemon.config import (
     configure_logger,
     get_actual_paths,
+    get_canbus_config,
     get_fastapi_config,
     get_static_paths,
 )
@@ -429,10 +430,10 @@ async def broadcast_to_clients(text: str):
 @app.on_event("startup")
 async def start_can_readers():
     loop = asyncio.get_running_loop()
-    raw_ifaces = os.getenv("CAN_CHANNELS", "can0,can1")
-    interfaces = [i.strip() for i in raw_ifaces.split(",") if i.strip()]
-    bustype = os.getenv("CAN_BUSTYPE", "socketcan")
-    bitrate = int(os.getenv("CAN_BITRATE", "500000"))
+    canbus_config = get_canbus_config()
+    interfaces = canbus_config["channels"]
+    bustype = canbus_config["bustype"]
+    bitrate = canbus_config["bitrate"]
     logger.info(
         f"Preparing CAN readers for interfaces: {interfaces}, "
         f"bustype: {bustype}, bitrate: {bitrate}"

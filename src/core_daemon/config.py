@@ -85,3 +85,12 @@ def get_static_paths():
         "static_dir": os.path.join(base_dir, "web_ui", "static"),
         "templates_dir": os.path.join(base_dir, "web_ui", "templates"),
     }
+
+
+# ── CAN Bus Configuration ─────────────────────────────────────────────────
+def get_canbus_config():
+    return {
+        "channels": os.getenv("CAN_CHANNELS", "can0,can1").split(","),
+        "bustype": os.getenv("CAN_BUSTYPE", "socketcan"),
+        "bitrate": int(os.getenv("CAN_BITRATE", "500000")),
+    }
