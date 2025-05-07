@@ -70,8 +70,9 @@ logger.info("rvc2api starting up...")
 # ── Determine actual config paths for core logic and UI display ────────────────
 actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
 
-logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
-logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
+# The following logs are now redundant as get_actual_paths() in config.py logs them.
+# logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
+# logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
 
 # ── Load spec & mappings for core logic ──────────────────────────────────────
 # load_config_data will perform its own logging regarding path resolution
@@ -291,174 +292,62 @@ async def start_can_readers():
         f"bustype: {bustype}, bitrate: {bitrate}"
     )
 
-    for iface in interfaces:
+    # Define the reader function once outside the loop
+    def reader_thread_target(iface_name: str) -> None:
+        try:
+            bus = can.interface.Bus(channel=iface_name, bustype=bustype, bitrate=bitrate)
+            buses[iface_name] = bus
+        except CanInterfaceNotImplementedError as e:
+            logger.error(f"Cannot open CAN bus '{iface_name}' ({bustype}, {bitrate}bps): {e}")
+            return
+        except Exception as e:
+            logger.error(
+                f"Failed to initialize CAN bus '{iface_name}' ({bustype}, "
+                f"{bitrate}bps) due to an unexpected error: {e}"
+            )
+            return
 
-        def reader(iface: str) -> None:
+        logger.info(f"Started CAN reader on {iface_name} via {bustype} @ {bitrate}bps")
+        while True:
             try:
-                bus = can.interface.Bus(channel=iface, bustype=bustype, bitrate=bitrate)
-                buses[iface] = bus
-            except CanInterfaceNotImplementedError as e:
-                logger.error(f"Cannot open CAN bus '{iface}' ({bustype}, {bitrate}bps): {e}")
-                return
-            except Exception as e:
-                logger.error(
-                    f"Failed to initialize CAN bus '{iface}' ({bustype}, "
-                    f"{bitrate}bps) due to an unexpected error: {e}"
+                msg = bus.recv(timeout=1.0)
+                if msg is None:
+                    continue
+
+                # Increment generator-specific counters
+                if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
+                    GENERATOR_COMMAND_COUNTER.inc()
+                elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
+                    GENERATOR_STATUS_1_COUNTER.inc()
+                elif msg.arbitration_id == 536861659:  # GENERATOR_STATUS_2
+                    GENERATOR_STATUS_2_COUNTER.inc()
+                elif msg.arbitration_id == 536870895:  # GENERATOR_DEMAND_COMMAND
+                    GENERATOR_DEMAND_COMMAND_COUNTER.inc()
+
+                FRAME_COUNTER.inc()
+                start_time = time.perf_counter()
+                decoded_payload_for_unmapped: Optional[Dict[str, Any]] = (
+                    None  # Variable to hold decoded data
                 )
-                return
+                entry = decoder_map.get(msg.arbitration_id)
 
-            logger.info(f"Started CAN reader on {iface} via {bustype} @ {bitrate}bps")
-            while True:
                 try:
-                    msg = bus.recv(timeout=1.0)
-                    if msg is None:
-                        continue
-
-                    # Increment generator-specific counters
-                    if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
-                        GENERATOR_COMMAND_COUNTER.inc()
-                    elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
-                        GENERATOR_STATUS_1_COUNTER.inc()
-                    elif msg.arbitration_id == 536861659:  # GENERATOR_STATUS_2
-                        GENERATOR_STATUS_2_COUNTER.inc()
-                    elif msg.arbitration_id == 536870895:  # GENERATOR_DEMAND_COMMAND
-                        GENERATOR_DEMAND_COMMAND_COUNTER.inc()
-
-                    FRAME_COUNTER.inc()
-                    start_time = time.perf_counter()
-                    decoded_payload_for_unmapped: Optional[Dict[str, Any]] = (
-                        None  # Variable to hold decoded data
-                    )
-                    entry = decoder_map.get(msg.arbitration_id)
-
-                    try:
-                        if not entry:
-                            LOOKUP_MISSES.inc()
-                            # Store unmapped entry for unknown PGN
-                            unmapped_key_str = (
-                                f"PGN_UNKNOWN-{msg.arbitration_id:X}"  # Ensure unique key
-                            )
-                            now_ts = time.time()
-
-                            model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                            model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
-                            model_dgn_hex = (
-                                f"{msg.arbitration_id:X}"  # Full Arb ID as DGN for unknown PGN
-                            )
-                            model_dgn_name = pgn_hex_to_name_map.get(
-                                model_dgn_hex
-                            )  # Attempt to name ArbID if it's a PGN
-
-                            if unmapped_key_str not in unmapped_entries:
-                                unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                                    pgn_hex=model_pgn_hex,
-                                    pgn_name=model_pgn_name,
-                                    dgn_hex=model_dgn_hex,
-                                    dgn_name=model_dgn_name,
-                                    instance="N/A",
-                                    last_data_hex=msg.data.hex().upper(),
-                                    decoded_signals=None,  # No decoded signals if PGN is unknown
-                                    first_seen_timestamp=now_ts,
-                                    last_seen_timestamp=now_ts,
-                                    count=1,
-                                    spec_entry=None,  # PGN unknown, so no specific spec entry
-                                )
-                            else:
-                                current_unmapped = unmapped_entries[unmapped_key_str]
-                                current_unmapped.last_data_hex = msg.data.hex().upper()
-                                current_unmapped.last_seen_timestamp = now_ts
-                                current_unmapped.count += 1
-                                if model_pgn_name and not current_unmapped.pgn_name:
-                                    current_unmapped.pgn_name = model_pgn_name
-                            continue  # Skip further processing
-
-                        # PGN is known, attempt to decode
-                        decoded, raw = decode_payload(entry, msg.data)
-                        decoded_payload_for_unmapped = decoded  # Store for potential unmapped entry
-                        SUCCESSFUL_DECODES.inc()
-
-                    except Exception as e:
-                        logger.error(
-                            f"Decode error for PGN 0x{msg.arbitration_id:X} on {iface}: {e}",
-                            exc_info=True,
-                        )
-                        DECODE_ERRORS.inc()
-                        continue
-                    finally:
-                        FRAME_LATENCY.observe(time.perf_counter() - start_time)
-
-                    # At this point, PGN is known and decoded successfully
-                    dgn = entry.get("dgn_hex")
-                    inst = raw.get("instance")  # instance can be 0
-
-                    if not dgn or inst is None:
+                    if not entry:
                         LOOKUP_MISSES.inc()
-                        logger.debug(
-                            f"DGN or instance missing in decoded payload for PGN "
-                            f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
-                            f"DGN from payload: {dgn}, Instance from payload: {inst}"
+                        # Store unmapped entry for unknown PGN
+                        unmapped_key_str = (
+                            f"PGN_UNKNOWN-{msg.arbitration_id:X}"  # Ensure unique key
                         )
-                        # Potentially log this as a specific type of unmapped if DGN/Inst
-                        # couldn't be derived from a known PGN's signals
-                        # For now, we assume `decode_payload` populates `raw` with `instance`
-                        # if the PGN spec defines it.
-                        # If `dgn` from spec or `instance` from raw signals is missing,
-                        # it's a config/spec issue or unexpected payload.
-                        continue
-
-                    key = (dgn.upper(), str(inst))
-                    # Find all matching devices for this status DGN/instance
-                    matching_devices = [dev for k, dev in status_lookup.items() if k == key]
-                    # If no match, try default instance
-                    if not matching_devices:
-                        default_key = (dgn.upper(), "default")
-                        if default_key in status_lookup:
-                            matching_devices = [status_lookup[default_key]]
-                    # Fallback to device_lookup if still not found
-                    if not matching_devices:
-                        if key in device_lookup:
-                            matching_devices = [device_lookup[key]]
-                        elif (dgn.upper(), "default") in device_lookup:
-                            matching_devices = [device_lookup[(dgn.upper(), "default")]]
-
-                    if not matching_devices:
-                        LOOKUP_MISSES.inc()
-                        logger.debug(
-                            f"No device config for DGN={dgn}, Inst={inst} "
-                            f"(PGN 0x{msg.arbitration_id:X})"
-                        )
-
-                        unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
-                        # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
-                        # pgn_name_from_spec was entry.get('name'),
-                        # which is better suited for dgn_name
-
-                        model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                        model_pgn_name = pgn_hex_to_name_map.get(
-                            model_pgn_hex
-                        )  # Name of the PGN part of ArbID
-
-                        model_dgn_hex = dgn.upper()  # dgn here is entry.get("dgn_hex")
-                        model_dgn_name = entry.get("name")  # Name from spec entry is DGN's name
-
                         now_ts = time.time()
 
-                        # Generate suggestions
-                        suggestions_list = []
-                        if raw_device_mapping and isinstance(
-                            raw_device_mapping.get("devices"), list
-                        ):
-                            for device_config in raw_device_mapping["devices"]:
-                                if device_config.get("dgn_hex", "").upper() == dgn.upper() and str(
-                                    device_config.get("instance")
-                                ) != str(inst):
-                                    suggestions_list.append(
-                                        SuggestedMapping(
-                                            instance=str(device_config.get("instance")),
-                                            name=device_config.get("name", "Unknown Name"),
-                                            suggested_area=device_config.get("suggested_area"),
-                                        )
-                                    )
+                        model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                        model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
+                        model_dgn_hex = (
+                            f"{msg.arbitration_id:X}"  # Full Arb ID as DGN for unknown PGN
+                        )
+                        model_dgn_name = pgn_hex_to_name_map.get(
+                            model_dgn_hex
+                        )  # Attempt to name ArbID if it's a PGN
 
                         if unmapped_key_str not in unmapped_entries:
                             unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
@@ -466,89 +355,197 @@ async def start_can_readers():
                                 pgn_name=model_pgn_name,
                                 dgn_hex=model_dgn_hex,
                                 dgn_name=model_dgn_name,
-                                instance=str(inst),
+                                instance="N/A",
                                 last_data_hex=msg.data.hex().upper(),
-                                decoded_signals=decoded_payload_for_unmapped,  # Store decoded
+                                decoded_signals=None,  # No decoded signals if PGN is unknown
                                 first_seen_timestamp=now_ts,
                                 last_seen_timestamp=now_ts,
                                 count=1,
-                                suggestions=suggestions_list if suggestions_list else None,
-                                spec_entry=entry,  # Store the spec entry used for decoding
+                                spec_entry=None,  # PGN unknown, so no specific spec entry
                             )
                         else:
                             current_unmapped = unmapped_entries[unmapped_key_str]
                             current_unmapped.last_data_hex = msg.data.hex().upper()
-                            current_unmapped.decoded_signals = (
-                                decoded_payload_for_unmapped  # Update decoded signals
-                            )
                             current_unmapped.last_seen_timestamp = now_ts
                             current_unmapped.count += 1
                             if model_pgn_name and not current_unmapped.pgn_name:
                                 current_unmapped.pgn_name = model_pgn_name
-                            if model_dgn_name and not current_unmapped.dgn_name:
-                                current_unmapped.dgn_name = model_dgn_name
-                            if (
-                                entry and not current_unmapped.spec_entry
-                            ):  # Add spec_entry if initially missing
-                                current_unmapped.spec_entry = entry
-                            # Update suggestions if they weren't there or if logic changes
-                            if not current_unmapped.suggestions and suggestions_list:
-                                current_unmapped.suggestions = suggestions_list
-                        continue
+                        continue  # Skip further processing
 
-                    ts = time.time()
-                    raw_brightness = raw.get("operating_status", 0)
-                    state_str = "on" if raw_brightness > 0 else "off"
+                    # PGN is known, attempt to decode
+                    decoded, raw = decode_payload(entry, msg.data)
+                    decoded_payload_for_unmapped = decoded  # Store for potential unmapped entry
+                    SUCCESSFUL_DECODES.inc()
 
-                    for device in matching_devices:
-                        eid = device["entity_id"]
-                        lookup = entity_id_lookup.get(
-                            eid, {}
-                        )  # Get full lookup for additional fields
-                        payload = {
-                            "entity_id": eid,
-                            "value": decoded,
-                            "raw": raw,
-                            "state": state_str,
-                            "timestamp": ts,
-                            "suggested_area": lookup.get("suggested_area", "Unknown"),
-                            "device_type": lookup.get("device_type", "unknown"),
-                            "capabilities": lookup.get("capabilities", []),
-                            "friendly_name": lookup.get("friendly_name"),
-                            "groups": lookup.get("groups", []),  # Changed from locations to groups
-                        }
-                        # Custom Metrics
-                        pgn = msg.arbitration_id & 0x3FFFF
-                        PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
-                        INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
-                        device_type = device.get("device_type", "unknown")
-                        DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
-                        # update state
-                        state[eid] = payload
-                        ENTITY_COUNT.set(len(state))
-                        # record into time‑based history
-                        hq = history[eid]
-                        hq.append(payload)
-                        cutoff = ts - HISTORY_DURATION
-                        while hq and hq[0]["timestamp"] < cutoff:
-                            hq.popleft()
-                        HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
-                        text = json.dumps(payload)
-                        # Use imported broadcast_to_clients
-                        loop.call_soon_threadsafe(
-                            lambda t=text: loop.create_task(broadcast_to_clients(t))
-                        )
-                except Exception as e_reader_loop:
+                except Exception as e:
                     logger.error(
-                        f"CRITICAL ERROR IN CAN READER LOOP for {iface}: {e_reader_loop}",
+                        f"Decode error for PGN 0x{msg.arbitration_id:X} on {iface}: {e}",
                         exc_info=True,
                     )
-                    time.sleep(
-                        1
-                    )  # Add a small delay to prevent log spamming if the error is persistent
+                    DECODE_ERRORS.inc()
+                    continue
+                finally:
+                    FRAME_LATENCY.observe(time.perf_counter() - start_time)
 
-        for iface in interfaces:
-            threading.Thread(target=reader, args=(iface,), daemon=True).start()
+                # At this point, PGN is known and decoded successfully
+                dgn = entry.get("dgn_hex")
+                inst = raw.get("instance")  # instance can be 0
+
+                if not dgn or inst is None:
+                    LOOKUP_MISSES.inc()
+                    logger.debug(
+                        f"DGN or instance missing in decoded payload for PGN "
+                        f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
+                        f"DGN from payload: {dgn}, Instance from payload: {inst}"
+                    )
+                    # Potentially log this as a specific type of unmapped if DGN/Inst
+                    # couldn't be derived from a known PGN's signals
+                    # For now, we assume `decode_payload` populates `raw` with `instance`
+                    # if the PGN spec defines it.
+                    # If `dgn` from spec or `instance` from raw signals is missing,
+                    # it's a config/spec issue or unexpected payload.
+                    continue
+
+                key = (dgn.upper(), str(inst))
+                # Find all matching devices for this status DGN/instance
+                matching_devices = [dev for k, dev in status_lookup.items() if k == key]
+                # If no match, try default instance
+                if not matching_devices:
+                    default_key = (dgn.upper(), "default")
+                    if default_key in status_lookup:
+                        matching_devices = [status_lookup[default_key]]
+                # Fallback to device_lookup if still not found
+                if not matching_devices:
+                    if key in device_lookup:
+                        matching_devices = [device_lookup[key]]
+                    elif (dgn.upper(), "default") in device_lookup:
+                        matching_devices = [device_lookup[(dgn.upper(), "default")]]
+
+                if not matching_devices:
+                    LOOKUP_MISSES.inc()
+                    logger.debug(
+                        f"No device config for DGN={dgn}, Inst={inst} "
+                        f"(PGN 0x{msg.arbitration_id:X})"
+                    )
+
+                    unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
+                    # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
+                    # pgn_name_from_spec was entry.get('name'),
+                    # which is better suited for dgn_name
+
+                    model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+                    model_pgn_name = pgn_hex_to_name_map.get(
+                        model_pgn_hex
+                    )  # Name of the PGN part of ArbID
+
+                    model_dgn_hex = dgn.upper()  # dgn here is entry.get("dgn_hex")
+                    model_dgn_name = entry.get("name")  # Name from spec entry is DGN's name
+
+                    now_ts = time.time()
+
+                    # Generate suggestions
+                    suggestions_list = []
+                    if raw_device_mapping and isinstance(raw_device_mapping.get("devices"), list):
+                        for device_config in raw_device_mapping["devices"]:
+                            if device_config.get("dgn_hex", "").upper() == dgn.upper() and str(
+                                device_config.get("instance")
+                            ) != str(inst):
+                                suggestions_list.append(
+                                    SuggestedMapping(
+                                        instance=str(device_config.get("instance")),
+                                        name=device_config.get("name", "Unknown Name"),
+                                        suggested_area=device_config.get("suggested_area"),
+                                    )
+                                )
+
+                    if unmapped_key_str not in unmapped_entries:
+                        unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
+                            pgn_hex=model_pgn_hex,
+                            pgn_name=model_pgn_name,
+                            dgn_hex=model_dgn_hex,
+                            dgn_name=model_dgn_name,
+                            instance=str(inst),
+                            last_data_hex=msg.data.hex().upper(),
+                            decoded_signals=decoded_payload_for_unmapped,  # Store decoded
+                            first_seen_timestamp=now_ts,
+                            last_seen_timestamp=now_ts,
+                            count=1,
+                            suggestions=suggestions_list if suggestions_list else None,
+                            spec_entry=entry,  # Store the spec entry used for decoding
+                        )
+                    else:
+                        current_unmapped = unmapped_entries[unmapped_key_str]
+                        current_unmapped.last_data_hex = msg.data.hex().upper()
+                        current_unmapped.decoded_signals = (
+                            decoded_payload_for_unmapped  # Update decoded signals
+                        )
+                        current_unmapped.last_seen_timestamp = now_ts
+                        current_unmapped.count += 1
+                        if model_pgn_name and not current_unmapped.pgn_name:
+                            current_unmapped.pgn_name = model_pgn_name
+                        if model_dgn_name and not current_unmapped.dgn_name:
+                            current_unmapped.dgn_name = model_dgn_name
+                        if (
+                            entry and not current_unmapped.spec_entry
+                        ):  # Add spec_entry if initially missing
+                            current_unmapped.spec_entry = entry
+                        # Update suggestions if they weren't there or if logic changes
+                        if not current_unmapped.suggestions and suggestions_list:
+                            current_unmapped.suggestions = suggestions_list
+                    continue
+
+                ts = time.time()
+                raw_brightness = raw.get("operating_status", 0)
+                state_str = "on" if raw_brightness > 0 else "off"
+
+                for device in matching_devices:
+                    eid = device["entity_id"]
+                    lookup = entity_id_lookup.get(eid, {})  # Get full lookup for additional fields
+                    payload = {
+                        "entity_id": eid,
+                        "value": decoded,
+                        "raw": raw,
+                        "state": state_str,
+                        "timestamp": ts,
+                        "suggested_area": lookup.get("suggested_area", "Unknown"),
+                        "device_type": lookup.get("device_type", "unknown"),
+                        "capabilities": lookup.get("capabilities", []),
+                        "friendly_name": lookup.get("friendly_name"),
+                        "groups": lookup.get("groups", []),  # Changed from locations to groups
+                    }
+                    # Custom Metrics
+                    pgn = msg.arbitration_id & 0x3FFFF
+                    PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
+                    INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
+                    device_type = device.get("device_type", "unknown")
+                    DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
+                    # update state
+                    state[eid] = payload
+                    ENTITY_COUNT.set(len(state))
+                    # record into time‑based history
+                    hq = history[eid]
+                    hq.append(payload)
+                    cutoff = ts - HISTORY_DURATION
+                    while hq and hq[0]["timestamp"] < cutoff:
+                        hq.popleft()
+                    HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
+                    text = json.dumps(payload)
+                    # Use imported broadcast_to_clients
+                    loop.call_soon_threadsafe(
+                        lambda t=text: loop.create_task(broadcast_to_clients(t))
+                    )
+            except Exception as e_reader_loop:
+                logger.error(
+                    f"CRITICAL ERROR IN CAN READER LOOP for {iface}: {e_reader_loop}",
+                    exc_info=True,
+                )
+                time.sleep(
+                    1
+                )  # Add a small delay to prevent log spamming if the error is persistent
+
+    # Corrected loop: Start one thread per interface
+    for iface in interfaces:
+        threading.Thread(target=reader_thread_target, args=(iface,), daemon=True).start()
 
 
 # ── REST Endpoints ─────────────────────────────────────────────────────────
