@@ -1,64 +1,55 @@
+import asyncio
 import logging
 import os
 
 import coloredlogs
 
-# Add logger initialization at the top of the file
+from core_daemon.models import WebSocketLogHandler
+
+# ── Logging Configuration ──────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 
 
-# ── Logging Configuration ──────────────────────────────────────────────────
+# Refactor configure_logger to properly handle logging levels and handlers
 def configure_logger():
     logger = logging.getLogger()
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     log_format = "%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 
-    logging.basicConfig(level=log_level, format=log_format)
-    # Set logger level to the value of log_level variable
-    logger.setLevel(log_level)
+    # Set up the root logger
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    logger.setLevel(logging.DEBUG)  # Root logger captures all logs
 
-    # Add a separate handler for system-level logs
+    # System-level handler for journalctl
     system_handler = logging.StreamHandler()
-    system_handler.setLevel(log_level)  # Set to INFO or the value of LOG_LEVEL
+    system_handler.setLevel(getattr(logging, log_level, logging.INFO))
     system_handler.setFormatter(logging.Formatter(log_format))
 
-    # Add a filter to the system-level handler to restrict logs to a configurable level
-    class ConfigurableLevelFilter(logging.Filter):
-        def __init__(self, level):
-            self.level = level
-
+    # Add a filter to restrict logs to INFO and above for system-level logs
+    class InfoAndAboveFilter(logging.Filter):
         def filter(self, record):
-            return record.levelno >= self.level
+            return record.levelno >= logging.INFO
 
-    # Update the system-level handler filter to use the `log_level` variable
-    system_handler.addFilter(ConfigurableLevelFilter(getattr(logging, log_level, logging.INFO)))
-
-    # Ensure the root logger's level is set to DEBUG for generating all logs
-    logger.setLevel(logging.DEBUG)
-
-    # Add the system handler after setting the root logger's level
+    system_handler.addFilter(InfoAndAboveFilter())
     logger.addHandler(system_handler)
 
-    # Update the root logger to respect the LOG_LEVEL environment variable
-    logger.setLevel(getattr(logging, log_level, logging.INFO))
+    # WebSocket log handler for Web UI
+    try:
+        main_loop = asyncio.get_running_loop()
+        log_ws_handler = WebSocketLogHandler(loop=main_loop)
+        log_ws_handler.setLevel(logging.DEBUG)  # Always capture DEBUG logs
+        log_ws_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        )
+        logger.addHandler(log_ws_handler)
+    except Exception as e:
+        logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
 
-    # Add the WebSocket log handler directly to a logger set to DEBUG
-    websocket_logger = logging.getLogger("websocket")
-    websocket_logger.setLevel(logging.DEBUG)
-    websocket_logger.addHandler(system_handler)
-
-    # Enhance logging with coloredlogs
+    # Enhance logging with coloredlogs for console output
     coloredlogs.install(
-        level=log_level,  # Use the log_level variable for consistency
-        fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s",
-        logger=logger,  # Apply to the root logger
-    )
-
-    # Add coloredlogs to the WebSocket logger as well
-    coloredlogs.install(
-        level="DEBUG",  # Always show DEBUG logs for WebSocket
-        fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s",
-        logger=websocket_logger,  # Apply to the WebSocket logger
+        level=log_level,
+        fmt=log_format,
+        logger=logger,
     )
 
     return logger
