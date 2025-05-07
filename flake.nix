@@ -69,7 +69,7 @@
             pyPkgs.mypy
             pyPkgs.flake8
             pyPkgs.pip # Added pip
-            pyPkgs.types-PyYAML # Added types-PyYAML
+            pyPkgs.types-pyyaml # Changed to lowercase pyyaml
             # Add the package itself to the dev shell for testing
             # rvc2apiPackage # This can be included if you want the Nix-built version
           ];
