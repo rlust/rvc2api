@@ -3,6 +3,7 @@ rvc_decoder.decode
 
 Core decoding logic for RV-C CAN frames, including loading of spec and device mapping data.
 """
+
 import os
 import sys
 import json
@@ -10,7 +11,7 @@ import yaml
 import logging
 from importlib import resources
 
-logger = logging.getLogger(__name__) # Added named logger
+logger = logging.getLogger(__name__)  # Added named logger
 
 
 def _default_paths():
@@ -29,7 +30,7 @@ def get_bits(data_bytes: bytes, start_bit: int, length: int) -> int:
     """
     Extract a little‑endian bitfield from an 8‑byte CAN payload.
     """
-    raw_int = int.from_bytes(data_bytes, byteorder='little')
+    raw_int = int.from_bytes(data_bytes, byteorder="little")
     mask = (1 << length) - 1
     return (raw_int >> start_bit) & mask
 
@@ -46,33 +47,32 @@ def decode_payload(entry: dict, data_bytes: bytes):
     decoded = {}
     raw_values = {}
 
-    for sig in entry.get('signals', []):
-        raw = get_bits(data_bytes, sig['start_bit'], sig['length'])
-        raw_values[sig['name']] = raw
+    for sig in entry.get("signals", []):
+        raw = get_bits(data_bytes, sig["start_bit"], sig["length"])
+        raw_values[sig["name"]] = raw
 
         # apply scale/offset
-        val = raw * sig.get('scale', 1) + sig.get('offset', 0)
-        unit = sig.get('unit', '')
+        val = raw * sig.get("scale", 1) + sig.get("offset", 0)
+        unit = sig.get("unit", "")
 
         # enum lookup if present
-        if 'enum' in sig:
-            formatted = sig['enum'].get(str(raw))
+        if "enum" in sig:
+            formatted = sig["enum"].get(str(raw))
             if formatted is None:
                 formatted = f"UNKNOWN ({raw})"
-        elif sig.get('scale', 1) != 1 or sig.get('offset', 0) != 0 or isinstance(val, float):
+        elif sig.get("scale", 1) != 1 or sig.get("offset", 0) != 0 or isinstance(val, float):
             formatted = f"{val:.2f}{unit}"
         else:
             formatted = f"{int(val)}{unit}"
 
-
-        decoded[sig['name']] = formatted
+        decoded[sig["name"]] = formatted
 
     return decoded, raw_values
 
 
 def load_config_data(
-    rvc_spec_path_override: str | None = None,    # Renamed parameter
-    device_mapping_path_override: str | None = None, # Renamed parameter
+    rvc_spec_path_override: str | None = None,  # Renamed parameter
+    device_mapping_path_override: str | None = None,  # Renamed parameter
 ):
     """
     Load and parse:
@@ -99,58 +99,68 @@ def load_config_data(
     default_spec_path, default_mapping_path = _default_paths()
 
     # Determine final spec path
-    rvc_spec_path = default_spec_path # Default
+    rvc_spec_path = default_spec_path  # Default
     if rvc_spec_path_override:
         if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
             rvc_spec_path = rvc_spec_path_override
-            logger.info(f"Using overridden RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
+            logger.info(
+                f"Using overridden RVC Spec Path: {rvc_spec_path}"
+            )  # Changed to logger.info
         else:
-            logger.warning( # Changed to logger.warning
+            logger.warning(  # Changed to logger.warning
                 f"Provided override path for RVC spec is missing or unreadable: {rvc_spec_path_override}. "
                 f"Attempting to use bundled default: {default_spec_path}"
             )
-            logger.info(f"Using default RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
+            logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")  # Changed to logger.info
     else:
-        logger.info(f"Using default RVC Spec Path: {rvc_spec_path}") # Changed to logger.info
+        logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")  # Changed to logger.info
 
     # Determine final mapping path
-    device_mapping_path = default_mapping_path # Default
+    device_mapping_path = default_mapping_path  # Default
     if device_mapping_path_override:
-        if os.path.exists(device_mapping_path_override) and os.access(device_mapping_path_override, os.R_OK):
+        if os.path.exists(device_mapping_path_override) and os.access(
+            device_mapping_path_override, os.R_OK
+        ):
             device_mapping_path = device_mapping_path_override
-            logger.info(f"Using overridden Device Mapping Path: {device_mapping_path}") # Changed to logger.info
+            logger.info(
+                f"Using overridden Device Mapping Path: {device_mapping_path}"
+            )  # Changed to logger.info
         else:
-            logger.warning( # Changed to logger.warning
+            logger.warning(  # Changed to logger.warning
                 f"Provided override path for device mapping is missing or unreadable: {device_mapping_path_override}. "
                 f"Attempting to use bundled default: {default_mapping_path}"
             )
-            logger.info(f"Using default Device Mapping Path: {device_mapping_path}") # Changed to logger.info
+            logger.info(
+                f"Using default Device Mapping Path: {device_mapping_path}"
+            )  # Changed to logger.info
     else:
-        logger.info(f"Using default Device Mapping Path: {device_mapping_path}") # Changed to logger.info
+        logger.info(
+            f"Using default Device Mapping Path: {device_mapping_path}"
+        )  # Changed to logger.info
     # --- MODIFICATION END ---
 
     # 1) Load spec
     if not os.path.exists(rvc_spec_path) or not os.access(rvc_spec_path, os.R_OK):
-        logger.error(f"Cannot read RVC spec: {rvc_spec_path}") # Changed to logger.error
+        logger.error(f"Cannot read RVC spec: {rvc_spec_path}")  # Changed to logger.error
         sys.exit(1)
     with open(rvc_spec_path) as f:
         spec_content = json.load(f)
 
-    specs = spec_content.get('messages', [])
+    specs = spec_content.get("messages", [])
     decoder_map: dict[int, dict] = {}
     for entry in specs:
-        sid = entry.get('id')
+        sid = entry.get("id")
         if sid is None:
-            logger.warning(f"Skipping spec without 'id': {entry}") # Changed to logger.warning
+            logger.warning(f"Skipping spec without 'id': {entry}")  # Changed to logger.warning
             continue
         try:
             dec_id = sid if isinstance(sid, int) else int(sid, 16)
         except ValueError:
-            logger.warning(f"Invalid 'id' in spec: {sid}") # Changed to logger.warning
+            logger.warning(f"Invalid 'id' in spec: {sid}")  # Changed to logger.warning
             continue
-        entry['dgn_hex'] = f"{(dec_id >> 8) & 0x3FFFF:X}"
+        entry["dgn_hex"] = f"{(dec_id >> 8) & 0x3FFFF:X}"
         decoder_map[dec_id] = entry
-    logger.info(f"Loaded {len(decoder_map)} spec entries.") # Changed to logger.info
+    logger.info(f"Loaded {len(decoder_map)} spec entries.")  # Changed to logger.info
 
     # 2) Load device mapping
     device_mapping: dict = {}
@@ -163,11 +173,11 @@ def load_config_data(
     if os.path.exists(device_mapping_path):
         with open(device_mapping_path) as f:
             raw_map = yaml.safe_load(f) or {}
-        templates = raw_map.get('templates', {})
+        templates = raw_map.get("templates", {})
         device_mapping = raw_map
 
         for dgn_hex, instances in raw_map.items():
-            if dgn_hex == 'templates' or not isinstance(instances, dict):
+            if dgn_hex == "templates" or not isinstance(instances, dict):
                 continue
             for inst_str, configs in instances.items():
                 if not isinstance(configs, list):
@@ -175,36 +185,40 @@ def load_config_data(
                 for cfg in configs:
                     if not isinstance(cfg, dict):
                         continue
-                    tmpl = cfg.pop('<<', None)
+                    tmpl = cfg.pop("<<", None)
                     merged = {**templates.get(tmpl, {}), **cfg} if tmpl else cfg
 
-                    eid = merged.get('entity_id')
-                    fname = merged.get('friendly_name')
+                    eid = merged.get("entity_id")
+                    fname = merged.get("friendly_name")
                     if eid and fname:
                         key = (dgn_hex.upper(), str(inst_str))
                         device_lookup[key] = merged
                         entity_id_lookup[eid] = merged
 
-                        sd = merged.get('status_dgn')
+                        sd = merged.get("status_dgn")
                         if sd:
                             status_lookup[(sd.upper(), str(inst_str))] = merged
 
-                        if merged.get('device_type') == 'light':
+                        if merged.get("device_type") == "light":
                             light_entity_ids.add(eid)
                             light_command_info[eid] = {
-                                'dgn':      int(dgn_hex, 16),
-                                'instance': int(inst_str),
-                                'interface': merged.get('interface')
+                                "dgn": int(dgn_hex, 16),
+                                "instance": int(inst_str),
+                                "interface": merged.get("interface"),
                             }
-        logger.info(f"Loaded {len(device_lookup)} device_lookup entries.") # Changed to logger.info
-        logger.info(f"Loaded {len(status_lookup)} status_lookup entries.") # Changed to logger.info
+        logger.info(f"Loaded {len(device_lookup)} device_lookup entries.")  # Changed to logger.info
+        logger.info(f"Loaded {len(status_lookup)} status_lookup entries.")  # Changed to logger.info
         status_keys_to_log = list(status_lookup.keys())
         if len(status_keys_to_log) > 50:
-            logger.info(f"status_lookup keys (first 50): {status_keys_to_log[:50]}") # Changed to logger.info
+            logger.info(
+                f"status_lookup keys (first 50): {status_keys_to_log[:50]}"
+            )  # Changed to logger.info
         else:
-            logger.info(f"status_lookup keys: {status_keys_to_log}") # Changed to logger.info
+            logger.info(f"status_lookup keys: {status_keys_to_log}")  # Changed to logger.info
     else:
-        logger.error(f"Device mapping file NOT FOUND: {device_mapping_path}") # Changed to logger.error
+        logger.error(
+            f"Device mapping file NOT FOUND: {device_mapping_path}"
+        )  # Changed to logger.error
 
     return (
         decoder_map,

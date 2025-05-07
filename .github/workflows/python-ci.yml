@@ -2,15 +2,16 @@ name: Python CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ] # Adjust if your main branch has a different name
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ] # Adjust if your main branch has a different name
+
 jobs:
-  build:
+  lint-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.12"] # Matches your pyproject.toml
 
     steps:
     - uses: actions/checkout@v4
@@ -23,9 +24,9 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: "1.8.2"
+        version: "1.8.2" # Or your desired Poetry version
         virtualenvs-create: true
-        virtualenvs-in-project: true
+        virtualenvs-in-project: true # Optional: creates .venv in project root
 
     - name: Load cached venv
       id: cached-poetry-dependencies
@@ -34,14 +35,22 @@ jobs:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-
-    - name: Install project (for linters/tests to pick it up)
+    - name: Install dependencies (including dev)
+      # Install all dependencies including dev for linters and tests
+      # No-root is not used here as we want the project itself to be importable by tests/linters
       run: poetry install --no-interaction
+      # If the above step was slow due to re-installing the project, 
+      # you can split it back into two steps:
+      # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      # run: poetry install --no-interaction --no-root # Install only dependencies
+      # run: poetry install --no-interaction # Ensure project is installed
+
+    - name: Check formatting with Black
+      run: |
+        poetry run black --check src tests
 
     - name: Lint with Flake8
+      # Flake8 will automatically pick up its configuration from pyproject.toml
       run: |
         poetry run flake8 src tests
 

@@ -32,21 +32,22 @@ packages = [
 # If any files are missed, they can be explicitly added back to an 'include' list.
 
 [tool.poetry.dependencies]
-python = ">=3.12"
+python = "^3.12.6" # Updated to avoid Python 3.12.5 issues with Black
 fastapi    = "^0.115"                 # Updated from ^0.95
 uvicorn    = { extras = ["standard"], version = "^0.32" } # Updated from ^0.22
 python-can = "^4.0"
 pydantic   = "^2.9"                   # Updated from ^1.10 (Major V2 update)
 pyyaml     = "^6.0"
 # Dependencies added from flake.nix and original pyproject.toml
-prometheus_client = "^0.21.0"       # Updated from ^0.20.0
+prometheus_client = "^0.21.0"       # Updated from ^0.20.0"
 coloredlogs = "^15.0"
 jinja2 = "^3.1.4"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.0" # Updated version
 mypy   = "^1.10" # Updated version
 flake8 = "^7.0" # Updated version
+black = "^24.4.2" # Added Black
 
 [tool.poetry.urls]
 Homepage   = "https://github.com/carpenike/rvc2api"
@@ -55,3 +56,25 @@ Repository = "https://github.com/carpenike/rvc2api"
 [tool.poetry.scripts]
 rvc2api-daemon = "core_daemon.app:main" # Assumes main() in app.py runs the Uvicorn server
 rvc2api-console = "console_client.console:main" # Assumes main() in console.py runs the console client
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = [
+    "E203", # Whitespace before ':' (often conflicts with Black)
+    "W503"  # Line break before binary operator (PEP 8 changed, Black prefers this)
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "build",
+    "dist",
+    "*.egg-info"
+]
+# You might want to specify which directories to check explicitly if not running on specific files
+# For example, to check only src and tests:
+# select = F,E,W,C90 # Or just let it default
+# application-import-names = rvc2api,src,tests # If you want to enforce import styles
+
+[tool.black]
+line-length = 100

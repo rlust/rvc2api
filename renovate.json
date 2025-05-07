@@ -24,6 +24,21 @@
       "matchManagers": ["nix"],
       "groupName": "nix flake inputs",
       "addLabels": ["nix"]
+    },
+    {
+      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest"],
+      "matchManagers": ["poetry"],
+      "matchDepTypes": ["dev"],
+      "groupName": "python dev tools (non-major)",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "addLabels": ["python", "dev-tools"]
+    },
+    {
+      "matchPackagePatterns": ["black", "flake8", "mypy", "pytest"],
+      "matchManagers": ["poetry"],
+      "matchDepTypes": ["dev"],
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["python", "dev-tools", "major"]
     }
   ]
 }
