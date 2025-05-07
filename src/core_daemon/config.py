@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 # Add logger initialization at the top of the file
 logger = logging.getLogger(__name__)
@@ -12,7 +12,8 @@ def configure_logger():
     log_format = "%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 
     logging.basicConfig(level=log_level, format=log_format)
-    logger.setLevel(logging.DEBUG)  # Ensure logger processes DEBUG messages for handlers
+    # Set logger level to the value of log_level variable
+    logger.setLevel(log_level)
 
     return logger
 
