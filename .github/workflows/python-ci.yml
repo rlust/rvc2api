@@ -2,16 +2,15 @@ name: Python CI
 
 on:
   push:
-    branches: [ main, master ] # Adjust if your main branch has a different name
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ] # Adjust if your main branch has a different name
-
+    branches: [ main ]
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"] # Matches your pyproject.toml
+        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -24,16 +23,15 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: "1.8.2" # Or your desired Poetry version
+        version: "1.8.2"
         virtualenvs-create: true
-        virtualenvs-in-project: true # Optional: creates .venv in project root
+        virtualenvs-in-project: true
 
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v4
       with:
         path: .venv
-        # Simplified quoting for hashFiles, which is often preferred by linters
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
