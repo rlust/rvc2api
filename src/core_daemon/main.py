@@ -11,7 +11,6 @@ from collections import deque
 from typing import Any, Dict, List, Optional
 
 import can
-import coloredlogs
 import uvicorn  # Added for main()
 from can.exceptions import CanInterfaceNotImplementedError
 from fastapi import (
@@ -31,54 +30,19 @@ from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, Field
 from rvc_decoder import decode_payload, load_config_data
-from rvc_decoder.decode import _default_paths
+
+from config import configure_logger, get_actual_paths
 
 # Removed unused pathlib.Path import
 
 
 # ── Logging ──────────────────────────────────────────────────────────────────
-logger = logging.getLogger(__name__)
-coloredlogs.install(
-    level=os.getenv("LOG_LEVEL", "INFO").upper(),
-    fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s",
-)
-logger.setLevel(logging.DEBUG)  # Ensure this logger processes DEBUG messages for its handlers
+logger = configure_logger()
 
 logger.info("rvc2api starting up...")
 
 # ── Determine actual config paths for core logic and UI display ────────────────
-spec_override_env = os.getenv("CAN_SPEC_PATH")
-mapping_override_env = os.getenv("CAN_MAP_PATH")
-
-_decoder_default_spec_path, _decoder_default_map_path = _default_paths()
-
-# Determine actual spec path that will be used by load_config_data and for UI
-actual_spec_path_for_ui = _decoder_default_spec_path
-if spec_override_env:
-    if os.path.exists(spec_override_env) and os.access(spec_override_env, os.R_OK):
-        actual_spec_path_for_ui = spec_override_env
-    else:
-        logger.warning(
-            f"Override RVC Spec Path '{spec_override_env}' is missing or "
-            f"unreadable. Core logic will attempt to use bundled default: "
-            f"'{_decoder_default_spec_path}'"
-        )
-        # actual_spec_path_for_ui remains _decoder_default_spec_path for UI
-        # consistency if override fails for core logic
-
-# Determine actual mapping path that will be used by load_config_data and for UI
-actual_map_path_for_ui = _decoder_default_map_path
-if mapping_override_env:
-    if os.path.exists(mapping_override_env) and os.access(mapping_override_env, os.R_OK):
-        actual_map_path_for_ui = mapping_override_env
-    else:
-        logger.warning(
-            f"Override Device Mapping Path '{mapping_override_env}' is missing "
-            f"or unreadable. Core logic will attempt to use bundled default: "
-            f"'{_decoder_default_map_path}'"
-        )
-        # actual_map_path_for_ui remains _decoder_default_map_path for UI
-        # consistency if override fails for core logic
+actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
 
 logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
 logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
@@ -86,9 +50,9 @@ logger.info(f"UI will attempt to display device mapping from: {actual_map_path_f
 # ── Load spec & mappings for core logic ──────────────────────────────────────
 # load_config_data will perform its own logging regarding path resolution
 logger.info(
-    f"Core logic attempting to load CAN spec from: "
-    f"{spec_override_env or '(default)'}, mapping from: "
-    f"{mapping_override_env or '(default)'}"
+    "Core logic attempting to load CAN spec from: %s, mapping from: %s",
+    os.getenv("CAN_SPEC_PATH") or "(default)",
+    os.getenv("CAN_MAP_PATH") or "(default)",
 )
 (
     decoder_map,
@@ -99,8 +63,8 @@ logger.info(
     entity_id_lookup,
     light_command_info,
 ) = load_config_data(
-    rvc_spec_path_override=spec_override_env,
-    device_mapping_path_override=mapping_override_env,
+    rvc_spec_path_override=os.getenv("CAN_SPEC_PATH"),
+    device_mapping_path_override=os.getenv("CAN_MAP_PATH"),
 )
 
 # Create a map from PGN hex string to PGN name for unmapped entry enrichment
