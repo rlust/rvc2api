@@ -13,70 +13,60 @@
         # Package set for the current system
         pkgs = import nixpkgs { inherit system; };
 
-        # Define the Python package build
+        # Define the Python package build using Poetry
         rvc2apiPackage = pkgs.python3Packages.buildPythonPackage {
           pname = "rvc2api";
-          version = "0.1.0"; # Read from pyproject.toml ideally, but explicit for now
+          version = "0.1.0"; # Ideally read from pyproject.toml, but explicit for now
           src = self; # Use the flake's own source tree
 
-          # Build dependencies needed by setuptools/build backend
-          buildInputs = with pkgs.python3Packages; [ setuptools wheel ];
+          # Build dependencies needed by the poetry build backend
+          nativeBuildInputs = with pkgs.python3Packages; [ poetry-core ];
 
-          # Runtime dependencies (Nix usually gets these from pyproject.toml)
-          propagatedBuildInputs = with pkgs.python3Packages; [
-            fastapi
-            uvicorn
-            python-can
-            pydantic
-            pyyaml
-            prometheus_client
-            coloredlogs # Added coloredlogs
-            jinja2 # Added for Jinja2Templates
-          ];
-          format = "pyproject";
+          # Runtime dependencies are now managed by Poetry and read from pyproject.toml
+          # No need for propagatedBuildInputs here if Poetry handles it,
+          # buildPythonPackage should infer them.
 
-          # Include package data (config files and web_ui)
-          postInstall = ''
-            mkdir -p $out/lib/${pkgs.python3.libPrefix}/site-packages/rvc_decoder/config
-            cp src/rvc_decoder/config/* $out/lib/${pkgs.python3.libPrefix}/site-packages/rvc_decoder/config/
-            
-            # Copy the web_ui directory
-            mkdir -p $out/lib/${pkgs.python3.libPrefix}/site-packages/core_daemon/web_ui
-            cp -r src/core_daemon/web_ui/* $out/lib/${pkgs.python3.libPrefix}/site-packages/core_daemon/web_ui/
-          '';
+          format = "pyproject"; # This tells buildPythonPackage to use PEP 517
+
+          # postInstall script is removed; Poetry should handle data files.
+          # Ensure Python code uses importlib.resources or similar to access package data.
 
           # If you have tests defined in pyproject.toml that Nix can run:
-          # doCheck = true;
-          # checkInputs = with pkgs.python3Packages; [ pytest ];
+          # doCheck = true; # You might need to configure how tests are run with Poetry
+          # checkInputs = with pkgs.python3Packages; [ pytest ]; # Or let poetry handle it
         };
 
-        # Helper to build a Python 3.12 shell (kept for development)
+        # Helper to build a Python 3.12 shell
         mkPyShell = pkgs: let
           py     = pkgs.python312;
           pyPkgs = pkgs.python312Packages;
         in pkgs.mkShell {
           buildInputs = with pkgs; [
             py
-            # core tooling
-            pyPkgs.setuptools
-            pyPkgs.wheel
-            # runtime deps
+            poetry # Add poetry CLI for managing the project
+            # runtime deps (can be useful to have them in the shell directly)
             pyPkgs.fastapi
             pyPkgs.uvicorn
             pyPkgs.python-can
             pyPkgs.pydantic
             pyPkgs.pyyaml
-            pyPkgs.coloredlogs # Added coloredlogs
+            pyPkgs.coloredlogs
+            pyPkgs.jinja2
+            pyPkgs.prometheus_client # Added from previous propagatedBuildInputs
             # dev deps
             pyPkgs.pytest
             pyPkgs.mypy
             pyPkgs.flake8
             # Add the package itself to the dev shell for testing
-            rvc2apiPackage
+            # rvc2apiPackage # This can be included if you want the Nix-built version
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
-            echo "🐚 Entered rvc2api devShell on ${pkgs.system} (Python ${py.version}) - Package: ${rvc2apiPackage}"
+            # Advise user on Poetry usage
+            echo "🐚 Entered rvc2api devShell on ${pkgs.system} (Python ${py.version})"
+            echo "💡 Run 'poetry install' to set up the project's virtual environment."
+            echo "💡 Then use 'poetry shell' or 'poetry run <command>'."
+            echo "💡 The rvc2api package itself can be built by Nix (e.g., 'nix build .#')."
           '';
         };
       in

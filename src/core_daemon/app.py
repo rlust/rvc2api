@@ -6,7 +6,7 @@ import threading
 import time
 import logging
 import coloredlogs
-import shutil # Keep for now, though copy_config_files is removed
+# Removed shutil import
 from typing import Dict, Any, Optional, List
 from collections import deque
 from pathlib import Path
@@ -21,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+import uvicorn # Added for main()
 
 from rvc_decoder import load_config_data, decode_payload
 from rvc_decoder.decode import _default_paths
@@ -649,7 +650,7 @@ async def list_lights(
             if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
         results[eid] = {
-            **ent,
+            **ent, # Corrected from ...ent
             "suggested_area": cfg.get("suggested_area", "Unknown"),
             "device_type": cfg.get("device_type", "unknown"),
             "capabilities": cfg.get("capabilities", []),
@@ -680,7 +681,7 @@ async def metadata():
             val = cfg.get(internal)
             if isinstance(val, list):
                 values.update(val)
-            elif val is not None:
+            elif val is not None: # Corrected from 'is not none'
                 values.add(val)
         out[public] = sorted(values)
 
@@ -746,26 +747,28 @@ async def get_device_mapping_config_content_api():
         logger.error(f"API Error: Device mapping file not found for UI display at '{actual_map_path_for_ui}'")
         raise HTTPException(status_code=404, detail="Device mapping file not found.")
 
-CONFIG_PATH = Path(__file__).parent / "rvc_decoder" / "config"
-RVC_SPEC_FILE = CONFIG_PATH / "rvc.json"
-DEVICE_MAPPING_FILE = CONFIG_PATH / "device_mapping.yml"
+# Removed CONFIG_PATH, RVC_SPEC_FILE, DEVICE_MAPPING_FILE definitions from previous version
 
 @app.get("/config/rvc_spec_details")
 async def get_rvc_spec_details():
     """Returns metadata from the rvc.json spec file."""
+    # Use actual_spec_path_for_ui which is determined at startup
+    if not os.path.exists(actual_spec_path_for_ui):
+        logger.error(f"RVC spec file not found at {actual_spec_path_for_ui} for spec details endpoint")
+        raise HTTPException(status_code=404, detail=f"RVC spec file not found at {actual_spec_path_for_ui}")
     try:
-        with open(RVC_SPEC_FILE, 'r') as f:
+        with open(actual_spec_path_for_ui, 'r') as f: # Use the correct path
             spec_data = json.load(f)
         return {
             "version": spec_data.get("version"),
             "spec_document": spec_data.get("spec_document")
         }
-    except FileNotFoundError:
-        logger.error(f"rvc.json not found at {RVC_SPEC_FILE}")
-        raise HTTPException(status_code=404, detail="rvc.json not found")
     except json.JSONDecodeError:
-        logger.error(f"Error decoding rvc.json at {RVC_SPEC_FILE}")
-        raise HTTPException(status_code=500, detail="Error decoding rvc.json")
+        logger.error(f"Error decoding RVC spec from {actual_spec_path_for_ui}")
+        raise HTTPException(status_code=500, detail="Error decoding RVC spec file.")
+    except Exception as e:
+        logger.error(f"Error reading RVC spec from {actual_spec_path_for_ui}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
 
 @app.get("/config/rvc_spec_metadata")
 async def get_rvc_spec_metadata():
@@ -1088,7 +1091,7 @@ async def _bulk_control_lights(
         
         if group_filter: # Changed from location_filter
             entity_groups = device_config.get("groups", []) # Changed from locations
-            if group_filter not in entity_groups: # Changed from location_filter
+            if group_filter not in entity_groups: # Corrected line
                 continue # Skip if group_filter is not in the entity's groups list
 
         action_description = f"Bulk: {action_name} {action_verb} - {eid}"
@@ -1155,3 +1158,19 @@ async def serve_home(request: Request):
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
     return PlainTextResponse(f"Validation error: {exc}", status_code=500)
+
+def main():
+    """Runs the FastAPI application using Uvicorn."""
+    # Configuration for Uvicorn can be extended here (e.g., from environment variables)
+    # For example, to set host and port from environment variables with defaults:
+    host = os.getenv("RVC2API_HOST", "0.0.0.0")
+    port = int(os.getenv("RVC2API_PORT", "8000"))
+    log_level = os.getenv("RVC2API_LOG_LEVEL", "info").lower()
+
+    logger.info(f"Starting Uvicorn server on {host}:{port} with log level '{log_level}'")
+    uvicorn.run(app, host=host, port=port, log_level=log_level)
+
+if __name__ == "__main__":
+    # This allows running the app directly with `python app.py` for development
+    # The script entry point `rvc2api-daemon` will call the `main()` function.
+    main()

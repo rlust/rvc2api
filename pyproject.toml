@@ -1,58 +1,57 @@
 [build-system]
-# use setuptools as the PEP 517 build backend
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires    = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
-name = "rvc2api"
-version = "0.1.0"
+[tool.poetry]
+name        = "rvc2api"
+version     = "0.1.0"
 description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket"
-readme = "README.md"
-license = { file = "LICENSE" }
-authors = [
-  { name = "Ryan Holt", email = "ryan@ryanholt.net" }
-]
-# Python support
-requires-python = ">=3.12"
+readme      = "README.md"
+license     = "MIT"
+authors     = ["Ryan Holt <ryan@ryanholt.net>"]
 
-# runtime deps
-dependencies = [
-  "fastapi>=0.95",
-  "uvicorn[standard]>=0.22",
-  "python-can>=4.0",
-  "pydantic>=1.10",
-  "PyYAML>=6.0",
-  "coloredlogs>=15.0", # Added coloredlogs
-]
-
-keywords = ["can", "rv-c", "websocket", "fastapi"]
+# PyPI metadata
+keywords    = ["can", "rv-c", "websocket", "fastapi"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX :: Linux",
 ]
 
-[project.urls]
-"Homepage"   = "https://github.com/carpenike/rvc2api"
-"Repository" = "https://github.com/carpenike/rvc2api"
-
-[project.optional-dependencies]
-# dev dependencies for testing and linting
-dev = [
-  "pytest>=7.2",
-  "mypy>=1.5",
-  "flake8>=6.0",
+# src layout and extra files
+packages = [
+  { include = "console_client", from = "src" },
+  { include = "core_daemon", from = "src" },
+  { include = "rvc_decoder", from = "src" },
 ]
+# Package data (like config files within rvc_decoder, web_ui within core_daemon)
+# should be automatically included by Poetry if they are present within these package directories
+# (e.g., src/rvc_decoder/config/*, src/core_daemon/web_ui/*).
+# The 'include' section from the original pyproject-poetry.toml for rvc_decoder config
+# is removed to rely on this standard behavior.
+# If any files are missed, they can be explicitly added back to an 'include' list.
 
-[tool.setuptools]
-include-package-data = true
+[tool.poetry.dependencies]
+python = ">=3.12"
+fastapi    = "^0.95"
+uvicorn    = { extras = ["standard"], version = "^0.22" }
+python-can = "^4.0"
+pydantic   = "^1.10" # Consider updating to Pydantic V2, e.g., "^2.5" if compatible
+pyyaml     = "^6.0"
+# Dependencies added from flake.nix and original pyproject.toml
+prometheus_client = "^0.20.0"
+coloredlogs = "^15.0"
+jinja2 = "^3.1.4"
 
-[tool.setuptools.package-data]
-"rvc_decoder" = [
-  "config/rvc.json",
-  "config/device_mapping.yml",
-]
+[tool.poetry.dev-dependencies]
+pytest = "^8.0" # Updated version
+mypy   = "^1.10" # Updated version
+flake8 = "^7.0" # Updated version
 
-[tool.setuptools.packages.find]
-# your code lives under src/
-where = ["src"]
+[tool.poetry.urls]
+Homepage   = "https://github.com/carpenike/rvc2api"
+Repository = "https://github.com/carpenike/rvc2api"
+
+[tool.poetry.scripts]
+rvc2api-daemon = "core_daemon.app:main" # Assumes main() in app.py runs the Uvicorn server
+rvc2api-console = "console_client.console:main" # Assumes main() in console.py runs the console client
