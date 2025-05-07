@@ -35,4 +35,4 @@ repos:
     -   id: mypy
         args: [--ignore-missing-imports, --scripts-are-modules, --explicit-package-bases]
         # You might need to adjust MyPy args based on your project structure and needs
-        # additional_dependencies: [pydantic] # If MyPy needs to understand types from specific libraries
+        additional_dependencies: [types-PyYAML] # Add types-PyYAML here
