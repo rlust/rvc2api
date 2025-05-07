@@ -31,7 +31,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, ge
 from pydantic import BaseModel, Field
 from rvc_decoder import decode_payload, load_config_data
 
-from config import configure_logger, get_actual_paths
+from core_daemon.config import configure_logger, get_actual_paths
 
 # Removed unused pathlib.Path import
 
