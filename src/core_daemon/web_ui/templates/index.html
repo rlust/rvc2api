@@ -218,7 +218,7 @@
     </div>
 
     <script>
-      const socket = new WebSocket(`ws://${location.host}/ws`);
+      // const socket = new WebSocket(`ws://${location.host}/ws`); // This line will be removed
       const grid = document.getElementById('light-grid');
       const filter = document.getElementById('area-filter');
       const lightStates = {};
@@ -428,7 +428,7 @@
       });
 
       // WebSocket for entity updates
-      const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
+      const entitySocket = new WebSocket(`ws://${location.host}${apiBasePath}/ws`);
 
       // --- Fetch and Display CAN Status ---
       async function fetchCanStatus() {
@@ -495,7 +495,6 @@
         canStatusContainer.appendChild(ul);
       }
 
-
       // Helper function to call light services (or any entity control)
       function callLightService(entityId, command, data = {}) {
         const path = `${apiBasePath}/entities/${entityId}/control`;
@@ -544,84 +543,6 @@
           showToast(`Failed to control ${entityId}: ${error.message}`, 'error');
         });
       }
-
-      // Helper function to call light group commands
-      async function callLightGroupCommand(group, action, buttonText) {
-        const endpoint = `${apiBasePath}/lights/control`; // apiBasePath is already defined
-        const payload = {
-            group: group,
-            action: action.toLowerCase() // Ensure action is lowercase e.g. 'on', 'off'
-        };
-        // console.log(`Attempting to execute: ${buttonText} (Group: ${group}, Action: ${action.toLowerCase()})`);
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            let responseData;
-            try {
-                responseData = await response.json();
-            } catch (e) {
-                // If response is not JSON, use status text
-                responseData = { message: response.statusText };
-            }
-
-            if (!response.ok) {
-                const errorMessage = responseData.detail || responseData.message || `HTTP error ${response.status}`;
-                // console.error(`Error executing ${buttonText}: ${errorMessage}`);
-                throw new Error(errorMessage);
-            }
-
-            // console.log(`${buttonText} executed successfully:`, responseData);
-            if (typeof showToast === 'function') {
-                showToast(`${buttonText}: ${responseData.message || 'Command sent successfully!'}`, 'success');
-            } else {
-                alert(`${buttonText}: ${responseData.message || 'Command sent successfully!'}`); // Fallback
-            }
-        } catch (error) {
-            // console.error(`Failed to execute ${buttonText}:`, error);
-            if (typeof showToast === 'function') {
-                showToast(`Failed to execute ${buttonText}. Error: ${error.message}`, 'error');
-            } else {
-                alert(`Failed to execute ${buttonText}. Error: ${error.message}`); // Fallback
-            }
-        }
-      }
-
-      // Attach event listeners for quick light controls
-      // Ensure this part of the script runs after the DOM is fully loaded or elements are available.
-      // Since the script tag is usually at the end of the body, elements should be present.
-      document.addEventListener('DOMContentLoaded', () => {
-        const btnAllOn = document.getElementById('btn-all-on');
-        if (btnAllOn) {
-          btnAllOn.addEventListener('click', () => callLightGroupCommand('all', 'on', 'All Lights On'));
-        }
-        const btnAllOff = document.getElementById('btn-all-off');
-        if (btnAllOff) {
-          btnAllOff.addEventListener('click', () => callLightGroupCommand('all', 'off', 'All Lights Off'));
-        }
-        const btnExteriorOn = document.getElementById('btn-exterior-on');
-        if (btnExteriorOn) {
-          btnExteriorOn.addEventListener('click', () => callLightGroupCommand('exterior', 'on', 'Exterior Lights On'));
-        }
-        const btnExteriorOff = document.getElementById('btn-exterior-off');
-        if (btnExteriorOff) {
-          btnExteriorOff.addEventListener('click', () => callLightGroupCommand('exterior', 'off', 'Exterior Lights Off'));
-        }
-        const btnInteriorOn = document.getElementById('btn-interior-on');
-        if (btnInteriorOn) {
-          btnInteriorOn.addEventListener('click', () => callLightGroupCommand('interior', 'on', 'Interior Lights On'));
-        }
-        const btnInteriorOff = document.getElementById('btn-interior-off');
-        if (btnInteriorOff) {
-          btnInteriorOff.addEventListener('click', () => callLightGroupCommand('interior', 'off', 'Interior Lights Off'));
-        }
-      });
 
       function renderCard(entity) {
         const card = document.createElement('div');
@@ -821,7 +742,7 @@
         if (logSocket && logSocket.readyState === WebSocket.OPEN) {
           return;
         }
-        logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
+        logSocket = new WebSocket(`ws://${location.host}${apiBasePath}/ws/logs`);
         // logsWaitingMessage.classList.remove('hidden'); // Managed by setPinnedLogsState
 
         logSocket.onopen = () => {
@@ -881,97 +802,73 @@
         }
       }
 
-      // Function to handle bulk light control button clicks
-      function setupBulkControlButtons() {
-        const controls = [
-          { id: 'btn-all-on', group: null, command: 'set', state: 'on', name: 'All Lights On' },
-          { id: 'btn-all-off', group: null, command: 'set', state: 'off', name: 'All Lights Off' },
-          { id: 'btn-interior-on', group: 'interior', command: 'set', state: 'on', name: 'Interior Lights On' },
-          { id: 'btn-interior-off', group: 'interior', command: 'set', state: 'off', name: 'Interior Lights Off' },
-          { id: 'btn-exterior-on', group: 'exterior', command: 'set', state: 'on', name: 'Exterior Lights On' },
-          { id: 'btn-exterior-off', group: 'exterior', command: 'set', state: 'off', name: 'Exterior Lights Off' },
-        ];
+      // NEW Helper function for Quick Light Controls (based on original working logic)
+      function executeQuickLightCommand(buttonElement, commandName, apiPath, httpMethod) {
+        const originalText = buttonElement.innerHTML;
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
 
-        controls.forEach(control => {
-          const button = document.getElementById(control.id);
-          if (button) {
-            button.addEventListener('click', () => {
-              const originalText = button.innerHTML;
-              button.disabled = true;
-              button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
-
-              let path = `${apiBasePath}/lights/control`;
-              if (control.group) {
-                path += `?group=${control.group}`;
+        fetch(apiPath, { method: httpMethod })
+          .then(response => {
+            if (!response.ok) {
+              const contentType = response.headers.get("content-type");
+              if (contentType && contentType.indexOf("application/json") !== -1) {
+                  return response.json().then(err => {
+                      const detail = err.detail || (typeof err === 'string' ? err : 'Unknown server error from JSON response');
+                      throw new Error(`HTTP error ${response.status}: ${detail}`);
+                  });
+              } else {
+                  return response.text().then(text => {
+                      let errorText = text;
+                      const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+                      if (titleMatch && titleMatch[1]) {
+                          errorText = titleMatch[1];
+                      } else if (text.length > 150) {
+                          errorText = "Server returned non-JSON error (see console for details)";
+                          console.error("Full non-JSON error response from server:", text);
+                      }
+                      throw new Error(`HTTP error ${response.status}: ${errorText}`);
+                  });
               }
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log(`Command ${commandName} successful:`, data);
+            let toastType = 'success';
+            let toastMessage;
 
-              const body = { command: control.command, state: control.state };
+            if (data.errors && data.errors.length > 0) {
+              toastMessage = `${commandName}: ${data.lights_commanded || 0} commanded with ${data.errors.length} errors. Check console.`;
+              toastType = 'warning';
+              console.warn(`Bulk action '${commandName}' errors:`, data.errors);
+            } else if (data.status === "no_match" && data.message) {
+              toastMessage = `${commandName}: ${data.message}`;
+              toastType = 'info';
+            } else if (data.lights_commanded !== undefined) {
+               toastMessage = `${commandName}: ${data.lights_commanded} lights commanded.`;
+            } else if (data.message) { // General message from API on success
+                toastMessage = data.message;
+            } else { // Fallback success
+                toastMessage = `${commandName}: Command sent successfully.`;
+            }
+            showToast(toastMessage, toastType);
 
-              fetch(path, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-              })
-                .then(response => {
-                  if (!response.ok) {
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        return response.json().then(err => {
-                            const detail = err.detail || (typeof err === 'string' ? err : 'Unknown error from JSON response');
-                            throw new Error(`HTTP error ${response.status}: ${detail}`);
-                        });
-                    } else {
-                        return response.text().then(text => {
-                            let errorText = text;
-                            // Try to extract a title from HTML error page for a more concise message
-                            const titleMatch = text.match(/<title>(.*?)<\/title>/i);
-                            if (titleMatch && titleMatch[1]) {
-                                errorText = titleMatch[1];
-                            } else if (text.length > 150) { // Avoid showing full HTML page in toast
-                                errorText = "Server returned non-JSON error (see console for details)";
-                                console.error("Full non-JSON error response from server:", text);
-                            }
-                            throw new Error(`HTTP error ${response.status}: ${errorText}`);
-                        });
-                    }
-                  }
-                  return response.json();
-                })
-                .then(data => {
-                  console.log(`Command ${control.name} successful:`, data);
-                  let toastMessage = `${control.name}: ${data.message || 'Command processed.'}`;
-                  if (data.details && data.details.length > 0) {
-                    const successfulCount = data.details.filter(d => d.status === 'sent').length;
-                    const errorCount = data.details.filter(d => d.status !== 'sent').length;
-                    toastMessage = `${control.name}: ${successfulCount} sent, ${errorCount} failed.`;
-                    if (errorCount > 0) {
-                        showToast(toastMessage, 'warning');
-                    } else {
-                        showToast(toastMessage, 'success');
-                    }
-                  } else if (data.status === "no_match") {
-                    showToast(`${control.name}: ${data.message}`, 'info');
-                  } else {
-                    showToast(toastMessage, 'success');
-                  }
-                  console.info(`Bulk Action Details - ${control.name}:\nStatus: ${data.status}\nMessage: ${data.message}`);
-                })
-                .catch(error => {
-                  console.error(`Command ${control.name} failed:`, error);
-                  showToast(`Failed to execute ${control.name}. Error: ${error.message}`, 'error');
-                })
-                .finally(() => {
-                  button.disabled = false;
-                  button.innerHTML = originalText;
-                });
-            });
-          } else {
-            console.warn(`Button with ID ${control.id} not found for bulk control setup.`);
-          }
-        });
+            if (data.action !== undefined && data.status !== undefined) {
+              console.info(`Bulk Action Details - ${commandName}:\nAction: ${data.action}\nStatus: ${data.status}\nProcessed: ${data.lights_processed || 0}\nCommanded: ${data.lights_commanded || 0}`);
+            }
+          })
+          .catch(error => {
+            console.error(`Command ${commandName} failed:`, error);
+            showToast(`Failed to execute ${commandName}. Error: ${error.message}`, 'error');
+          })
+          .finally(() => {
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalText;
+          });
       }
 
-      fetch('/api/lights')
+      fetch(`${apiBasePath}/lights`)
         .then(res => {
           if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -1032,7 +929,7 @@
           // if (view === 'logs') { ... } else { disconnectLogSocket(); ... }
 
           if (view === 'mapping') {
-            fetch('/api/config/device_mapping')
+            fetch(`${apiBasePath}/config/device_mapping`)
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.text();
@@ -1045,7 +942,7 @@
                 document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
               });
           } else if (view === 'spec') {
-            fetch('/api/config/rvc_spec')
+            fetch(`${apiBasePath}/config/rvc_spec`)
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.text();
@@ -1057,7 +954,7 @@
                 console.error("Failed to fetch rvc.json:", err);
                 document.getElementById('spec-content').textContent = `Error: Could not load rvc.json.\n${err.message}`;
               });
-            fetch('/api/config/rvc_spec_metadata')
+            fetch(`${apiBasePath}/config/rvc_spec_metadata`)
               .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
                 return res.json();
@@ -1069,7 +966,12 @@
                     <p><strong>Version:</strong> ${data.version}</p>
                     <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
                   `;
-                } else {
+                } else if (data.spec_document) { // Case where only document is present
+                  metadataDiv.innerHTML = `
+                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
+                  `;
+                }
+                else {
                   metadataDiv.textContent = 'Could not load spec metadata.';
                 }
               })
@@ -1084,7 +986,7 @@
             container.innerHTML = ''; // Clear previous entries
             container.appendChild(loadingMsg);
 
-            fetch('/api/unmapped_entries')
+            fetch(`${apiBasePath}/unmapped_entries`)
               .then(response => {
                 if (!response.ok) {
                   throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
@@ -1330,7 +1232,24 @@
           if (lightsNavLink) lightsNavLink.classList.add('active-nav');
         }
 
-        setupBulkControlButtons(); // Setup event listeners for the new buttons
+        // Setup Quick Light Control Buttons
+        const quickControls = [
+          { id: 'btn-all-on', name: 'All Lights On', path: `${apiBasePath}/lights/all/on`, method: 'POST' },
+          { id: 'btn-all-off', name: 'All Lights Off', path: `${apiBasePath}/lights/all/off`, method: 'POST' },
+          { id: 'btn-exterior-on', name: 'Exterior Lights On', path: `${apiBasePath}/lights/exterior/on`, method: 'POST' },
+          { id: 'btn-exterior-off', name: 'Exterior Lights Off', path: `${apiBasePath}/lights/exterior/off`, method: 'POST' },
+          { id: 'btn-interior-on', name: 'Interior Lights On', path: `${apiBasePath}/lights/interior/on`, method: 'POST' },
+          { id: 'btn-interior-off', name: 'Interior Lights Off', path: `${apiBasePath}/lights/interior/off`, method: 'POST' },
+        ];
+
+        quickControls.forEach(qc => {
+          const button = document.getElementById(qc.id);
+          if (button) {
+            button.addEventListener('click', () => executeQuickLightCommand(button, qc.name, qc.path, qc.method));
+          } else {
+            console.warn(`Quick control button with ID ${qc.id} not found.`);
+          }
+        });
 
         // Any other initializations that need to happen after DOM is ready
         // For example, if you still need to fetch initial data for other views:
@@ -1440,55 +1359,6 @@
       function updateSystemStatus() {
         // ...existing code...
       }
-
-      function updateCanStatus() {
-        fetch('/api/can/status')
-          .then(response => response.json())
-          .then(data => {
-            const loadingDiv = document.getElementById('can-status-loading');
-            const container = document.getElementById('can-status-container');
-            loadingDiv.style.display = 'none';
-            container.style.display = 'block';
-            container.innerHTML = ''; // Clear previous status
-
-            if (Object.keys(data).length === 0) {
-              container.innerHTML = '<p>No CAN interfaces found or an error occurred.</p>';
-              return;
-            }
-
-            for (const iface in data) {
-              const status = data[iface];
-              const card = document.createElement('div');
-              card.className = 'card mb-2';
-              let cardBodyContent = `<div class="card-header">${iface}</div><ul class="list-group list-group-flush">`;
-              cardBodyContent += `<li class="list-group-item">State: ${status.state || 'N/A'}</li>`;
-              cardBodyContent += `<li class="list-group-item">Bitrate: ${status.bitrate ? status.bitrate + ' bps' : 'N/A'}</li>`;
-              cardBodyContent += `<li class="list-group-item">Restart Count: ${status.restarts || '0'}</li>`;
-              cardBodyContent += `<li class="list-group-item">Error Counters: RX: ${status.rx_errors || '0'}, TX: ${status.tx_errors || '0'}</li>`;
-              if (status.error_details) {
-                cardBodyContent += `<li class="list-group-item">Error Details: ${JSON.stringify(status.error_details)}</li>`;
-              }
-              cardBodyContent += '</ul>';
-              card.innerHTML = cardBodyContent;
-              container.appendChild(card);
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching CAN status:', error);
-            const loadingDiv = document.getElementById('can-status-loading');
-            const container = document.getElementById('can-status-container');
-            loadingDiv.style.display = 'none';
-            container.style.display = 'block';
-            container.innerHTML = '<p>Error loading CAN status. Check console for details.</p>';
-          });
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        updateSystemStatus();
-        updateCanStatus(); // Add this line
-        setInterval(updateSystemStatus, 5000);
-        setInterval(updateCanStatus, 5000); // Add this line to refresh CAN status periodically
-      });
     </script>
     <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
   </body>
