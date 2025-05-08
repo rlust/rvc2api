@@ -130,7 +130,7 @@ logger.info(f"API Root Path: {API_ROOT_PATH}")
 app = FastAPI(
     title=API_TITLE,
     servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],
-    root_path=API_ROOT_PATH,
+    # root_path=API_ROOT_PATH,
 )
 
 static_paths = get_static_paths()
