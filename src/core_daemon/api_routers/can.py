@@ -190,7 +190,7 @@ async def get_can_status():
     for iface_name in interface_names:
         try:
             # Using -details -statistics for the most comprehensive output
-            command = f"ip -details -statistics link show {iface_name}"
+            command = f"/run/current-system/sw/bin/ip -details -statistics link show {iface_name}"
             proc = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
