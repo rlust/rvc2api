@@ -81,6 +81,16 @@ class UnmappedEntryModel(BaseModel):
     )
 
 
+class UnknownPGNEntry(BaseModel):
+    """Represents a CAN message whose PGN (from arbitration ID) is not in the rvc.json spec."""
+
+    arbitration_id_hex: str
+    first_seen_timestamp: float
+    last_seen_timestamp: float
+    count: int
+    last_data_hex: str
+
+
 class BulkLightControlResponse(BaseModel):
     """Response model for bulk light control operations, summarizing the outcome."""
 

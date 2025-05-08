@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Body, HTTPException, Query
 
 # Application state and helpers
+from core_daemon.app_state import unknown_pgns  # Import unknown_pgns
 from core_daemon.app_state import unmapped_entries  # Ensure unmapped_entries is imported
 from core_daemon.app_state import (
     entity_id_lookup,
@@ -36,6 +37,7 @@ from core_daemon.can_manager import can_tx_queue, create_light_can_message
 from core_daemon.metrics import CAN_TX_ENQUEUE_LATENCY, CAN_TX_ENQUEUE_TOTAL, CAN_TX_QUEUE_LENGTH
 
 # Models
+from core_daemon.models import UnknownPGNEntry  # Import UnknownPGNEntry
 from core_daemon.models import (
     BulkLightControlResponse,
     ControlCommand,
@@ -111,6 +113,14 @@ async def get_unmapped_entries_api():  # Renamed function for clarity
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
     """
     return unmapped_entries  # Ensure this uses the imported app_state.unmapped_entries
+
+
+@api_router_entities.get("/unknown_pgns", response_model=Dict[str, UnknownPGNEntry])
+async def get_unknown_pgns_api():
+    """
+    Return all CAN messages whose PGN (from arbitration ID) was not found in the rvc.json spec.
+    """
+    return unknown_pgns
 
 
 @api_router_entities.get("/lights", response_model=Dict[str, Entity])

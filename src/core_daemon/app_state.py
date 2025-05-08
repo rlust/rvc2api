@@ -16,7 +16,7 @@ from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
 
 # Assuming UnmappedEntryModel is in core_daemon.models
 # We need to import it if it's used in type hints for unmapped_entries
-from core_daemon.models import UnmappedEntryModel
+from core_daemon.models import UnknownPGNEntry, UnmappedEntryModel
 
 # In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 # Unmapped entries
 unmapped_entries: Dict[str, UnmappedEntryModel] = {}
+
+# Unknown PGNs (PGNs not found in rvc.json spec)
+unknown_pgns: Dict[str, UnknownPGNEntry] = {}
 
 # Last known brightness levels for lights
 last_known_brightness_levels: Dict[str, int] = {}

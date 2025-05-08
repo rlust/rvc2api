@@ -69,6 +69,9 @@
                 <button data-view="unmapped" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                   Unmapped Entries
                 </button>
+                <button data-view="unknown-pgns" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                  Unknown PGNs
+                </button>
               </div>
             </div>
           </nav>
@@ -182,6 +185,20 @@
           <div id="unmapped-entries-container" class="space-y-6">
             <p id="unmapped-loading-message">Loading unmapped entries...</p>
             <!-- Unmapped entries will be loaded here -->
+          </div>
+        </section>
+
+        <!-- Unknown PGNs View -->
+        <section id="unknown-pgns-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Unknown PGNs (Not in rvc.json)</h1>
+          <p class="mb-4 text-gray-400">
+            These are CAN messages received by the system where the PGN (extracted from the arbitration ID)
+            was <strong>not found</strong> in your <code>rvc.json</code> specification file. This means the system
+            does not know how to interpret these messages at a fundamental PGN level.
+          </p>
+          <div id="unknown-pgns-container" class="space-y-6">
+            <p id="unknown-pgns-loading-message">Loading unknown PGNs...</p>
+            <!-- Unknown PGNs will be loaded here -->
           </div>
         </section>
       </main>
@@ -1073,6 +1090,71 @@
                 container.innerHTML = `<p class="text-red-500">Error loading unmapped entries: ${error.message}</p>`;
               });
           }
+          // --- START: Add logic for Unknown PGNs view ---
+          else if (view === 'unknown-pgns') {
+            const container = document.getElementById('unknown-pgns-container');
+            const loadingMsg = document.getElementById('unknown-pgns-loading-message');
+            loadingMsg.classList.remove('hidden');
+            container.innerHTML = ''; // Clear previous entries
+            container.appendChild(loadingMsg);
+
+            fetch(`${apiBasePath}/unknown_pgns`)
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                return response.json();
+              })
+              .then(data => {
+                loadingMsg.classList.add('hidden');
+                if (Object.keys(data).length === 0) {
+                  container.innerHTML = '<p class="text-gray-500">No unknown PGNs found. All received PGNs are in rvc.json.</p>';
+                  return;
+                }
+
+                for (const [arbIdHex, entry] of Object.entries(data)) {
+                  const entryDiv = document.createElement('div');
+                  entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
+
+                  // Attempt to extract PGN from Arb ID for display, even if not in spec
+                  // Standard PGN extraction: (arb_id >> 8) & 0x1FFFF (if PDU Format < 240)
+                  // Or (arb_id >> 8) & 0x3FFFF (if PDU Format >= 240, for PDU2)
+                  // For simplicity, let's assume PDU2 for now as it covers more ground, or just display arb ID.
+                  // A more sophisticated approach might try to guess PDU1/PDU2 based on PF value.
+                  const arbIdDecimal = parseInt(arbIdHex, 16);
+                  const pf = (arbIdDecimal >> 16) & 0xFF; // PDU Format
+                  let extractedPgnHex = "N/A";
+                  if (pf < 240) { // PDU1
+                      extractedPgnHex = ((arbIdDecimal >> 8) & 0x1FFFF).toString(16).toUpperCase();
+                  } else { // PDU2
+                      extractedPgnHex = ((arbIdDecimal >> 8) & 0x0FFFF).toString(16).toUpperCase(); // Corrected for PDU2 PGN (DA is in lowest 8 bits)
+                  }
+                  // The API returns arbitration_id_hex which is the full ID. We can show that primarily.
+
+                  entryDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-orange-400 mb-2">Arbitration ID: ${entry.arbitration_id_hex}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
+                      <p><strong>Derived PGN (for reference):</strong> ${extractedPgnHex}</p>
+                      <p><strong>Count:</strong> ${entry.count}</p>
+                      <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
+                      <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
+                      <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${entry.last_data_hex}</code></p>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                      This arbitration ID (and its derived PGN) was not found in your <code>rvc.json</code> file.
+                      You may need to add a definition for PGN ${extractedPgnHex} to the spec file if this is valid RV-C traffic you wish to decode.
+                    </p>
+                  `;
+                  container.appendChild(entryDiv);
+                }
+              })
+              .catch(error => {
+                console.error('Error fetching unknown PGNs:', error);
+                loadingMsg.classList.add('hidden');
+                container.innerHTML = `<p class="text-red-500">Error loading unknown PGNs: ${error.message}</p>`;
+              });
+          }
+          // --- END: Add logic for Unknown PGNs view ---
         });
       });
 
