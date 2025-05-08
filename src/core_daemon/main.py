@@ -13,11 +13,7 @@ from typing import Any, Dict, Optional  # Keep Any, Dict, Optional for _process_
 
 import can
 import uvicorn
-from fastapi import (
-    FastAPI,
-    Request,
-    # Response, # Unused import
-)
+from fastapi import FastAPI, Request  # Response, # Unused import
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import HTMLResponse, PlainTextResponse  # Removed JSONResponse (unused)
 from fastapi.staticfiles import StaticFiles
@@ -25,18 +21,14 @@ from fastapi.templating import Jinja2Templates
 
 # Import application state variables and initialization function
 from core_daemon import app_state  # Import the module itself
-from core_daemon.app_state import (
-    initialize_history_deques,
-    preseed_light_states,
-)
+
+# App state used by _process_can_message, moved to top
+from core_daemon.app_state import unmapped_entries  # Keep for _process_can_message
+from core_daemon.app_state import update_entity_state_and_history  # Keep for _process_can_message
+from core_daemon.app_state import initialize_history_deques, preseed_light_states
 
 # Import CAN components from can_manager
-from core_daemon.can_manager import (
-    # can_tx_queue, # Unused import
-    initialize_can_writer_task,
-    # create_light_can_message, # Unused import
-    initialize_can_listeners,
-)
+from core_daemon.can_manager import initialize_can_listeners, initialize_can_writer_task
 from core_daemon.config import (
     configure_logger,
     get_actual_paths,
@@ -45,18 +37,9 @@ from core_daemon.config import (
     get_static_paths,
 )
 
-from core_daemon.websocket import (
-    WebSocketLogHandler,
-    broadcast_to_clients,  # Moved to top for _process_can_message
-)
-from rvc_decoder import decode_payload, load_config_data
-
-# Import the new routers
-from .api_routers.can import api_router_can
-from .api_routers.config_and_ws import api_router_config_ws
-from .api_routers.entities import api_router_entities
-
 # Metrics that are specific to _process_can_message or global
+from core_daemon.metrics import HTTP_LATENCY  # Used by middleware
+from core_daemon.metrics import HTTP_REQUESTS  # Used by middleware
 from core_daemon.metrics import (
     DECODE_ERRORS,
     DGN_TYPE_GAUGE,
@@ -66,8 +49,6 @@ from core_daemon.metrics import (
     GENERATOR_DEMAND_COMMAND_COUNTER,
     GENERATOR_STATUS_1_COUNTER,
     GENERATOR_STATUS_2_COUNTER,
-    HTTP_LATENCY,  # Used by middleware
-    HTTP_REQUESTS,  # Used by middleware
     INST_USAGE_COUNTER,
     LOOKUP_MISSES,
     PGN_USAGE_COUNTER,
@@ -75,14 +56,15 @@ from core_daemon.metrics import (
 )
 
 # Models used by _process_can_message
-from core_daemon.models import UnmappedEntryModel, SuggestedMapping
+from core_daemon.models import SuggestedMapping, UnmappedEntryModel
+from core_daemon.websocket import broadcast_to_clients  # Moved to top for _process_can_message
+from core_daemon.websocket import WebSocketLogHandler
+from rvc_decoder import decode_payload, load_config_data
 
-# App state used by _process_can_message, moved to top
-from core_daemon.app_state import (
-    unmapped_entries,  # Keep for _process_can_message
-    update_entity_state_and_history,  # Keep for _process_can_message
-)
-
+# Import the new routers
+from .api_routers.can import api_router_can
+from .api_routers.config_and_ws import api_router_config_ws
+from .api_routers.entities import api_router_entities
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = configure_logger()
@@ -160,11 +142,11 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
 
-@app.on_event("startup")
-async def ensure_static_dir_exists():
-    static_dir_for_mount = os.path.join(web_ui_dir, "static")
-    os.makedirs(static_dir_for_mount, exist_ok=True)
-    logger.info(f"Ensured static directory for mount exists: {static_dir_for_mount}")
+# @app.on_event("startup")
+# async def ensure_static_dir_exists():
+#     static_dir_for_mount = os.path.join(web_ui_dir, "static")
+#     os.makedirs(static_dir_for_mount, exist_ok=True)
+#     logger.info(f"Ensured static directory for mount exists: {static_dir_for_mount}")
 
 
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
