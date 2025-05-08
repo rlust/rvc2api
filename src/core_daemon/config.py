@@ -1,3 +1,4 @@
+import importlib.resources  # Added for robust path finding
 import logging
 import os
 
@@ -104,11 +105,37 @@ def get_fastapi_config():
 
 # ── Static File and Template Paths ─────────────────────────────────────────
 def get_static_paths():
-    base_dir = os.path.dirname(__file__)
+    try:
+        static_pkg_path = importlib.resources.files("core_daemon.web_ui.static")
+        templates_pkg_path = importlib.resources.files("core_daemon.web_ui.templates")
+        # web_ui_pkg_path = importlib.resources.files('core_daemon.web_ui')
+
+        static_dir = str(static_pkg_path)
+        templates_dir = str(templates_pkg_path)
+        # web_ui_dir needs to be the parent of static_dir and templates_dir
+        # Assuming static_dir is .../core_daemon/web_ui/static
+        web_ui_dir = os.path.dirname(static_dir)
+
+        module_logger.info(f"Located static_dir via importlib.resources: {static_dir}")
+        module_logger.info(f"Located templates_dir via importlib.resources: {templates_dir}")
+        module_logger.info(f"Determined web_ui_dir via importlib.resources: {web_ui_dir}")
+
+    except (ImportError, ModuleNotFoundError) as e:
+        module_logger.error(f"Could not load static/template paths via importlib.resources: {e}")
+        module_logger.warning("Falling back to __file__ based paths for static/templates.")
+        # Fallback to the old method if importlib.resources fails
+        base_dir = os.path.dirname(os.path.abspath(__file__))  # Ensure absolute path
+        web_ui_dir = os.path.join(base_dir, "web_ui")
+        static_dir = os.path.join(web_ui_dir, "static")
+        templates_dir = os.path.join(web_ui_dir, "templates")
+        module_logger.info(f"Determined static_dir via fallback: {static_dir}")
+        module_logger.info(f"Determined templates_dir via fallback: {templates_dir}")
+        module_logger.info(f"Determined web_ui_dir via fallback: {web_ui_dir}")
+
     return {
-        "web_ui_dir": os.path.join(base_dir, "web_ui"),
-        "static_dir": os.path.join(base_dir, "web_ui", "static"),
-        "templates_dir": os.path.join(base_dir, "web_ui", "templates"),
+        "web_ui_dir": web_ui_dir,
+        "static_dir": static_dir,
+        "templates_dir": templates_dir,
     }
 
 
