@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RVC2API Console</title>
-    <link rel="stylesheet" href="/static/css/custom.css">
+    <title>rvc2api UI</title>
+    <!-- <script src="https://cdn.tailwindcss.com"></script> --> <!-- Moved to end of body -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/custom.css"> <!-- Assuming static files are served from /static -->
   </head>
   <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
     <div id="toast-container"></div> <!-- Toast messages will appear here -->
@@ -215,7 +217,6 @@
       </div>
     </div>
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       const socket = new WebSocket(`ws://${location.host}/ws`);
       const grid = document.getElementById('light-grid');
@@ -1433,5 +1434,6 @@
         setInterval(updateCanStatus, 5000); // Add this line to refresh CAN status periodically
       });
     </script>
+    <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
   </body>
 </html>

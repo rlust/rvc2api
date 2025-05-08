@@ -180,7 +180,7 @@ async def prometheus_http_middleware(request: Request, call_next):
 
 
 # ── CAN Status Endpoint ──────────────────────────────────────────────────────
-@app.get("/api/can/status", response_model=List[CANInterfaceStats])
+@app.get("/can/status", response_model=List[CANInterfaceStats])  # Removed /api prefix
 async def get_can_status():
     """
     Retrieves the status of configured CAN interfaces.
