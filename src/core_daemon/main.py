@@ -172,7 +172,10 @@ if static_dir and os.path.isdir(static_dir):
     # app.mount("/static", StaticFiles(directory=static_dir, follow_symlink=True), name="static")
     app.mount(
         "/static",
-        StaticFiles(packages=[("core_daemon.web_ui", "static")], html=True),
+        StaticFiles(
+            directory=static_dir,
+            follow_symlink=True,  # optional in Nix, but harmless
+        ),
         name="static",
     )
     logger.info(
