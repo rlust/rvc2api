@@ -555,25 +555,32 @@
 
       // Helper function to call light services (or any entity control)
       function callLightService(entityId, command, data = {}) {
-        const path = `${apiBasePath}/entities/${entityId}/control`;
-        let body = { command: command };
+        let path;
+        let body;
+        const groupLightEntityIds = ['all_lights', 'exterior_lights', 'interior_lights'];
 
-        if (command === 'set') {
-          if (data.state !== undefined) {
-            body.state = data.state;
+        if (groupLightEntityIds.includes(entityId)) {
+          // This is a group control command
+          if (command === 'set' && data.state) { // Ensure command is 'set' and data.state exists
+            const groupName = entityId.replace('_lights', ''); // e.g. all_lights -> all
+            path = `${apiBasePath}/lights/control?group=${groupName}`;
+            body = { command: command, state: data.state }; // Body for group control, now includes 'command'
+          } else {
+            console.error(`Invalid command '${command}' or data for group light control '${entityId}'. Must be 'set' with a state.`);
+            showToast(`Invalid command for group ${entityId}`, 'error');
+            return Promise.reject(`Invalid command for group ${entityId}`);
           }
-          if (data.brightness !== undefined) { // Brightness is 0-100 for the API
-            body.brightness = data.brightness;
-          }
-        } else if (command === 'toggle') {
-          // No additional body params needed for toggle
-        } else if (command === 'brightness_up' || command === 'brightness_down') {
-          // No additional body params needed for these specific commands if your API supports them directly
-          // If not, these would need to be translated to a 'set' with calculated brightness here.
-          // For now, assuming the API handles these command strings directly if they are used.
         } else {
-          console.error('Unknown command for service call:', command);
-          return Promise.reject('Unknown command');
+          // This is an individual entity control command
+          path = `${apiBasePath}/entities/${entityId}/control`;
+          body = { command: command, ...data }; // Standard body for entity control
+
+          // Validate individual commands (optional, but good practice)
+          if (command !== 'set' && command !== 'toggle' && command !== 'brightness_up' && command !== 'brightness_down') {
+            console.error('Unknown light command for individual entity:', command);
+            showToast(`Unknown command: ${command} for ${entityId}`, 'error');
+            return Promise.reject(`Unknown command: ${command} for ${entityId}`);
+          }
         }
 
         return fetch(path, {
@@ -1524,6 +1531,44 @@
       function updateSystemStatus() {
         // ...existing code...
       }
+
+      // --- Add Event Listeners for Quick Light Controls ---
+      document.addEventListener('DOMContentLoaded', () => {
+        const quickControlButtons = [
+          { id: 'btn-all-on', entityId: 'all_lights', command: 'set', data: { state: 'on' } },
+          { id: 'btn-all-off', entityId: 'all_lights', command: 'set', data: { state: 'off' } },
+          { id: 'btn-exterior-on', entityId: 'exterior_lights', command: 'set', data: { state: 'on' } },
+          { id: 'btn-exterior-off', entityId: 'exterior_lights', command: 'set', data: { state: 'off' } },
+          { id: 'btn-interior-on', entityId: 'interior_lights', command: 'set', data: { state: 'on' } },
+          { id: 'btn-interior-off', entityId: 'interior_lights', command: 'set', data: { state: 'off' } },
+        ];
+
+        quickControlButtons.forEach(control => {
+          const button = document.getElementById(control.id);
+          if (button) {
+            button.addEventListener('click', () => {
+              // Temporarily disable button and show loading state
+              const originalHtml = button.innerHTML;
+              button.disabled = true;
+              button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+
+              callLightService(control.entityId, control.command, control.data)
+                .catch(error => {
+                  // Error is already shown by showToast in callLightService or fetch promise chain
+                  console.error(`Error during quick control for ${control.entityId}:`, error);
+                })
+                .finally(() => {
+                  // Restore button state
+                  button.disabled = false;
+                  button.innerHTML = originalHtml;
+                });
+            });
+          } else {
+            console.warn(`Quick control button with id '${control.id}' not found.`);
+          }
+        });
+      });
+      // --- End of Added Event Listeners for Quick Light Controls ---
     </script>
     <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
   </body>
