@@ -138,66 +138,31 @@ web_ui_dir = static_paths["web_ui_dir"]
 static_dir = static_paths["static_dir"]
 templates_dir = static_paths["templates_dir"]
 
-logger.info(f"MAIN.PY: Received static_dir from get_static_paths: '{static_dir}'")
-logger.info(f"MAIN.PY: Received templates_dir from get_static_paths: '{templates_dir}'")
-logger.info(f"MAIN.PY: Received web_ui_dir from get_static_paths: '{web_ui_dir}'")
-
-# Diagnostic logging: List contents of static_dir and its css subdirectory
 if static_dir and os.path.isdir(static_dir):
-    logger.info(f"MAIN.PY: Contents of static_dir ('{static_dir}'): {os.listdir(static_dir)}")
-    css_subdir_path = os.path.join(static_dir, "css")
-    if os.path.isdir(css_subdir_path):
-        logger.info(
-            f"MAIN.PY: Contents of css_subdir ('{css_subdir_path}'): {os.listdir(css_subdir_path)}"
-        )
-        # ADD THIS DIAGNOSTIC BLOCK
-        custom_css_path = os.path.join(css_subdir_path, "custom.css")
-        logger.info(f"MAIN.PY: Checking for custom.css at: {custom_css_path}")
-        if os.path.isfile(custom_css_path):
-            logger.info(f"MAIN.PY: custom.css FOUND via os.path.isfile at {custom_css_path}")
-            try:
-                with open(custom_css_path, "rb") as f:  # Open in binary mode for safety
-                    logger.info(
-                        f"MAIN.PY: Successfully opened custom.css, first 10 bytes: {f.read(10)!r}"
-                    )
-            except Exception as e:
-                logger.error(f"MAIN.PY: Error reading custom.css: {e}", exc_info=True)
-        else:
-            logger.warning(f"MAIN.PY: custom.css NOT FOUND via os.path.isfile at {custom_css_path}")
-        # END OF ADDED DIAGNOSTIC BLOCK
-    else:
-        logger.warning(
-            f"MAIN.PY: css_subdir ('{css_subdir_path}') does not exist or is not a directory."
-        )
-    # app.mount("/static", StaticFiles(directory=static_dir, follow_symlink=True), name="static")
     app.mount(
         "/static",
         StaticFiles(
             directory=static_dir,
-            follow_symlink=True,  # optional in Nix, but harmless
+            follow_symlink=True,
         ),
         name="static",
     )
-    logger.info(
-        f"MAIN.PY: Successfully mounted /static to directory: {static_dir} with follow_symlink=True"
-    )
+    logger.info(f"Successfully mounted /static to directory: {static_dir}")
 else:
     logger.error(
-        f"MAIN.PY: static_dir ('{static_dir}') is invalid or not found."
-        f"Static files will NOT be served from this path."
+        f"Static directory ('{static_dir}') is invalid or not found;"
+        f"static files will not be served."
     )
 
 if templates_dir and os.path.isdir(templates_dir):
     templates = Jinja2Templates(directory=templates_dir)
-    logger.info(
-        f"MAIN.PY: Successfully initialized Jinja2Templates with directory: {templates_dir}"
-    )
+    logger.info(f"Successfully initialized Jinja2Templates with directory: {templates_dir}")
 else:
     logger.error(
-        f"MAIN.PY: templates_dir ('{templates_dir}') is invalid or not found."
-        f"Templates will NOT be loaded from this path."
+        f"Templates directory ('{templates_dir}') is invalid or not found;"
+        f"templates will not be loaded."
     )
-    templates = None  # Or provide a fallback Jinja2Templates instance with no loader
+    templates = None
 
 
 # @app.on_event("startup")
