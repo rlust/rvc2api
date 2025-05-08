@@ -10,7 +10,16 @@ from typing import Any, Dict, List, Optional
 
 import can
 import uvicorn  # Added for main()
-from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, WebSocket
+from fastapi import (
+    APIRouter,
+    Body,
+    FastAPI,  # Modified import
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    WebSocket,
+)
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -135,13 +144,17 @@ API_ROOT_PATH = fastapi_config["root_path"]
 
 logger.info(f"API Title: {API_TITLE}")
 logger.info(f"API Server Description: {API_SERVER_DESCRIPTION}")
-logger.info(f"API Root Path: {API_ROOT_PATH}")
+logger.info(f"API Root Path: {API_ROOT_PATH}")  # This will now typically log "/"
 
 app = FastAPI(
     title=API_TITLE,
     servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],  # URL is relative to root_path
     root_path=API_ROOT_PATH,
 )
+
+# Create an APIRouter for API specific endpoints
+api_router = APIRouter(prefix="/api")
+
 
 # Get static and template paths
 static_paths = get_static_paths()
@@ -180,7 +193,7 @@ async def prometheus_http_middleware(request: Request, call_next):
 
 
 # ── CAN Status Endpoint ──────────────────────────────────────────────────────
-@app.get("/can/status", response_model=List[CANInterfaceStats])  # Removed /api prefix
+@api_router.get("/can/status", response_model=List[CANInterfaceStats])  # Changed from app.get
 async def get_can_status():
     """
     Retrieves the status of configured CAN interfaces.
@@ -556,7 +569,7 @@ async def start_can_readers():
 
 
 # ── REST Endpoints ─────────────────────────────────────────────────────────
-@app.get("/entities", response_model=Dict[str, Entity])  # Removed /api/ prefix
+@api_router.get("/entities", response_model=Dict[str, Entity])  # Changed from app.get
 async def list_entities(
     type: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
@@ -576,13 +589,13 @@ async def list_entities(
     return {eid: ent for eid, ent in state.items() if matches(eid)}
 
 
-@app.get("/entities/ids", response_model=List[str])  # Removed /api/ prefix
+@api_router.get("/entities/ids", response_model=List[str])  # Changed from app.get
 async def list_entity_ids():
     """Return all known entity IDs."""
     return list(state.keys())
 
 
-@app.get("/entities/{entity_id}", response_model=Entity)  # Removed /api/ prefix
+@api_router.get("/entities/{entity_id}", response_model=Entity)  # Changed from app.get
 async def get_entity(entity_id: str):
     """Return the latest value for one entity."""
     ent = state.get(entity_id)
@@ -591,7 +604,9 @@ async def get_entity(entity_id: str):
     return ent
 
 
-@app.get("/entities/{entity_id}/history", response_model=List[Entity])  # Removed /api/ prefix
+@api_router.get(
+    "/entities/{entity_id}/history", response_model=List[Entity]
+)  # Changed from app.get
 async def get_history(
     entity_id: str,
     since: Optional[float] = Query(
@@ -611,7 +626,9 @@ async def get_history(
     return entries[-actual_limit:]
 
 
-@app.get("/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])  # Removed /api/ prefix
+@api_router.get(
+    "/unmapped_entries", response_model=Dict[str, UnmappedEntryModel]
+)  # Changed from app.get
 async def get_unmapped_entries():
     """
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
@@ -622,7 +639,7 @@ async def get_unmapped_entries():
     return unmapped_entries
 
 
-@app.get("/lights", response_model=Dict[str, Entity])  # Removed /api/ prefix
+@api_router.get("/lights", response_model=Dict[str, Entity])  # Changed from app.get
 async def list_lights(
     state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
     capability: Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
@@ -657,7 +674,7 @@ async def list_lights(
     return results
 
 
-@app.get("/meta", response_model=Dict[str, List[str]])  # Removed /api/ prefix
+@api_router.get("/meta", response_model=Dict[str, List[str]])  # Changed from app.get
 async def metadata():
     """
     Expose groupable dimensions:
@@ -711,13 +728,13 @@ async def metadata():
     return out
 
 
-@app.get("/healthz")  # Removed /api/ prefix
+@api_router.get("/healthz")  # Changed from app.get
 async def healthz():
     """Liveness probe."""
     return JSONResponse(status_code=200, content={"status": "ok"})
 
 
-@app.get("/readyz")  # Removed /api/ prefix
+@api_router.get("/readyz")  # Changed from app.get
 async def readyz():
     """
     Readiness probe: 200 once at least one frame decoded, else 503.
@@ -730,14 +747,14 @@ async def readyz():
     )
 
 
-@app.get("/metrics")  # Removed /api/ prefix
+@api_router.get("/metrics")  # Changed from app.get
 def metrics():
     """Prometheus metrics endpoint."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
 
 
-@app.get("/config/device_mapping", response_class=PlainTextResponse)  # Removed /api/ prefix
+@api_router.get("/config/device_mapping", response_class=PlainTextResponse)  # Changed from app.get
 async def get_device_mapping_config_content_api():
     # Serves the content of the device mapping file that the application is effectively using.
     if os.path.exists(actual_map_path_for_ui):
@@ -762,7 +779,7 @@ async def get_device_mapping_config_content_api():
 # Removed CONFIG_PATH, RVC_SPEC_FILE, DEVICE_MAPPING_FILE definitions from previous version
 
 
-@app.get("/config/rvc_spec_details")
+@api_router.get("/config/rvc_spec_details")  # Changed from app.get
 async def get_rvc_spec_details():
     """Returns metadata from the rvc.json spec file."""
     # Use actual_spec_path_for_ui which is determined at startup
@@ -788,7 +805,7 @@ async def get_rvc_spec_details():
         raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
 
 
-@app.get("/config/rvc_spec_metadata")
+@api_router.get("/config/rvc_spec_metadata")  # Changed from app.get
 async def get_rvc_spec_metadata():
     """Returns metadata (version and spec_document URL) from the rvc.json spec file."""
     if not os.path.exists(actual_spec_path_for_ui):
@@ -812,7 +829,7 @@ async def get_rvc_spec_metadata():
         raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
 
 
-@app.get("/config/rvc_spec", response_class=PlainTextResponse)  # Removed /api/ prefix
+@api_router.get("/config/rvc_spec", response_class=PlainTextResponse)  # Changed from app.get
 async def get_rvc_spec_config_content_api():
     # Serves the content of the RVC spec file that the application is effectively using.
     if os.path.exists(actual_spec_path_for_ui):
@@ -832,12 +849,12 @@ async def get_rvc_spec_config_content_api():
 
 
 # Use imported WebSocket handlers
-@app.websocket("/ws")  # Removed /api/ prefix
+@api_router.websocket("/ws")  # Changed from app.websocket
 async def serve_websocket_endpoint(ws: WebSocket):
     await websocket_endpoint(ws)  # Call the correctly imported function
 
 
-@app.websocket("/ws/logs")  # Removed /api/ prefix
+@api_router.websocket("/ws/logs")  # Changed from app.websocket
 async def serve_websocket_logs_endpoint(ws: WebSocket):
     await websocket_logs_endpoint(ws)  # Call the correctly imported function
 
@@ -947,7 +964,9 @@ async def _send_light_can_command(
         return False
 
 
-@app.post("/entities/{entity_id}/control", response_model=ControlEntityResponse)
+@api_router.post(
+    "/entities/{entity_id}/control", response_model=ControlEntityResponse
+)  # Changed from app.post
 async def control_entity(
     entity_id: str,
     cmd: ControlCommand = Body(
@@ -1222,7 +1241,9 @@ async def _bulk_control_lights(
     return results
 
 
-@app.post("/lights/control", response_model=BulkLightControlResponse)
+@api_router.post(
+    "/lights/control", response_model=BulkLightControlResponse
+)  # Changed from app.post
 async def control_lights_bulk(
     cmd: ControlCommand = Body(...),
     group: Optional[str] = Query(None, description="Group to apply the command to"),
@@ -1280,7 +1301,7 @@ async def control_lights_bulk(
 # ── Main Application Setup ───────────────────────────────────────────────────
 
 
-@app.get("/queue", response_model=dict)  # Removed /api/ prefix
+@api_router.get("/queue", response_model=dict)  # Changed from app.get
 async def get_queue_status():
     """
     Return the current status of the CAN transmit queue.
@@ -1297,6 +1318,10 @@ async def shutdown_event():
 @app.get("/", response_class=HTMLResponse)
 async def serve_home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+# Include the API router
+app.include_router(api_router)
 
 
 @app.exception_handler(ResponseValidationError)

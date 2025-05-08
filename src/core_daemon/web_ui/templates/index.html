@@ -6,7 +6,7 @@
     <title>rvc2api UI</title>
     <!-- <script src="https://cdn.tailwindcss.com"></script> --> <!-- Moved to end of body -->
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/custom.css"> <!-- Assuming static files are served from /static -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/custom.css') }}">
   </head>
   <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
     <div id="toast-container"></div> <!-- Toast messages will appear here -->

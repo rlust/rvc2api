@@ -98,7 +98,7 @@ def get_fastapi_config():
     return {
         "title": os.getenv("RVC2API_TITLE", "rvc2api"),
         "server_description": os.getenv("RVC2API_SERVER_DESCRIPTION", "RV-C to API Bridge"),
-        "root_path": os.getenv("RVC2API_ROOT_PATH", "/api"),
+        "root_path": os.getenv("RVC2API_ROOT_PATH", "/"),  # Changed default from "/api" to "/"
     }
 
 
