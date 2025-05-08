@@ -77,3 +77,11 @@ class ControlEntityResponse(BaseModel):
     command: str
     brightness: int
     action: str
+
+
+class CANInterfaceStats(BaseModel):
+    interface_name: str
+    is_up: bool
+    state: Optional[str] = None  # e.g. 'active', 'passive', 'bus-off'
+    bitrate: Optional[int] = None
+    error_counters: Optional[Dict[str, int]] = None  # e.g. {'tx_errors': 0, 'rx_errors': 0}

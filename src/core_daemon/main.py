@@ -4,6 +4,7 @@ import functools  # Added for functools.partial
 import json
 import logging
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -58,6 +59,7 @@ from core_daemon.metrics import (
     PGN_USAGE_COUNTER,
     SUCCESSFUL_DECODES,
 )
+from core_daemon.models import CANInterfaceStats  # Added import
 from core_daemon.models import (
     BulkLightControlResponse,
     ControlCommand,
@@ -175,6 +177,118 @@ async def prometheus_http_middleware(request: Request, call_next):
     HTTP_REQUESTS.labels(method=method, endpoint=path, status_code=status).inc()
     HTTP_LATENCY.labels(method=method, endpoint=path).observe(latency)
     return response
+
+
+# ── CAN Status Endpoint ──────────────────────────────────────────────────────
+@app.get("/api/can/status", response_model=List[CANInterfaceStats])
+async def get_can_status():
+    """
+    Retrieves the status of configured CAN interfaces.
+    Uses 'ip' command to get details like state, bitrate, and error counters.
+    """
+    can_config = get_canbus_config()
+    interfaces = can_config.get("interfaces", [])
+    status_list = []
+
+    for iface_conf in interfaces:
+        iface_name = iface_conf.get("name")
+        if not iface_name:
+            continue
+
+        try:
+            # Check basic link status (UP/DOWN)
+            proc_link_show = await asyncio.create_subprocess_shell(
+                f"ip link show {iface_name}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_link, stderr_link = await proc_link_show.communicate()
+
+            if proc_link_show.returncode != 0:
+                logger.error(f"Error getting link status for {iface_name}: {stderr_link.decode()}")
+                # Even if 'ip link show' fails, try 'ip -details' as it might still give info
+                # or confirm the interface doesn't exist.
+                is_up = False
+            else:
+                link_output = stdout_link.decode()
+                is_up = (
+                    "state UP" in link_output or "state UNKNOWN" in link_output
+                )  # UNKNOWN often means up for virtual CAN
+
+            # Get detailed information (bitrate, state, error counters)
+            proc_details = await asyncio.create_subprocess_shell(
+                f"ip -details link show {iface_name}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_details, stderr_details = await proc_details.communicate()
+
+            if proc_details.returncode != 0:
+                logger.error(
+                    f"Error getting detailed status for {iface_name}: {stderr_details.decode()}"
+                )
+                status_list.append(
+                    CANInterfaceStats(interface_name=iface_name, is_up=is_up)
+                )  # Basic info
+                continue
+
+            details_output = stdout_details.decode()
+
+            # Initialize with basic info
+            stats = CANInterfaceStats(interface_name=iface_name, is_up=is_up)
+
+            # Parse bitrate
+            bitrate_match = re.search(r"bitrate (\d+)", details_output)
+            if bitrate_match:
+                stats.bitrate = int(bitrate_match.group(1))
+
+            # Parse CAN state (e.g., ERROR-ACTIVE, ERROR-PASSIVE, BUS-OFF)
+            state_match = re.search(
+                r"state (ERROR-ACTIVE|ERROR-WARNING|ERROR-PASSIVE|BUS-OFF)", details_output
+            )
+            if state_match:
+                stats.state = state_match.group(1)
+            elif is_up:  # If no specific error state, but is_up, assume active
+                stats.state = "ACTIVE"
+
+            # Parse error counters (tx_errors, rx_errors)
+            # Example: 'can <BERR-COUNTER restart-ms 0> state ERROR-ACTIVE
+            # (berr-counter tx 0 rx 0)\n'
+            # Or on newer iproute2: 'can <BERR-COUNTER restart-ms 0> state
+            # ERROR-ACTIVE txqueuelen 1000 numtxqueues 1 numrxqueues 1
+            # gso_max_size 65536 gso_max_segs 65535\n         tx_errors 0 rx_errors 0\n'
+            errors_match = re.search(
+                r"tx_errors (\d+) rx_errors (\d+)", details_output, re.MULTILINE
+            )
+            if not errors_match:  # Try older format
+                errors_match = re.search(r"berr-counter tx (\d+) rx (\d+)", details_output)
+
+            if errors_match:
+                stats.error_counters = {
+                    "tx_errors": int(errors_match.group(1)),
+                    "rx_errors": int(errors_match.group(2)),
+                }
+
+            status_list.append(stats)
+
+        except Exception as e:
+            logger.error(f"Failed to get status for CAN interface {iface_name}: {e}")
+            status_list.append(
+                CANInterfaceStats(interface_name=iface_name, is_up=False, state="UNKNOWN")
+            )
+
+    if not status_list and interfaces:
+        # If no interfaces could be processed but some were configured
+        logger.warning(
+            "CAN status endpoint: No interface status could be retrieved, "
+            "though interfaces are configured."
+        )
+        raise HTTPException(status_code=500, detail="Could not retrieve CAN interface status.")
+    elif not interfaces:
+        logger.info("CAN status endpoint: No CAN interfaces configured.")
+        # Return empty list, not an error, if no interfaces are defined in config
+
+    return status_list
 
 
 # ── In‑memory state + history ────────────────────────────────────────────────
