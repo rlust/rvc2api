@@ -820,12 +820,54 @@
       }
 
       // NEW Helper function for Quick Light Controls (based on original working logic)
-      function executeQuickLightCommand(buttonElement, commandName, apiPath, httpMethod) {
+      function executeQuickLightCommand(buttonElement, commandName, fullApiPath, httpMethod) { // Renamed apiPath to fullApiPath
         const originalText = buttonElement.innerHTML;
         buttonElement.disabled = true;
         buttonElement.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
 
-        fetch(apiPath, { method: httpMethod })
+        const url = new URL(fullApiPath, window.location.origin);
+        const params = new URLSearchParams(url.search);
+
+        const bodyPayload = {};
+        let actualApiPath = url.pathname; // e.g., /api/lights/control
+        const queryParamsForFetch = new URLSearchParams();
+
+        params.forEach((value, key) => {
+            if (key === 'command' || key === 'state' || key === 'brightness') {
+                bodyPayload[key] = value;
+                if (key === 'brightness' && value !== null) {
+                    const parsedBrightness = parseInt(value, 10);
+                    bodyPayload[key] = isNaN(parsedBrightness) ? null : parsedBrightness;
+                }
+                // Ensure state is 'on' or 'off', or null if not applicable
+                if (key === 'state' && value !== 'on' && value !== 'off') {
+                    // This case should ideally not happen with current buttons
+                    // but good for robustness if 'state' could be other things or absent
+                    // For now, quick controls only send 'on' or 'off'
+                }
+            } else {
+                queryParamsForFetch.set(key, value);
+            }
+        });
+
+        if (queryParamsForFetch.toString()) {
+            actualApiPath += '?' + queryParamsForFetch.toString();
+        }
+
+        const fetchOptions = {
+            method: httpMethod,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // Only add body for relevant methods
+        };
+
+        if (httpMethod === 'POST' || httpMethod === 'PUT' || httpMethod === 'PATCH') {
+            fetchOptions.body = JSON.stringify(bodyPayload);
+        }
+
+
+        fetch(actualApiPath, fetchOptions)
           .then(response => {
             if (!response.ok) {
               const contentType = response.headers.get("content-type");
@@ -1318,10 +1360,10 @@
         const quickControls = [
           { id: 'btn-all-on', name: 'All Lights On', path: `${apiBasePath}/lights/all/on`, method: 'POST' },
           { id: 'btn-all-off', name: 'All Lights Off', path: `${apiBasePath}/lights/all/off`, method: 'POST' },
-          { id: 'btn-exterior-on', name: 'Exterior Lights On', path: `${apiBasePath}/lights/exterior/on`, method: 'POST' },
-          { id: 'btn-exterior-off', name: 'Exterior Lights Off', path: `${apiBasePath}/lights/exterior/off`, method: 'POST' },
-          { id: 'btn-interior-on', name: 'Interior Lights On', path: `${apiBasePath}/lights/interior/on`, method: 'POST' },
-          { id: 'btn-interior-off', name: 'Interior Lights Off', path: `${apiBasePath}/lights/interior/off`, method: 'POST' },
+          { id: 'btn-exterior-on', name: 'Exterior Lights On', path: `${apiBasePath}/lights/group/exterior/on`, method: 'POST' },
+          { id: 'btn-exterior-off', name: 'Exterior Lights Off', path: `${apiBasePath}/lights/group/exterior/off`, method: 'POST' },
+          { id: 'btn-interior-on', name: 'Interior Lights On', path: `${apiBasePath}/lights/group/interior/on`, method: 'POST' },
+          { id: 'btn-interior-off', name: 'Interior Lights Off', path: `${apiBasePath}/lights/group/interior/off`, method: 'POST' },
         ];
 
         quickControls.forEach(qc => {
