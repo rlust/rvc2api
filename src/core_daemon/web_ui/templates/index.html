@@ -884,12 +884,12 @@
       // Function to handle bulk light control button clicks
       function setupBulkControlButtons() {
         const controls = [
-          { id: 'btn-all-on', path: `${apiBasePath}/lights/all/on`, method: 'POST', name: 'All Lights On' },
-          { id: 'btn-all-off', path: `${apiBasePath}/lights/all/off`, method: 'POST', name: 'All Lights Off' },
-          { id: 'btn-interior-on', path: `${apiBasePath}/lights/interior/on`, method: 'POST', name: 'Interior Lights On' },
-          { id: 'btn-interior-off', path: `${apiBasePath}/lights/interior/off`, method: 'POST', name: 'Interior Lights Off' },
-          { id: 'btn-exterior-on', path: `${apiBasePath}/lights/exterior/on`, method: 'POST', name: 'Exterior Lights On' },
-          { id: 'btn-exterior-off', path: `${apiBasePath}/lights/exterior/off`, method: 'POST', name: 'Exterior Lights Off' },
+          { id: 'btn-all-on', group: null, command: 'set', state: 'on', name: 'All Lights On' },
+          { id: 'btn-all-off', group: null, command: 'set', state: 'off', name: 'All Lights Off' },
+          { id: 'btn-interior-on', group: 'interior', command: 'set', state: 'on', name: 'Interior Lights On' },
+          { id: 'btn-interior-off', group: 'interior', command: 'set', state: 'off', name: 'Interior Lights Off' },
+          { id: 'btn-exterior-on', group: 'exterior', command: 'set', state: 'on', name: 'Exterior Lights On' },
+          { id: 'btn-exterior-off', group: 'exterior', command: 'set', state: 'off', name: 'Exterior Lights Off' },
         ];
 
         controls.forEach(control => {
@@ -900,22 +900,46 @@
               button.disabled = true;
               button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
 
-              fetch(control.path, { method: control.method })
+              let path = `${apiBasePath}/lights/control`;
+              if (control.group) {
+                path += `?group=${control.group}`;
+              }
+
+              const body = { command: control.command, state: control.state };
+
+              fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              })
                 .then(response => {
                   if (!response.ok) {
-                    return response.json().then(err => { throw new Error(`HTTP error ${response.status}: ${err.detail || response.statusText}`) });
+                    return response.json().then(err => {
+                      // Try to extract a meaningful message from the error response
+                      const detail = err.detail || (typeof err === 'string' ? err : 'Unknown error');
+                      throw new Error(`HTTP error ${response.status}: ${detail}`);
+                    });
                   }
                   return response.json();
                 })
                 .then(data => {
                   console.log(`Command ${control.name} successful:`, data);
-                  if (data.errors && data.errors.length > 0) {
-                    showToast(`${control.name}: ${data.lights_commanded} commanded with ${data.errors.length} errors. Check console.`, 'warning');
-                    console.warn(`Bulk action '${control.name}' errors:`, data.errors);
+                  let toastMessage = `${control.name}: ${data.message || 'Command processed.'}`;
+                  if (data.details && data.details.length > 0) {
+                    const successfulCount = data.details.filter(d => d.status === 'sent').length;
+                    const errorCount = data.details.filter(d => d.status !== 'sent').length;
+                    toastMessage = `${control.name}: ${successfulCount} sent, ${errorCount} failed.`;
+                    if (errorCount > 0) {
+                        showToast(toastMessage, 'warning');
+                    } else {
+                        showToast(toastMessage, 'success');
+                    }
+                  } else if (data.status === "no_match") {
+                    showToast(`${control.name}: ${data.message}`, 'info');
                   } else {
-                    showToast(`${control.name}: ${data.lights_commanded} lights commanded.`, 'success');
+                    showToast(toastMessage, 'success');
                   }
-                  console.info(`Bulk Action Details - ${control.name}:\nAction: ${data.action}\nStatus: ${data.status}\nProcessed: ${data.lights_processed}\nCommanded: ${data.lights_commanded}`);
+                  console.info(`Bulk Action Details - ${control.name}:\nStatus: ${data.status}\nMessage: ${data.message}`);
                 })
                 .catch(error => {
                   console.error(`Command ${control.name} failed:`, error);
