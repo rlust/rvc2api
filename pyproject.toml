@@ -18,17 +18,20 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
 ]
 
-# src layout and extra files
+# src layout
 packages = [
   { include = "console_client", from = "src" },
   { include = "core_daemon", from = "src" },
   { include = "rvc_decoder", from = "src" },
 ]
 
-# Add this to explicitly include the web_ui directory and its contents
-package = [
-  { include = "core_daemon/web_ui/templates/**" },
-  { include = "core_daemon/web_ui/static/**" }
+# Explicitly include package data like templates and static files
+# Paths are relative to this pyproject.toml file.
+include = [
+    "src/core_daemon/web_ui/static/**/*",
+    "src/core_daemon/web_ui/templates/**/*",
+    # Ensuring rvc_decoder config is also explicitly included, though it seemed to work by default.
+    "src/rvc_decoder/config/*"
 ]
 
 # Package data (like config files within rvc_decoder, web_ui within core_daemon)
