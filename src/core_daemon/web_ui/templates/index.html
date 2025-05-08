@@ -914,11 +914,26 @@
               })
                 .then(response => {
                   if (!response.ok) {
-                    return response.json().then(err => {
-                      // Try to extract a meaningful message from the error response
-                      const detail = err.detail || (typeof err === 'string' ? err : 'Unknown error');
-                      throw new Error(`HTTP error ${response.status}: ${detail}`);
-                    });
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        return response.json().then(err => {
+                            const detail = err.detail || (typeof err === 'string' ? err : 'Unknown error from JSON response');
+                            throw new Error(`HTTP error ${response.status}: ${detail}`);
+                        });
+                    } else {
+                        return response.text().then(text => {
+                            let errorText = text;
+                            // Try to extract a title from HTML error page for a more concise message
+                            const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+                            if (titleMatch && titleMatch[1]) {
+                                errorText = titleMatch[1];
+                            } else if (text.length > 150) { // Avoid showing full HTML page in toast
+                                errorText = "Server returned non-JSON error (see console for details)";
+                                console.error("Full non-JSON error response from server:", text);
+                            }
+                            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+                        });
+                    }
                   }
                   return response.json();
                 })
