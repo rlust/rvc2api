@@ -479,32 +479,73 @@
         }
 
         const ul = document.createElement('ul');
-        ul.className = 'space-y-4';
+        ul.className = 'space-y-6'; // Increased spacing between interface cards
 
         for (const interfaceName in statusData) {
           const iface = statusData[interfaceName];
           const li = document.createElement('li');
-          li.className = 'p-4 bg-gray-700 rounded-md shadow';
+          li.className = 'p-5 bg-gray-700 rounded-lg shadow-md'; // Slightly more padding and shadow
 
+          let statusText = iface.state || 'N/A';
           let statusColor = 'text-gray-400'; // Default/unknown
-          if (iface.state === 'UP' || iface.state === 'RUNNING') {
-            statusColor = 'text-green-400';
-          } else if (iface.state === 'DOWN' || iface.state === 'STOPPED' || iface.state === 'ERROR-ACTIVE' || iface.state === 'ERROR-PASSIVE' || iface.state === 'BUS-OFF') {
-            statusColor = 'text-red-400';
+
+          if (iface.state === 'ERROR-ACTIVE' || iface.state === 'UP' || iface.state === 'RUNNING') {
+            statusColor = 'text-green-400'; // Healthy states
+          } else if (iface.state === 'ERROR-WARNING') {
+            statusColor = 'text-yellow-400'; // Warning state
+          } else if (iface.state === 'ERROR-PASSIVE') {
+            statusColor = 'text-orange-500'; // Passive error state (more distinct orange)
+          } else if (iface.state === 'BUS-OFF' || iface.state === 'DOWN' || iface.state === 'STOPPED') {
+            statusColor = 'text-red-500'; // Error/Offline states (more distinct red)
           }
 
+          const bitrateDisplay = iface.bitrate ? `${(iface.bitrate / 1000).toFixed(0)} kbps` : 'N/A';
+          const samplePointDisplay = iface.sample_point ? `${(iface.sample_point * 100).toFixed(1)}%` : 'N/A';
+          const tqDisplay = iface.tq ? `${iface.tq} ns` : 'N/A';
 
           li.innerHTML = `
-            <h3 class="text-lg font-semibold text-blue-300 mb-2">${interfaceName}</h3>
-            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              <p><strong>State:</strong> <span class="${statusColor}">${iface.state || 'N/A'}</span></p>
-              <p><strong>Bitrate:</strong> ${iface.bitrate ? (iface.bitrate / 1000) + ' kbps' : 'N/A'}</p>
-              <p><strong>Restart MS:</strong> ${iface.restart_ms === undefined ? 'N/A' : iface.restart_ms}</p>
-              <p><strong>Bus Errors:</strong> ${iface.bus_errors === undefined ? 'N/A' : iface.bus_errors}</p>
-              <p><strong>TX Errors:</strong> ${iface.tx_errors === undefined ? 'N/A' : iface.tx_errors}</p>
-              <p><strong>RX Errors:</strong> ${iface.rx_errors === undefined ? 'N/A' : iface.rx_errors}</p>
-              <p><strong>Error Passive:</strong> ${iface.error_passive === undefined ? 'N/A' : iface.error_passive}</p>
-              <p><strong>Error Warning:</strong> ${iface.error_warning === undefined ? 'N/A' : iface.error_warning}</p>
+            <h3 class="text-xl font-semibold text-blue-300 mb-4 border-b border-gray-600 pb-2">${interfaceName}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div>
+                <p class="mb-1"><strong>State:</strong> <span class="${statusColor} font-semibold">${statusText}</span></p>
+                <p class="mb-1"><strong>Bitrate:</strong> ${bitrateDisplay}</p>
+                <p class="mb-1"><strong>Sample Point:</strong> ${samplePointDisplay}</p>
+                <p class="mb-1"><strong>Restart MS:</strong> ${iface.restart_ms === undefined ? 'N/A' : iface.restart_ms}</p>
+              </div>
+              <div>
+                <p class="mb-1"><strong>TQ:</strong> ${tqDisplay}</p>
+                <p class="mb-1"><strong>BRP:</strong> ${iface.brp === undefined ? 'N/A' : iface.brp}</p>
+                <p class="mb-1"><strong>Prop Seg:</strong> ${iface.prop_seg === undefined ? 'N/A' : iface.prop_seg}</p>
+                <p class="mb-1"><strong>Phase Seg1:</strong> ${iface.phase_seg1 === undefined ? 'N/A' : iface.phase_seg1}</p>
+                <p class="mb-1"><strong>Phase Seg2:</strong> ${iface.phase_seg2 === undefined ? 'N/A' : iface.phase_seg2}</p>
+                <p class="mb-1"><strong>SJW:</strong> ${iface.sjw === undefined ? 'N/A' : iface.sjw}</p>
+              </div>
+
+              ${ (iface.tx_packets !== undefined || iface.rx_packets !== undefined || iface.tx_errors !== undefined || iface.restarts !== undefined) ? `
+                <div class="md:col-span-2 mt-3 pt-3 border-t border-gray-600">
+                  <h4 class="text-md font-medium text-gray-300 mb-2">Counters & Errors</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                    <p><strong>TX Packets:</strong> ${iface.tx_packets === undefined ? 'N/A' : iface.tx_packets}</p>
+                    <p><strong>RX Packets:</strong> ${iface.rx_packets === undefined ? 'N/A' : iface.rx_packets}</p>
+                    <p><strong>TX Bytes:</strong> ${iface.tx_bytes === undefined ? 'N/A' : iface.tx_bytes}</p>
+                    <p><strong>RX Bytes:</strong> ${iface.rx_bytes === undefined ? 'N/A' : iface.rx_bytes}</p>
+                    <p><strong>TX Errors:</strong> ${iface.tx_errors === undefined ? 'N/A' : iface.tx_errors}</p>
+                    <p><strong>RX Errors:</strong> ${iface.rx_errors === undefined ? 'N/A' : iface.rx_errors}</p>
+                    <p><strong>Bus Errors:</strong> ${iface.bus_errors === undefined ? 'N/A' : iface.bus_errors}</p>
+                    <p><strong>Restarts:</strong> ${iface.restarts === undefined ? 'N/A' : iface.restarts}</p>
+                  </div>
+                </div>
+              ` : ''}
+
+              ${ (iface.parentbus || iface.parentdev) ? `
+                <div class="md:col-span-2 mt-3 pt-3 border-t border-gray-600">
+                  <h4 class="text-md font-medium text-gray-300 mb-2">Device Info</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                    <p><strong>Parent Bus:</strong> ${iface.parentbus || 'N/A'}</p>
+                    <p><strong>Parent Dev:</strong> ${iface.parentdev || 'N/A'}</p>
+                  </div>
+                </div>
+              ` : ''}
             </div>
           `;
           ul.appendChild(li);

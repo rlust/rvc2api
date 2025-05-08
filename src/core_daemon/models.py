@@ -115,10 +115,47 @@ class ControlEntityResponse(BaseModel):
 
 
 class CANInterfaceStats(BaseModel):
-    """Provides statistics and status for a CAN bus interface."""
-
-    interface_name: str
-    is_up: bool
-    state: Optional[str] = None  # e.g. 'active', 'passive', 'bus-off'
+    name: str
+    state: Optional[str] = None
+    restart_ms: Optional[int] = None
     bitrate: Optional[int] = None
-    error_counters: Optional[Dict[str, int]] = None  # e.g. {'tx_errors': 0, 'rx_errors': 0}
+    sample_point: Optional[float] = None
+    tq: Optional[int] = None  # Time quantum in nanoseconds
+    prop_seg: Optional[int] = None
+    phase_seg1: Optional[int] = None
+    phase_seg2: Optional[int] = None
+    sjw: Optional[int] = None  # Synchronization Jump Width
+    brp: Optional[int] = None  # Bitrate Prescaler
+    # Shortened line:
+    clock_freq: Optional[int] = Field(default=None, alias="clock")  # Clock frequency Hz
+
+    # From ip -s link show
+    tx_packets: Optional[int] = None
+    rx_packets: Optional[int] = None
+    tx_bytes: Optional[int] = None
+    rx_bytes: Optional[int] = None
+    tx_errors: Optional[int] = None
+    rx_errors: Optional[int] = None
+    bus_errors: Optional[int] = None  # General bus errors
+    restarts: Optional[int] = None  # Controller restarts
+
+    # Additional details from ip -details link show
+    link_type: Optional[str] = Field(default=None, alias="link/can")
+    promiscuity: Optional[int] = None
+    allmulti: Optional[int] = None
+    minmtu: Optional[int] = None
+    maxmtu: Optional[int] = None
+    parentbus: Optional[str] = None
+    parentdev: Optional[str] = None
+
+    # Specific error counters if available (these might vary by controller)
+    error_warning: Optional[int] = None  # Entered error warning state count
+    error_passive: Optional[int] = None  # Entered error passive state count
+    bus_off: Optional[int] = None  # Entered bus off state count
+
+    # Raw details string for any unparsed info, if needed for debugging
+    raw_details: Optional[str] = None
+
+
+class AllCANStats(BaseModel):
+    interfaces: Dict[str, CANInterfaceStats]

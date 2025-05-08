@@ -8,128 +8,222 @@ check the CAN transmit queue, and potentially other CAN-specific actions.
 import asyncio
 import logging
 import re
-from typing import Any, Dict, List
 
-from fastapi import APIRouter
+# Remove unused List: from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, HTTPException
 
 # Assuming can_tx_queue is in core_daemon.can_manager
 from core_daemon.can_manager import can_tx_queue
 
-# Assuming get_canbus_config is in core_daemon.config
-from core_daemon.config import get_canbus_config
-
 # Assuming CANInterfaceStats model is in core_daemon.models
-from core_daemon.models import CANInterfaceStats
+from core_daemon.models import AllCANStats, CANInterfaceStats
+
+# Remove unused get_canbus_config: from core_daemon.config import get_canbus_config
+
 
 logger = logging.getLogger(__name__)
 
 api_router_can = APIRouter()  # FastAPI router for CAN-related endpoints
 
 
-@api_router_can.get("/can/status", response_model=List[CANInterfaceStats])
+def parse_ip_link_show(output: str, interface_name: str) -> Optional[CANInterfaceStats]:
+    stats = CANInterfaceStats(name=interface_name)
+    stats.raw_details = output  # Store raw output for debugging or future use
+
+    # Overall interface state line (e.g., state UP, state DOWN)
+    match = re.search(rf"^\d+: {re.escape(interface_name)}: .* state (\S+)", output, re.MULTILINE)
+    if match:
+        stats.state = match.group(1)  # This is the general link state, CAN state is more specific
+
+    # link/can line
+    match = re.search(r"link/can\s+promiscuity\s+(\d+)\s+allmulti\s+(\d+)", output)
+    if match:
+        stats.promiscuity = int(match.group(1))
+        stats.allmulti = int(match.group(2))
+
+    # CAN specific state line: "can state ERROR-PASSIVE restart-ms 0"
+    can_state_match = re.search(r"can state ([\w-]+)(?: restart-ms (\d+))?", output)
+    if can_state_match:
+        stats.state = can_state_match.group(1)  # Override general state with specific CAN state
+        if can_state_match.group(2):
+            stats.restart_ms = int(can_state_match.group(2))
+
+    # Bitrate and sample-point: "bitrate 250000 sample-point 0.875"
+    bitrate_match = re.search(r"bitrate (\d+) sample-point (\S+)", output)
+    if bitrate_match:
+        stats.bitrate = int(bitrate_match.group(1))
+        try:
+            stats.sample_point = float(bitrate_match.group(2))
+        except ValueError:
+            logger.warning(
+                f"Could not parse sample-point for {interface_name}: {bitrate_match.group(2)}"
+            )
+
+    # Timing parameters: "tq 250 prop-seg 6 phase-seg1 7 phase-seg2 2 sjw 1 brp 2"
+    timing_match = re.search(
+        r"tq (\d+) prop-seg (\d+) phase-seg1 (\d+) phase-seg2 (\d+) sjw (\d+) brp (\d+)", output
+    )
+    if timing_match:
+        stats.tq = int(timing_match.group(1))
+        stats.prop_seg = int(timing_match.group(2))
+        stats.phase_seg1 = int(timing_match.group(3))
+        stats.phase_seg2 = int(timing_match.group(4))
+        stats.sjw = int(timing_match.group(5))
+        stats.brp = int(timing_match.group(6))
+
+    # Clock frequency: "clock 8000000"
+    clock_match = re.search(r"clock (\d+)", output)
+    if clock_match:
+        stats.clock_freq = int(clock_match.group(1))
+
+    # Parent bus/dev: "parentbus spi parentdev spi0.1"
+    parent_match = re.search(r"parentbus (\S+) parentdev (\S+)", output)
+    if parent_match:
+        stats.parentbus = parent_match.group(1)
+        stats.parentdev = parent_match.group(2)
+
+    # Statistics lines (RX and TX)
+    # RX: bytes  packets  errors  dropped overrun mcast
+    # 12345      67890    12      3       4       0
+    rx_stats_match = re.search(
+        r"RX: bytes\s+packets\s+errors\s+dropped\s+overrun\s+mcast\s*\n"
+        r"\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)",
+        output,
+        re.MULTILINE,
+    )
+    if rx_stats_match:
+        stats.rx_bytes = int(rx_stats_match.group(1))
+        stats.rx_packets = int(rx_stats_match.group(2))
+        stats.rx_errors = int(rx_stats_match.group(3))
+        # Potentially add dropped, overrun if needed in model
+
+    # TX: bytes  packets  errors  dropped carrier collsns
+    # 12345      67890    12      3       4       0
+    tx_stats_match = re.search(
+        r"TX: bytes\s+packets\s+errors\s+dropped\s+carrier\s+collsns\s*\n"
+        r"\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)",
+        output,
+        re.MULTILINE,
+    )
+    if tx_stats_match:
+        stats.tx_bytes = int(tx_stats_match.group(1))
+        stats.tx_packets = int(tx_stats_match.group(2))
+        stats.tx_errors = int(tx_stats_match.group(3))
+        # Potentially add dropped, carrier, collsns if needed in model
+
+    # More specific error counters from ip -s -d link show canX
+    # Example: "bus-error 0 error-warning 0 error-passive 0 bus-off 0"
+    # Note: These might not always be present or might be on a different line.
+    # This regex is a bit more flexible.
+    detailed_errors_match = re.search(
+        r"(?:bus-error\s+(\d+))?\s*"
+        r"(?:error-warning\s+(\d+))?\s*"
+        r"(?:error-passive\s+(\d+))?\s*"
+        r"(?:bus-off\s+(\d+))?",
+        output,
+    )
+    if detailed_errors_match:
+        if detailed_errors_match.group(1):
+            stats.bus_errors = int(detailed_errors_match.group(1))
+        if detailed_errors_match.group(2):
+            stats.error_warning = int(detailed_errors_match.group(2))
+        if detailed_errors_match.group(3):
+            stats.error_passive = int(detailed_errors_match.group(3))
+        if detailed_errors_match.group(4):
+            stats.bus_off = int(detailed_errors_match.group(4))
+
+    # If 'restarts' is mentioned separately, e.g. from
+    # `can state ERROR-PASSIVE restart-ms 0 restarts 5`
+    # The current `can state` regex handles restart-ms. If `restarts` (count) is separate:
+    restarts_count_match = re.search(r"restarts (\d+)", output)
+    if restarts_count_match:
+        stats.restarts = int(restarts_count_match.group(1))
+
+    # Fallback for bus_errors if not found in detailed_errors_match but present
+    # in statistics section
+    # This is common if `ip -s link show` is used without `-d` for some counters
+    if stats.bus_errors is None:
+        bus_error_simple_match = re.search(r"bus-error\s+(\d+)", output)
+        if bus_error_simple_match:
+            stats.bus_errors = int(bus_error_simple_match.group(1))
+
+    return stats
+
+
+async def get_can_interfaces() -> list[str]:
+    """Lists available CAN interfaces by checking 'ip link show type can'."""
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            "ip -o link show type can | awk -F': ' '{print $2}'",  # Shortened this line
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode == 0:
+            interfaces = stdout.decode().strip().split("\n")
+            return [iface for iface in interfaces if iface]  # Filter out empty strings
+        else:
+            logger.error(f"Error listing CAN interfaces: {stderr.decode()}")
+            return []
+    except Exception as e:
+        logger.error(f"Exception listing CAN interfaces: {e}")
+        return []
+
+
+@api_router_can.get("/can/status", response_model=AllCANStats)
 async def get_can_status():
     """
-    Retrieves the status of configured CAN interfaces.
-    Uses 'ip' command to get details like state, bitrate, and error counters.
+    Retrieves detailed status for all CAN interfaces.
+    Uses `ip -details -statistics link show <interface>` for comprehensive info.
     """
-    can_config = get_canbus_config()
-    interfaces_config = can_config.get(
-        "channels", []
-    )  # Corrected key from "interfaces" to "channels"
-    status_list = []
+    interfaces_data: Dict[str, CANInterfaceStats] = {}
+    interface_names = await get_can_interfaces()
 
-    if not interfaces_config:
-        logger.info("CAN status endpoint: No CAN interfaces configured (empty 'channels' list).")
-        # Return empty list or raise HTTPException, depending on desired behavior for no channels
-        return []  # Or raise HTTPException(status_code=404, detail="No CAN interfaces configured")
+    if not interface_names:
+        # Return empty if no interfaces found, or error occurred.
+        # Frontend should handle this by showing "No CAN interfaces found".
+        return AllCANStats(interfaces={})
 
-    for (
-        iface_name
-    ) in interfaces_config:  # Iterate directly over names if interfaces_config is a list of strings
-        if not iface_name:
-            continue
-
+    for iface_name in interface_names:
         try:
-            # Check basic link status (UP/DOWN)
-            proc_link_show = await asyncio.create_subprocess_shell(
-                f"/run/current-system/sw/bin/ip link show {iface_name}",  # Use explicit path
+            # Using -details -statistics for the most comprehensive output
+            command = f"ip -details -statistics link show {iface_name}"
+            proc = await asyncio.create_subprocess_shell(
+                command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout_link, stderr_link = await proc_link_show.communicate()
+            stdout, stderr = await proc.communicate()
 
-            if proc_link_show.returncode != 0:
-                logger.error(f"Error getting link status for {iface_name}: {stderr_link.decode()}")
-                is_up = False
+            if proc.returncode == 0:
+                output_str = stdout.decode()
+                parsed_stats = parse_ip_link_show(output_str, iface_name)
+                if parsed_stats:
+                    interfaces_data[iface_name] = parsed_stats
+                else:
+                    logger.warning(f"Could not parse details for {iface_name}")
+                    # Add a basic entry even if parsing fails partially
+                    interfaces_data[iface_name] = CANInterfaceStats(
+                        name=iface_name, state="Unknown/ParseError"
+                    )
             else:
-                link_output = stdout_link.decode()
-                is_up = "state UP" in link_output or "state UNKNOWN" in link_output
-
-            # Get detailed information (bitrate, state, error counters)
-            proc_details = await asyncio.create_subprocess_shell(
-                f"/run/current-system/sw/bin/ip -details link show {iface_name}",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout_details, stderr_details = await proc_details.communicate()
-
-            if proc_details.returncode != 0:
-                logger.error(
-                    f"Error getting detailed status for {iface_name}: {stderr_details.decode()}"
+                error_msg = stderr.decode()
+                logger.error(f"Error getting status for {iface_name}: {error_msg}")
+                interfaces_data[iface_name] = CANInterfaceStats(
+                    name=iface_name, state="Error/NotAvailable"
                 )
-                status_list.append(CANInterfaceStats(interface_name=iface_name, is_up=is_up))
-                continue
-
-            details_output = stdout_details.decode()
-            stats = CANInterfaceStats(interface_name=iface_name, is_up=is_up)
-
-            bitrate_match = re.search(r"bitrate (\\d+)", details_output)
-            if bitrate_match:
-                stats.bitrate = int(bitrate_match.group(1))
-
-            state_match = re.search(
-                r"state (ERROR-ACTIVE|ERROR-WARNING|ERROR-PASSIVE|BUS-OFF)", details_output
-            )
-            if state_match:
-                stats.state = state_match.group(1)
-            elif is_up:
-                stats.state = "ACTIVE"
-
-            errors_match = re.search(
-                r"tx_errors (\\d+) rx_errors (\\d+)", details_output, re.MULTILINE
-            )
-            if not errors_match:
-                errors_match = re.search(r"berr-counter tx (\\d+) rx (\\d+)", details_output)
-
-            if errors_match:
-                stats.error_counters = {
-                    "tx_errors": int(errors_match.group(1)),
-                    "rx_errors": int(errors_match.group(2)),
-                }
-
-            status_list.append(stats)
-
         except Exception as e:
-            logger.error(f"Failed to get status for CAN interface {iface_name}: {e}")
-            status_list.append(
-                CANInterfaceStats(interface_name=iface_name, is_up=False, state="UNKNOWN")
-            )
+            logger.exception(f"Exception processing interface {iface_name}: {e}")
+            interfaces_data[iface_name] = CANInterfaceStats(name=iface_name, state="Exception")
 
-    # Adjusted logging for clarity when status_list might be empty due to errors vs. no config
-    if not status_list and interfaces_config:  # interfaces_config is not empty, but status_list is
-        logger.warning(
-            "CAN status endpoint: No interface status could be retrieved, "
-            "though interfaces are configured. Check 'ip' command availability "
-            "and interface states."
+    if not interfaces_data and interface_names:  # Should not happen if logic above is correct
+        raise HTTPException(
+            status_code=404, detail="CAN interfaces found but failed to retrieve status for all."
         )
-        # Consider raising an error if no statuses could be retrieved despite configuration
-        # raise HTTPException(
-        #     status_code=500,
-        #     detail="Could not retrieve CAN interface status for configured channels."
-        # )
-    # The case for not interfaces_config is handled at the beginning of the function now.
 
-    return status_list
+    return AllCANStats(interfaces=interfaces_data)
 
 
 @api_router_can.get("/queue", response_model=Dict[str, Any])
