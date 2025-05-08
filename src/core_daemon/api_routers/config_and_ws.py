@@ -1,22 +1,14 @@
 import json
 import logging
 import os
-from typing import Any, Dict  # Removed List, Optional, Union
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect  # Removed Query
-from fastapi.responses import (
-    FileResponse,
-    JSONResponse,
-    PlainTextResponse,
-    Response,
-)  # Added Response, Removed HTMLResponse
+from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from core_daemon import app_state  # For readyz and unmapped_entries
+from core_daemon import app_state
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
 from core_daemon.websocket import (
-    ConnectionManager,
-    WebSocketLogHandler,
     websocket_endpoint,
     websocket_logs_endpoint,
 )
@@ -24,9 +16,6 @@ from core_daemon.websocket import (
 logger = logging.getLogger(__name__)
 
 api_router_config_ws = APIRouter()
-
-# WebSocket connection manager
-manager = ConnectionManager()
 
 # Get actual paths once for this module
 actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
@@ -156,37 +145,6 @@ async def serve_websocket_logs_endpoint(ws: WebSocket):
     await websocket_logs_endpoint(ws)
 
 
-# ── WebSocket Endpoint for Logs ──────────────────────────────────────────────
-@api_router_config_ws.websocket("/ws/logs")
-async def websocket_log_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    # Add the WebSocket to the log handler's list of active WebSockets
-    # This assumes WebSocketLogHandler.add_client and .remove_client are implemented
-    # to manage individual WebSocket connections for log streaming.
-    root_logger = logging.getLogger()
-    ws_handler = None
-    for handler in root_logger.handlers:
-        if isinstance(handler, WebSocketLogHandler):
-            ws_handler = handler
-            break
-
-    if ws_handler:
-        ws_handler.add_client(websocket)
-    else:
-        logger.error("WebSocketLogHandler not found in root logger handlers.")
-
-    try:
-        while True:
-            # Keep the connection alive, logs are pushed by the handler
-            await websocket.receive_text()  # Or use receive_bytes if that's expected
-    except WebSocketDisconnect:
-        logger.info("WebSocket for logs disconnected.")
-    finally:
-        manager.disconnect(websocket)
-        if ws_handler:
-            ws_handler.remove_client(websocket)
-
-
 # ── Configuration File Endpoints ───────────────────────────────────────────
 @api_router_config_ws.get("/config/spec", response_class=PlainTextResponse)
 async def get_rvc_spec_file_contents():
@@ -202,10 +160,3 @@ async def get_device_mapping_file_contents():
     if ACTUAL_MAP_PATH and os.path.exists(ACTUAL_MAP_PATH):
         return FileResponse(ACTUAL_MAP_PATH, media_type="text/plain")
     raise HTTPException(status_code=404, detail="Device mapping file not found.")
-
-
-# ── Unmapped DGNs/PGNs Endpoint ──────────────────────────────────────────────
-@api_router_config_ws.get("/unmapped")
-async def get_unmapped_entries_api() -> Dict[str, Any]:
-    # Access unmapped_entries directly from app_state
-    return app_state.unmapped_entries

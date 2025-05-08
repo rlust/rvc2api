@@ -14,7 +14,7 @@ from core_daemon.app_state import (
     light_entity_ids,
     set_last_known_brightness,
     state,
-    unmapped_entries,
+    unmapped_entries,  # Ensure unmapped_entries is imported
     update_entity_state_and_history,
 )
 
@@ -95,11 +95,11 @@ async def get_history(
 
 
 @api_router_entities.get("/unmapped_entries", response_model=Dict[str, UnmappedEntryModel])
-async def get_unmapped_entries():
+async def get_unmapped_entries_api():  # Renamed function for clarity
     """
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
     """
-    return unmapped_entries
+    return unmapped_entries  # Ensure this uses the imported app_state.unmapped_entries
 
 
 @api_router_entities.get("/lights", response_model=Dict[str, Entity])
@@ -595,7 +595,7 @@ async def control_lights_bulk(
         action=cmd.command,
         group=group,
         lights_processed=lights_processed,
-        lights_commanded=lights_commanded_successfully,
+        lights_commanded=lights_commanded_successfully,  # Changed to keyword argument
         errors=[
             {"entity_id": e.get("entity_id"), "detail": e.get("detail", "Unknown error")}
             for e in errors

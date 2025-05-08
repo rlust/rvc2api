@@ -65,10 +65,13 @@ class UnmappedEntryModel(BaseModel):
 
 class BulkLightControlResponse(BaseModel):
     status: str
+    message: str  # Added message field
     action: str
+    group: Optional[str] = None  # Added group field
     lights_processed: int
     lights_commanded: int
-    errors: List[str] = []
+    errors: List[Dict[str, str]] = Field(default_factory=list)  # Changed type from List[str]
+    details: List[Dict[str, Any]] = Field(default_factory=list)  # Added details field
 
 
 class ControlEntityResponse(BaseModel):
