@@ -1,3 +1,13 @@
+"""
+Manages CAN bus communication for the rvc2api daemon.
+
+This module is responsible for:
+- Initializing and managing CAN bus listener threads for specified interfaces.
+- Providing a writer task to send messages from an asynchronous queue to the CAN bus.
+- Constructing RV-C specific CAN messages (e.g., for light control).
+- Storing and providing access to active CAN bus interface objects.
+"""
+
 import asyncio
 import logging
 import os
@@ -16,9 +26,8 @@ logger = logging.getLogger(__name__)
 # Global CAN transmit queue, to be used by other modules (e.g., main.py)
 can_tx_queue: asyncio.Queue[tuple[can.Message, str]] = asyncio.Queue()
 
-# Dictionary to hold active CAN bus interfaces.
-# This will be populated by start_can_readers in main.py
-# and used by can_writer here.
+# Dictionary to hold active CAN bus interfaces, keyed by interface name.
+# This is populated by initialize_can_listeners and used by can_writer.
 buses: Dict[str, can.Bus] = {}
 
 

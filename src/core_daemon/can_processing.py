@@ -1,3 +1,16 @@
+"""
+Handles the processing of incoming CAN messages for the rvc2api daemon.
+
+This module is responsible for:
+- Receiving raw CAN messages.
+- Looking up decoder information based on the message's arbitration ID.
+- Decoding the message payload using the `rvc_decoder`.
+- Updating the application state (`app_state`) with the decoded data.
+- Handling messages that cannot be mapped to known entities.
+- Broadcasting processed data to WebSocket clients.
+- Recording relevant metrics.
+"""
+
 import asyncio
 import json
 

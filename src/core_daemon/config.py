@@ -1,3 +1,16 @@
+"""
+Handles application configuration for the rvc2api daemon.
+
+This module is responsible for:
+- Configuring logging for the application.
+- Determining and providing paths to essential configuration files (RVC spec, device mapping)
+  considering environment overrides and bundled defaults.
+- Providing FastAPI application settings (title, description, root_path).
+- Resolving paths to static files and Jinja2 templates for the web UI,
+  using importlib.resources with a fallback to __file__-based resolution.
+- Providing CAN bus configuration (channels, bustype, bitrate) from environment variables.
+"""
+
 import importlib.resources  # Added for robust path finding
 import logging
 import os
@@ -10,9 +23,11 @@ import coloredlogs
 # This logger is for messages originating from the config.py module itself.
 module_logger = logging.getLogger(__name__)
 
-# Module-level globals to store determined paths
-ACTUAL_SPEC_PATH: str | None = None
-ACTUAL_MAP_PATH: str | None = None
+# Module-level globals to store determined paths to configuration files.
+# These are populated by get_actual_paths() after considering environment
+# variables and bundled defaults.
+ACTUAL_SPEC_PATH: str | None = None  # Stores the resolved path to the RVC specification file.
+ACTUAL_MAP_PATH: str | None = None  # Stores the resolved path to the device mapping file.
 
 
 # Refactor configure_logger to properly handle logging levels and handlers
@@ -57,6 +72,19 @@ def configure_logger():
 
 # ── Determine actual config paths for core logic and UI display ────────────────
 def get_actual_paths():
+    """
+    Determines and returns the actual paths to the RVC specification and device mapping files.
+
+    It considers environment variables (CAN_SPEC_PATH, CAN_MAP_PATH) for overrides.
+    If overrides are not present, invalid, or unreadable, it falls back to
+    default paths, typically bundled with the rvc_decoder package.
+    The determined paths are stored in module-level globals ACTUAL_SPEC_PATH
+    and ACTUAL_MAP_PATH to avoid re-computation.
+
+    Returns:
+        tuple[str, str]: A tuple containing the actual path to the RVC specification file
+                         and the actual path to the device mapping file.
+    """
     global ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH  # Indicate assignment to module globals
 
     # If already determined, return stored values
@@ -111,6 +139,13 @@ def get_actual_paths():
 
 # ── FastAPI Configuration ──────────────────────────────────────────────────
 def get_fastapi_config():
+    """
+    Retrieves FastAPI application settings from environment variables.
+
+    Returns:
+        dict: A dictionary containing title, server_description, and root_path
+              for the FastAPI application.
+    """
     return {
         "title": os.getenv("RVC2API_TITLE", "rvc2api"),
         "server_description": os.getenv("RVC2API_SERVER_DESCRIPTION", "RV-C to API Bridge"),
@@ -120,6 +155,20 @@ def get_fastapi_config():
 
 # ── Static File and Template Paths ─────────────────────────────────────────
 def get_static_paths():
+    """
+    Resolves and returns paths to the web UI's static files and templates directories.
+
+    It primarily uses `importlib.resources` to locate these directories, making it
+    robust for packaged applications. If `importlib.resources` fails (e.g., in
+    certain development or non-standard package structures), it falls back to
+    a `__file__`-based method to determine paths relative to this config.py file.
+
+    Logs errors if paths cannot be resolved or are invalid.
+
+    Returns:
+        dict: A dictionary with keys 'web_ui_dir', 'static_dir', and 'templates_dir',
+              containing the absolute paths to these directories.
+    """
     static_dir_path_str = None
     templates_dir_path_str = None
     web_ui_dir_path_str = None
@@ -234,6 +283,15 @@ def get_static_paths():
 
 # ── CAN Bus Configuration ─────────────────────────────────────────────────
 def get_canbus_config():
+    """
+    Retrieves CAN bus configuration settings from environment variables.
+
+    Returns:
+        dict: A dictionary containing:
+              - 'channels': A list of CAN interface names (e.g., ['can0', 'can1']).
+              - 'bustype': The CAN bus type (e.g., 'socketcan').
+              - 'bitrate': The CAN bus bitrate as an integer.
+    """
     return {
         "channels": os.getenv("CAN_CHANNELS", "can0,can1").split(","),
         "bustype": os.getenv("CAN_BUSTYPE", "socketcan"),

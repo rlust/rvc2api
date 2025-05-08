@@ -1,3 +1,11 @@
+"""
+Defines Prometheus metrics for monitoring the rvc2api application.
+
+This module centralizes the definition of all Counter, Gauge, and Histogram
+metrics used to track various aspects of the application's performance and behavior,
+including CAN frame processing, API requests, WebSocket connections, and system health.
+"""
+
 from prometheus_client import Counter, Gauge, Histogram
 
 # Define Prometheus metrics

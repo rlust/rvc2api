@@ -1,18 +1,38 @@
+"""
+Manages WebSocket communications for the rvc2api daemon.
+
+This module provides:
+- A custom logging handler (`WebSocketLogHandler`) to stream application logs
+  to connected WebSocket clients.
+- Functionality to broadcast data (typically entity updates) to another set of
+  WebSocket clients.
+- FastAPI WebSocket endpoint handlers for both data and log streaming.
+- Management of active WebSocket client connections.
+"""
+
 import asyncio
 import logging
 from typing import Set
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-# Globals to hold active WebSocket clients
-clients: Set[WebSocket] = set()
-log_ws_clients: Set[WebSocket] = set()
+# Globals to hold active WebSocket clients.
+clients: Set[WebSocket] = set()  # Stores active WebSocket connections for general data updates.
+log_ws_clients: Set[WebSocket] = set()  # Stores active WebSocket connections for log streaming.
 
 logger = logging.getLogger(__name__)
 
 
 # ── Log WebSocket Handler ──────────────────────────────────────────────────
 class WebSocketLogHandler(logging.Handler):
+    """
+    A custom logging.Handler subclass that formats log records and sends them
+    as text messages to all connected log WebSocket clients.
+
+    It uses an asyncio event loop to send messages asynchronously and thread-safely.
+    If sending a message to a client fails, that client is removed from the set.
+    """
+
     def __init__(self, loop: asyncio.AbstractEventLoop):
         super().__init__()
         self.loop = loop
@@ -31,6 +51,16 @@ class WebSocketLogHandler(logging.Handler):
 
 # ── Broadcasting ────────────────────────────────────────────────────────────
 async def broadcast_to_clients(text: str):
+    """
+    Asynchronously broadcasts a text message to all currently connected data WebSocket clients.
+
+    Iterates over a copy of the active clients set for safe removal if a send operation fails.
+    Metrics for WebSocket messages and client counts are assumed to be handled elsewhere
+    (e.g., in the calling code or via a shared metrics module if directly used here).
+
+    Args:
+        text: The string message to send (typically a JSON payload).
+    """
     # This function will need WS_MESSAGES and WS_CLIENTS if they are to be updated here.
     # For now, assuming they are handled by the caller or a shared metrics module.
     # from .metrics import WS_MESSAGES, WS_CLIENTS # Example if metrics were used directly

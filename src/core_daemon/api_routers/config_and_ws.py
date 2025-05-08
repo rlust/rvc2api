@@ -1,3 +1,13 @@
+"""
+Defines FastAPI APIRouter for application configuration, status, and WebSocket endpoints.
+
+This module groups routes for:
+- Health checks (`/healthz`, `/readyz`).
+- Prometheus metrics (`/metrics`).
+- Accessing RVC specification and device mapping configuration files.
+- Establishing WebSocket connections for data and log streaming.
+"""
+
 import json
 import logging
 import os
@@ -8,14 +18,11 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from core_daemon import app_state
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
-from core_daemon.websocket import (
-    websocket_endpoint,
-    websocket_logs_endpoint,
-)
+from core_daemon.websocket import websocket_endpoint, websocket_logs_endpoint
 
 logger = logging.getLogger(__name__)
 
-api_router_config_ws = APIRouter()
+api_router_config_ws = APIRouter()  # Router for configuration, status, and WebSocket endpoints
 
 # Get actual paths once for this module
 actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
@@ -137,11 +144,13 @@ async def get_rvc_spec_config_content_api():
 
 @api_router_config_ws.websocket("/ws")
 async def serve_websocket_endpoint(ws: WebSocket):
+    """Handles WebSocket connections for general data streaming."""
     await websocket_endpoint(ws)
 
 
 @api_router_config_ws.websocket("/ws/logs")
 async def serve_websocket_logs_endpoint(ws: WebSocket):
+    """Handles WebSocket connections for streaming application logs."""
     await websocket_logs_endpoint(ws)
 
 

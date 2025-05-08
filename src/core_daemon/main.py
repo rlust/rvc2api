@@ -1,4 +1,26 @@
 #!/usr/bin/env python3
+"""
+Main entry point and central orchestrator for the rvc2api daemon.
+
+This script initializes and runs the FastAPI application that bridges RV-C (Recreational
+Vehicle Controller Area Network) messages to a modern web API and WebSocket interface.
+
+Key responsibilities include:
+- Configuring application-wide logging.
+- Loading RV-C specification and device mapping configurations.
+- Initializing and managing shared application state (see app_state.py).
+- Setting up and starting CAN bus listeners to receive RV-C messages (see can_manager.py).
+- Starting a CAN bus writer task to send commands to the RV-C bus.
+- Processing incoming CAN messages, decoding them, and updating entity states
+(see can_processing.py).
+- Initializing the FastAPI application, including:
+    - Mounting static file directories and template engines for the web UI.
+    - Setting up Prometheus metrics middleware.
+    - Registering API routers for various functionalities
+    (entities, CAN control, config, WebSockets).
+    - Defining startup and shutdown event handlers.
+- Providing a command-line interface to start the Uvicorn server.
+"""
 import asyncio
 import functools
 import logging
@@ -126,11 +148,13 @@ async def prometheus_middleware_handler(request, call_next):
 
 @app.on_event("startup")
 async def start_can_writer():
+    """FastAPI startup event: Initializes and schedules the CAN writer task."""
     initialize_can_writer_task()
 
 
 @app.on_event("startup")
 async def setup_websocket_logging():
+    """FastAPI startup event: Sets up the WebSocketLogHandler for live log streaming."""
     try:
         main_loop = asyncio.get_running_loop()
         log_ws_handler = WebSocketLogHandler(loop=main_loop)
@@ -146,6 +170,10 @@ async def setup_websocket_logging():
 # ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
 async def start_can_readers():
+    """
+    FastAPI startup event: Initializes and starts CAN listener
+    threads for specified interfaces.
+    """
     loop = asyncio.get_running_loop()
     canbus_config = get_canbus_config()
     interfaces = canbus_config["channels"]
@@ -176,6 +204,7 @@ async def start_can_readers():
 # ── Main Application Setup ───────────────────────────────────────────────────
 @app.on_event("shutdown")
 async def shutdown_event():
+    """FastAPI shutdown event: Logs a message when the application is shutting down."""
     logger.info("rvc2api shutting down...")
 
 
@@ -195,6 +224,12 @@ async def validation_exception_handler(request, exc):
 
 
 def main():
+    """
+    Main function to run the Uvicorn server for the rvc2api application.
+
+    Retrieves host, port, and log level from environment variables or defaults,
+    then starts the Uvicorn server.
+    """
     host = os.getenv("RVC2API_HOST", "0.0.0.0")
     port = int(os.getenv("RVC2API_PORT", "8000"))
     log_level = os.getenv("RVC2API_LOG_LEVEL", "info").lower()

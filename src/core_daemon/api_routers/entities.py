@@ -1,3 +1,14 @@
+"""
+Defines FastAPI APIRouter for managing and interacting with RV-C entities.
+
+This module includes routes for:
+- Listing all entities with optional filtering by type or area.
+- Retrieving details and history for specific entities.
+- Listing unmapped DGN/instance pairs observed on the CAN bus.
+- Listing and controlling light entities, both individually and in bulk.
+- Providing metadata about available entity types, areas, capabilities, and commands.
+"""
+
 import json
 import logging
 import time
@@ -6,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Body, HTTPException, Query
 
 # Application state and helpers
+from core_daemon.app_state import unmapped_entries  # Ensure unmapped_entries is imported
 from core_daemon.app_state import (
     entity_id_lookup,
     get_last_known_brightness,
@@ -14,7 +26,6 @@ from core_daemon.app_state import (
     light_entity_ids,
     set_last_known_brightness,
     state,
-    unmapped_entries,  # Ensure unmapped_entries is imported
     update_entity_state_and_history,
 )
 
@@ -38,7 +49,7 @@ from core_daemon.websocket import broadcast_to_clients
 
 logger = logging.getLogger(__name__)
 
-api_router_entities = APIRouter()
+api_router_entities = APIRouter()  # FastAPI router for entity-related API endpoints
 
 
 @api_router_entities.get("/entities", response_model=Dict[str, Entity])
@@ -185,8 +196,22 @@ async def _send_light_can_command(
     entity_id: str, target_brightness_ui: int, action_description: str
 ) -> bool:
     """
-    Helper function to construct, send a CAN command for a light, and perform optimistic update.
-    Returns True if the command was successfully queued, False otherwise.
+    Internal helper to construct and send a CAN command for a light entity.
+
+    This function takes the entity ID, target brightness (0-100 scale),
+    and an action description. It looks up the necessary CAN parameters
+    (PGN, instance, interface) from `light_command_info`.
+    It then creates the CAN message, queues it for transmission, and performs
+    an optimistic update of the entity's state in `app_state` and broadcasts
+    this update via WebSockets.
+
+    Args:
+        entity_id: The ID of the light entity to control.
+        target_brightness_ui: The desired brightness level (0-100).
+        action_description: A string describing the action being taken (for logging).
+
+    Returns:
+        True if the CAN message was successfully queued, False otherwise.
     """
     if entity_id not in light_command_info:
         logger.error(
@@ -393,6 +418,25 @@ async def _bulk_control_lights(
     state_cmd: Optional[str] = None,
     brightness_val: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
+    """
+    Internal helper to process bulk light control commands.
+
+    Iterates through controllable light entities, applying filters (e.g., group)
+    and executing the specified command (set, toggle, brightness_up, brightness_down).
+    It determines the target brightness for each light based on the command,
+    current state, and last known brightness, then uses `_send_light_can_command`
+    to queue the CAN message and perform optimistic updates.
+
+    Args:
+        group_filter: Optional string to filter lights by their assigned group.
+        command: The primary command (e.g., 'set', 'toggle').
+        state_cmd: For 'set' command, the target state ('on' or 'off').
+        brightness_val: For 'set' command with 'on' state, the target brightness (0-100).
+
+    Returns:
+        A list of dictionaries, each representing the result of the command
+        for a processed light entity (status, action, new state, brightness).
+    """
     results = []
     action_description_base = f"Bulk {command}"
     if state_cmd:

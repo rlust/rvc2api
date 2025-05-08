@@ -1,3 +1,11 @@
+"""
+Manages the in-memory application state for the rvc2api daemon.
+
+This module holds the current state of all entities, their historical data,
+and configuration-derived lookups (like entity definitions, light commands, etc.).
+It provides functions to initialize, update, and access this shared state.
+"""
+
 import logging
 import time
 from collections import deque
@@ -10,7 +18,7 @@ from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
 # We need to import it if it's used in type hints for unmapped_entries
 from core_daemon.models import UnmappedEntryModel
 
-# In-memory state
+# In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
 
 # History duration

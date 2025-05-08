@@ -1,3 +1,10 @@
+"""
+Defines FastAPI APIRouter for CAN bus related operations.
+
+This module includes routes to get the status of CAN interfaces,
+check the CAN transmit queue, and potentially other CAN-specific actions.
+"""
+
 import asyncio
 import logging
 import re
@@ -16,7 +23,7 @@ from core_daemon.models import CANInterfaceStats
 
 logger = logging.getLogger(__name__)
 
-api_router_can = APIRouter()
+api_router_can = APIRouter()  # FastAPI router for CAN-related endpoints
 
 
 @api_router_can.get("/can/status", response_model=List[CANInterfaceStats])

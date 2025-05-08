@@ -36,7 +36,7 @@ def get_bits(data_bytes: bytes, start_bit: int, length: int) -> int:
     return (raw_int >> start_bit) & mask
 
 
-def decode_payload(entry: dict, data_bytes: bytes):
+def decode_payload(entry: dict, data_bytes: bytes) -> tuple[dict[str, str], dict[str, int]]:
     """
     Decode all 'signals' in a spec entry:
       - raw_values: the integer bitfields
@@ -95,6 +95,12 @@ def load_config_data(
          • light_command_info (id→{dgn,instance,interface})
 
     Uses override paths if provided and valid, otherwise falls back to bundled files.
+
+    Args:
+        rvc_spec_path_override (str | None): Optional path to an RVC specification JSON file.
+                                             If None or invalid, uses the bundled default.
+        device_mapping_path_override (str | None): Optional path to a device mapping YAML file.
+                                                   If None or invalid, uses the bundled default.
 
     Returns:
       decoder_map: dict[int,dict],
