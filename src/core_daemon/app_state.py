@@ -28,16 +28,51 @@ unmapped_entries: Dict[str, UnmappedEntryModel] = {}
 # Last known brightness levels for lights
 last_known_brightness_levels: Dict[str, int] = {}
 
-# Configuration data loaded at startup, to be populated by main.py
+# Configuration data loaded at startup, to be populated by initialize_app_from_config
 entity_id_lookup: Dict[str, Any] = {}
 light_entity_ids: List[str] = []
 light_command_info: Dict[str, Any] = {}
-# Potentially others if needed by routers/modules directly from app_state:
-# decoder_map: Dict[int, Any] = {}
-# raw_device_mapping: Dict[str, Any] = {}
-# device_lookup: Dict[tuple, Any] = {}
-# status_lookup: Dict[tuple, Any] = {}
-# pgn_hex_to_name_map: Dict[str, str] = {}
+decoder_map: Dict[int, Any] = {}
+raw_device_mapping: Dict[str, Any] = {}
+device_lookup: Dict[tuple, Any] = {}
+status_lookup: Dict[tuple, Any] = {}
+pgn_hex_to_name_map: Dict[str, str] = {}
+
+
+def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function: Callable) -> None:
+    """
+    Initializes all configuration-derived application state.
+    This function populates global variables within this module and then
+    calls further initialization functions like initialize_history_deques
+    and preseed_light_states.
+    """
+    global decoder_map, raw_device_mapping, device_lookup, status_lookup
+    global light_entity_ids, entity_id_lookup, light_command_info, pgn_hex_to_name_map
+
+    (
+        decoder_map_val,
+        raw_device_mapping_val,
+        device_lookup_val,
+        status_lookup_val,
+        light_entity_ids_val,
+        entity_id_lookup_val,
+        light_command_info_val,
+        pgn_hex_to_name_map_val,
+    ) = config_data_tuple
+
+    decoder_map = decoder_map_val
+    raw_device_mapping = raw_device_mapping_val
+    device_lookup = device_lookup_val
+    status_lookup = status_lookup_val
+    light_entity_ids = light_entity_ids_val
+    entity_id_lookup = entity_id_lookup_val
+    light_command_info = light_command_info_val
+    pgn_hex_to_name_map = pgn_hex_to_name_map_val
+
+    logger.info("Application state populated from configuration data.")
+
+    initialize_history_deques_internal()
+    preseed_light_states_internal(decode_payload_function)
 
 
 def get_last_known_brightness(entity_id: str) -> int:
@@ -56,17 +91,16 @@ def set_last_known_brightness(entity_id: str, brightness: int) -> None:
     last_known_brightness_levels[entity_id] = brightness
 
 
-def initialize_history_deques(entity_id_lookup: Dict[str, Any]) -> None:
+def initialize_history_deques_internal() -> None:
     """
     Initializes the history dictionary with empty deques for each entity ID.
-    This should be called after entity_id_lookup is populated.
+    This should be called after entity_id_lookup is populated globally in this module.
     """
-    global history
+    global history, entity_id_lookup
     for eid in entity_id_lookup:
-        if (
-            eid not in history
-        ):  # Ensure we don't overwrite if called multiple times (though unlikely)
+        if eid not in history:
             history[eid] = deque()
+    logger.info("History deques initialized for all entities.")
 
 
 def update_entity_state_and_history(entity_id: str, payload_to_store: Dict[str, Any]) -> None:
@@ -103,44 +137,35 @@ def update_entity_state_and_history(entity_id: str, payload_to_store: Dict[str, 
         logger.warning(f"History deque not found for {entity_id}, created new one.")
 
 
-def preseed_light_states(
-    light_entity_ids: list[str],
-    light_command_info: dict[str, Any],
-    decoder_map_values: list[dict[str, Any]],  # Effectively list(decoder_map.values())
-    entity_id_lookup: dict[str, Any],
-    decode_payload_func: Callable,  # e.g., from rvc_decoder.decode_payload
-) -> None:
+def preseed_light_states_internal(decode_payload_func: Callable) -> None:
     """
     Initializes the state and history for all known light entities to an "off" state at startup.
-    This ensures that lights appear in the API with a defined state even before any CAN messages.
-    Uses the existing update_entity_state_and_history function to ensure consistency.
+    Uses global state variables like light_entity_ids, light_command_info, decoder_map,
+    and entity_id_lookup.
     """
+    global light_entity_ids, light_command_info, decoder_map, entity_id_lookup
+
     now = time.time()
+    logger.info(f"Pre-seeding states for {len(light_entity_ids)} light entities.")
     for eid in light_entity_ids:
         info = light_command_info.get(eid)
         if not info:
-            # Optionally, add logging here if a configured light_entity_id has no command_info
-            # logger.warning(f"Pre-seeding: No command info for light entity ID: {eid}")
+            logger.warning(f"Pre-seeding: No command info for light entity ID: {eid}")
             continue
 
         spec_entry = None
-        # info["dgn"] should be the PGN for the light's command.
-        # We need to find a spec entry (typically for a status DGN) that matches this PGN
-        # to decode a generic "off" payload.
         target_dgn_hex = format(info["dgn"], "X").upper()
-        for entry_val in decoder_map_values:
+        for entry_val in decoder_map.values():
             if entry_val.get("dgn_hex", "").upper() == target_dgn_hex:
                 spec_entry = entry_val
                 break
 
         if not spec_entry:
-            # Optionally, add logging here
             logger.warning(
                 f"Pre-seeding: No spec entry found for DGN {target_dgn_hex} (from light {eid})"
             )
             continue
 
-        # Use a generic 8-byte zero payload, which usually signifies an "off" or default state.
         decoded, raw = decode_payload_func(spec_entry, bytes([0] * 8))
 
         brightness = raw.get("operating_status", 0)
@@ -162,4 +187,4 @@ def preseed_light_states(
             "groups": lookup.get("groups", []),
         }
         update_entity_state_and_history(eid, payload)
-    # Metrics (ENTITY_COUNT, HISTORY_SIZE_GAUGE) are updated within update_entity_state_and_history.
+    logger.info("Finished pre-seeding light states.")

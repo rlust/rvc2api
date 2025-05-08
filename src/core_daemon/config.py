@@ -10,6 +10,10 @@ import coloredlogs
 # This logger is for messages originating from the config.py module itself.
 module_logger = logging.getLogger(__name__)
 
+# Module-level globals to store determined paths
+ACTUAL_SPEC_PATH: str | None = None
+ACTUAL_MAP_PATH: str | None = None
+
 
 # Refactor configure_logger to properly handle logging levels and handlers
 def configure_logger():
@@ -53,6 +57,13 @@ def configure_logger():
 
 # ── Determine actual config paths for core logic and UI display ────────────────
 def get_actual_paths():
+    global ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH  # Indicate assignment to module globals
+
+    # If already determined, return stored values
+    if ACTUAL_SPEC_PATH is not None and ACTUAL_MAP_PATH is not None:
+        # module_logger.info("Returning already determined actual paths.") # Optional debug
+        return ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH
+
     spec_override_env = os.getenv("CAN_SPEC_PATH")
     mapping_override_env = os.getenv("CAN_MAP_PATH")
 
@@ -84,14 +95,18 @@ def get_actual_paths():
                 f"'{_decoder_default_map_path}'"
             )
 
+    # Store them in the global variables
+    ACTUAL_SPEC_PATH = actual_spec_path_for_ui
+    ACTUAL_MAP_PATH = actual_map_path_for_ui
+
     module_logger.info(
-        f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}"
+        f"UI will attempt to display RVC spec from: {ACTUAL_SPEC_PATH}"
     )  # Changed from logger to module_logger
     module_logger.info(
-        f"UI will attempt to display device mapping from: {actual_map_path_for_ui}"
+        f"UI will attempt to display device mapping from: {ACTUAL_MAP_PATH}"
     )  # Changed from logger to module_logger
 
-    return actual_spec_path_for_ui, actual_map_path_for_ui
+    return ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH
 
 
 # ── FastAPI Configuration ──────────────────────────────────────────────────
