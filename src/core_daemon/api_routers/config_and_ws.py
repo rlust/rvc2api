@@ -1,11 +1,9 @@
 """
-Defines FastAPI APIRouter for application configuration, status, and WebSocket endpoints.
+Manages API routes for configuration and WebSocket interactions.
 
-This module groups routes for:
-- Health checks (`/healthz`, `/readyz`).
-- Prometheus metrics (`/metrics`).
-- Accessing RVC specification and device mapping configuration files.
-- Establishing WebSocket connections for data and log streaming.
+This module provides FastAPI endpoints for:
+- Retrieving the current application configuration.
+- Managing WebSocket connections for real-time updates (e.g., CAN messages).
 """
 
 import json

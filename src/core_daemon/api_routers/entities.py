@@ -61,9 +61,17 @@ async def list_entities(
 ):
     """
     Return all entities, optionally filtered by device_type and/or area.
+
+    Args:
+        type: Optional filter by entity device_type.
+        area: Optional filter by entity suggested_area.
+
+    Returns:
+        A dictionary of entities matching the filter criteria.
     """
 
     def matches(eid: str) -> bool:
+        """Helper function to check if an entity matches the filter criteria."""
         cfg = entity_id_lookup.get(eid, {})
         if type and cfg.get("device_type") != type:
             return False
@@ -82,7 +90,18 @@ async def list_entity_ids():
 
 @api_router_entities.get("/entities/{entity_id}", response_model=Entity)
 async def get_entity(entity_id: str):
-    """Return the latest value for one entity."""
+    """
+    Return the latest value for one entity.
+
+    Args:
+        entity_id: The ID of the entity to retrieve.
+
+    Raises:
+        HTTPException: If the entity is not found.
+
+    Returns:
+        The entity object.
+    """
     ent = state.get(entity_id)
     if not ent:
         raise HTTPException(status_code=404, detail="Entity not found")
@@ -97,6 +116,20 @@ async def get_history(
     ),
     limit: Optional[int] = Query(1000, ge=1, description="Max number of points to return"),
 ):
+    """
+    Return the history of an entity.
+
+    Args:
+        entity_id: The ID of the entity to retrieve history for.
+        since: Optional Unix timestamp to filter entries newer than this.
+        limit: Optional limit on the number of points to return.
+
+    Raises:
+        HTTPException: If the entity is not found.
+
+    Returns:
+        A list of entity history entries.
+    """
     if entity_id not in history:
         raise HTTPException(status_code=404, detail="Entity not found")
     entries = list(history[entity_id])
@@ -111,6 +144,9 @@ async def get_history(
 async def get_unmapped_entries_api():  # Renamed function for clarity
     """
     Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
+
+    Returns:
+        A dictionary of unmapped DGN/instance pairs.
     """
     return unmapped_entries  # Ensure this uses the imported app_state.unmapped_entries
 
@@ -119,6 +155,9 @@ async def get_unmapped_entries_api():  # Renamed function for clarity
 async def get_unknown_pgns_api():
     """
     Return all CAN messages whose PGN (from arbitration ID) was not found in the rvc.json spec.
+
+    Returns:
+        A dictionary of unknown PGNs.
     """
     return unknown_pgns
 
@@ -134,6 +173,14 @@ async def list_lights(
     - state (\'on\' or \'off\')
     - a specific capability (e.g. \'brightness\')
     - area (suggested_area)
+
+    Args:
+        state_filter: Optional filter by light state ('on' or 'off').
+        capability: Optional filter by light capability (e.g., 'brightness').
+        area: Optional filter by light suggested_area.
+
+    Returns:
+        A dictionary of lights matching the filter criteria.
     """
     results: Dict[str, Entity] = {}
     for eid, ent in state.items():
@@ -164,6 +211,9 @@ async def metadata():
     - capability  (defined in mapping)
     - command     (derived from capabilities)
     - groups      (defined in mapping)
+
+    Returns:
+        A dictionary of metadata about available entity types, areas, capabilities, and commands.
     """
     mapping = {
         "type": "device_type",
@@ -323,6 +373,19 @@ async def control_entity(
         },
     ),
 ) -> ControlEntityResponse:
+    """
+    Control a specific entity (light) by sending a command.
+
+    Args:
+        entity_id: The ID of the entity to control.
+        cmd: The control command to execute.
+
+    Raises:
+        HTTPException: If the entity is not found or not controllable.
+
+    Returns:
+        A response indicating the status of the control command.
+    """
     device = entity_id_lookup.get(entity_id)
     if not device:
         logger.debug(f"Control command for unknown entity_id: {entity_id}")
@@ -601,6 +664,13 @@ async def control_lights_bulk(
     Control multiple lights based on a group or all lights if no group is specified.
     The special group 'all' explicitly targets all controllable lights.
     If group is None or empty, it also targets all controllable lights.
+
+    Args:
+        cmd: The control command to execute.
+        group: Optional group to filter lights by (e.g., 'interior', 'all').
+
+    Returns:
+        A response indicating the status of the bulk control command.
     """
     logger.info(
         f"HTTP Bulk CMD RX: group='{group}', command='{cmd.command}', "
