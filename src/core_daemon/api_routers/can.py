@@ -8,8 +8,6 @@ check the CAN transmit queue, and potentially other CAN-specific actions.
 import asyncio
 import logging
 import re
-
-# Remove unused List: from typing import Any, Dict, List, Optional
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -20,15 +18,25 @@ from core_daemon.can_manager import can_tx_queue
 # Assuming CANInterfaceStats model is in core_daemon.models
 from core_daemon.models import AllCANStats, CANInterfaceStats
 
-# Remove unused get_canbus_config: from core_daemon.config import get_canbus_config
-
-
 logger = logging.getLogger(__name__)
 
 api_router_can = APIRouter()  # FastAPI router for CAN-related endpoints
 
 
 def parse_ip_link_show(output: str, interface_name: str) -> Optional[CANInterfaceStats]:
+    """
+    Parses the output of `ip -details -statistics link show <interface_name>`
+    for a CAN interface.
+
+    Args:
+        output: The string output from the `ip` command.
+        interface_name: The name of the interface (e.g., "can0").
+
+    Returns:
+        A CANInterfaceStats object populated with the parsed data,
+        or None if essential information couldn't be parsed (though it
+        tries to return a partial object).
+    """
     stats = CANInterfaceStats(name=interface_name)
     stats.raw_details = output  # Store raw output for debugging or future use
 
@@ -153,7 +161,16 @@ def parse_ip_link_show(output: str, interface_name: str) -> Optional[CANInterfac
 
 
 async def get_can_interfaces() -> list[str]:
-    """Lists available CAN interfaces by checking 'ip link show type can'."""
+    """
+    Lists available CAN interfaces by checking 'ip link show type can'.
+
+    Uses `ip -o link show type can | awk -F': ' '{print $2}'` to get a list
+    of CAN interface names.
+
+    Returns:
+        A list of CAN interface names (e.g., ["can0", "can1"]), or an empty
+        list if none are found or an error occurs.
+    """
     try:
         proc = await asyncio.create_subprocess_shell(
             "/run/current-system/sw/bin/ip -o link show type can \
@@ -177,7 +194,17 @@ async def get_can_interfaces() -> list[str]:
 async def get_can_status():
     """
     Retrieves detailed status for all CAN interfaces.
-    Uses `ip -details -statistics link show <interface>` for comprehensive info.
+
+    This endpoint iterates through all detected CAN interfaces and fetches
+    detailed statistics for each using the `ip -details -statistics link show <interface>`
+    command. The output of this command is then parsed to populate the
+    `CANInterfaceStats` model for each interface.
+
+    Returns:
+        An `AllCANStats` object containing a dictionary where keys are
+        interface names and values are `CANInterfaceStats` objects.
+        Returns an empty dictionary if no interfaces are found or if
+        there's an error in fetching their statuses.
     """
     interfaces_data: Dict[str, CANInterfaceStats] = {}
     interface_names = await get_can_interfaces()
@@ -231,5 +258,12 @@ async def get_can_status():
 async def get_queue_status():
     """
     Return the current status of the CAN transmit queue.
+
+    Provides the current number of items in the `can_tx_queue` and its
+    maximum configured size.
+
+    Returns:
+        A dictionary with "length" (current queue size) and "maxsize"
+        (maximum queue size, or "unbounded").
     """
     return {"length": can_tx_queue.qsize(), "maxsize": can_tx_queue.maxsize or "unbounded"}
