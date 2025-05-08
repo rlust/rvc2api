@@ -12,6 +12,7 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
+    -   id: check-json # Added for JSON files
     -   id: check-toml
     -   id: check-merge-conflict
     -   id: debug-statements
@@ -36,3 +37,9 @@ repos:
         args: [--ignore-missing-imports, --scripts-are-modules, --explicit-package-bases]
         # You might need to adjust MyPy args based on your project structure and needs
         additional_dependencies: [types-PyYAML] # Add types-PyYAML here
+
+-   repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+    rev: v1.1.2
+    hooks:
+    - id: htmlhint
+      args: [--config, .htmlhintrc]
