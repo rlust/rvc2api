@@ -3,92 +3,81 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils"; # Helper for multi-system support
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = { self, nixpkgs, flake-utils, ... }@inputs:
-    # Use flake-utils to simplify defining outputs for multiple systems
     flake-utils.lib.eachDefaultSystem (system:
       let
-        # Package set for the current system
         pkgs = import nixpkgs { inherit system; };
+        python = pkgs.python312;
+        pythonPackages = pkgs.python312Packages;
 
-        # Define the Python package build using Poetry
-        rvc2apiPackage = pkgs.python3Packages.buildPythonPackage {
+        rvc2apiPackage = pythonPackages.buildPythonPackage {
           pname = "rvc2api";
-          version = "0.1.0"; # Ideally read from pyproject.toml, but explicit for now
-          src = self; # Use the flake's own source tree
+          version = "0.1.0";
+          src = self;
 
-          # Build dependencies needed by the poetry build backend
-          nativeBuildInputs = with pkgs.python3Packages; [ poetry-core ];
+          format = "pyproject";
 
-          # Runtime dependencies are now managed by Poetry and read from pyproject.toml
-          # No need for propagatedBuildInputs here if Poetry handles it,
-          # buildPythonPackage should infer them.
+          nativeBuildInputs = with pythonPackages; [ poetry-core ];
 
-          format = "pyproject"; # This tells buildPythonPackage to use PEP 517
-
-          propagatedBuildInputs = with pkgs.python3Packages; [
+          propagatedBuildInputs = with pythonPackages; [
             fastapi
             uvicorn
             python-can
             pydantic
             pyyaml
-            prometheus-client # Corrected: hyphenated
+            prometheus_client
             coloredlogs
             jinja2
           ];
 
-          # postInstall script is removed; Poetry should handle data files.
-          # Ensure Python code uses importlib.resources or similar to access package data.
+          # ✅ Enable test support during build
+          doCheck = true;
+          checkInputs = with pythonPackages; [ pytest ];
 
-          # If you have tests defined in pyproject.toml that Nix can run:
-          # doCheck = true; # You might need to configure how tests are run with Poetry
-          # checkInputs = with pkgs.python3Packages; [ pytest ]; # Or let poetry handle it
+          meta = with pkgs.lib; {
+            description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket";
+            homepage = "https://github.com/carpenike/rvc2api";
+            license = licenses.asl20;
+            maintainers = [
+              {
+                name = "Ryan Holt";
+                email = "ryan@ryanholt.net";
+                github = "carpenike";
+              }
+            ];
+          };
         };
 
-        # Helper to build a Python 3.12 shell
-        mkPyShell = pkgs: let
-          py     = pkgs.python312;
-          pyPkgs = pkgs.python312Packages;
-        in pkgs.mkShell {
-          buildInputs = with pkgs; [
-            py
-            poetry # Add poetry CLI for managing the project
-            # runtime deps (can be useful to have them in the shell directly)
-            pyPkgs.fastapi
-            pyPkgs.uvicorn
-            pyPkgs.python-can
-            pyPkgs.pydantic
-            pyPkgs.pyyaml
-            pyPkgs.coloredlogs
-            pyPkgs.jinja2
-            pyPkgs.prometheus_client # Added from previous propagatedBuildInputs
-            # dev deps
-            pyPkgs.pytest
-            pyPkgs.mypy
-            pyPkgs.flake8
-            pyPkgs.pip # Added pip
-            pyPkgs.types-pyyaml # Changed to lowercase pyyaml
-            # Add the package itself to the dev shell for testing
-            # rvc2apiPackage # This can be included if you want the Nix-built version
+        devShell = pkgs.mkShell {
+          buildInputs = [
+            python
+            pkgs.poetry
+            pythonPackages.fastapi
+            pythonPackages.uvicorn
+            pythonPackages.python-can
+            pythonPackages.pydantic
+            pythonPackages.pyyaml
+            pythonPackages.prometheus_client
+            pythonPackages.coloredlogs
+            pythonPackages.jinja2
+            pythonPackages.pytest
+            pythonPackages.mypy
+            pythonPackages.flake8
+            pythonPackages.types-pyyaml
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
-            # Advise user on Poetry usage
-            echo "🐚 Entered rvc2api devShell on ${pkgs.system} (Python ${py.version})"
-            echo "💡 Run 'poetry install' to set up the project's virtual environment."
-            echo "💡 Then use 'poetry shell' or 'poetry run <command>'."
-            echo "💡 The rvc2api package itself can be built by Nix (e.g., 'nix build .#')."
+            echo "🐚 Entered rvc2api devShell on ${pkgs.system} with Python ${python.version}"
+            echo "💡 Run 'poetry install' or 'nix build .#rvc2api' to get started."
           '';
         };
-      in
-      {
-        # Expose the package
-        packages.default = rvc2apiPackage;
-
-        # Keep the devShell
-        devShells.default = mkPyShell pkgs;
+      in {
+        packages.rvc2api = rvc2apiPackage;
+        defaultPackage = self.packages.${system}.rvc2api;
+        devShells.default = devShell;
       }
     );
 }
