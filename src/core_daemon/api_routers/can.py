@@ -156,7 +156,8 @@ async def get_can_interfaces() -> list[str]:
     """Lists available CAN interfaces by checking 'ip link show type can'."""
     try:
         proc = await asyncio.create_subprocess_shell(
-            "ip -o link show type can | awk -F': ' '{print $2}'",  # Shortened this line
+            "/run/current-system/sw/bin/ip -o link show type can \
+            | /run/current-system/sw/bin/awk -F': ' '{print $2}'",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
