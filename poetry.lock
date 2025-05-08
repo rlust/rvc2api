@@ -580,13 +580,13 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "4.3.7"
+version = "4.3.8"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "platformdirs-4.3.7-py3-none-any.whl", hash = "sha256:a03875334331946f13c549dbd8f4bac7a13a50a895a0eb1e8c6a8ace80d40a94"},
-    {file = "platformdirs-4.3.7.tar.gz", hash = "sha256:eb437d586b6a0986388f0d6f74aa0cde27b48d0e3d66843640bfb6bdcdb6e351"},
+    {file = "platformdirs-4.3.8-py3-none-any.whl", hash = "sha256:ff7059bb7eb1179e2685604f4aaf157cfd9535242bd23742eadc3c13542139b4"},
+    {file = "platformdirs-4.3.8.tar.gz", hash = "sha256:3d512d96e16bcb959a814c9f348431070822a6496326a4be0911c40b5a74c2bc"},
 ]
 
 [package.extras]
@@ -1007,13 +1007,13 @@ typing-extensions = ">=4.12.0"
 
 [[package]]
 name = "uvicorn"
-version = "0.32.1"
+version = "0.34.2"
 description = "The lightning-fast ASGI server."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "uvicorn-0.32.1-py3-none-any.whl", hash = "sha256:82ad92fd58da0d12af7482ecdb5f2470a04c9c9a53ced65b9bbb4a205377602e"},
-    {file = "uvicorn-0.32.1.tar.gz", hash = "sha256:ee9519c246a72b1c084cea8d3b44ed6026e78a4a309cbedae9c37e4cb9fbb175"},
+    {file = "uvicorn-0.34.2-py3-none-any.whl", hash = "sha256:deb49af569084536d269fe0a6d67e3754f104cf03aba7c11c40f01aadf33c403"},
+    {file = "uvicorn-0.34.2.tar.gz", hash = "sha256:0e929828f6186353a80b58ea719861d2629d766293b6d19baf086ba31d4f3328"},
 ]
 
 [package.dependencies]
@@ -1083,13 +1083,13 @@ test = ["aiohttp (>=3.10.5)", "flake8 (>=5.0,<6.0)", "mypy (>=0.800)", "psutil",
 
 [[package]]
 name = "virtualenv"
-version = "20.31.1"
+version = "20.31.2"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "virtualenv-20.31.1-py3-none-any.whl", hash = "sha256:f448cd2f1604c831afb9ea238021060be2c0edbcad8eb0a4e8b4e14ff11a5482"},
-    {file = "virtualenv-20.31.1.tar.gz", hash = "sha256:65442939608aeebb9284cd30baca5865fcd9f12b58bb740a24b220030df46d26"},
+    {file = "virtualenv-20.31.2-py3-none-any.whl", hash = "sha256:36efd0d9650ee985f0cad72065001e66d49a6f24eb44d98980f630686243cf11"},
+    {file = "virtualenv-20.31.2.tar.gz", hash = "sha256:e10c0a9d02835e592521be48b332b6caee6887f332c111aa79a09b9e79efc2af"},
 ]
 
 [package.dependencies]
@@ -1353,4 +1353,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12.6"
-content-hash = "4ac5bb69af4e2720d85fa9aa755136dc94f53fade85ca8ac2f1317852c346db3"
+content-hash = "f2ddbf621a7d84883bcaa67f42c12f1dc25c5fc6dd8e51dcd5ef4cbaf71cf42f"
