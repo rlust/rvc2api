@@ -142,7 +142,18 @@ logger.info(f"MAIN.PY: Received static_dir from get_static_paths: '{static_dir}'
 logger.info(f"MAIN.PY: Received templates_dir from get_static_paths: '{templates_dir}'")
 logger.info(f"MAIN.PY: Received web_ui_dir from get_static_paths: '{web_ui_dir}'")
 
+# Diagnostic logging: List contents of static_dir and its css subdirectory
 if static_dir and os.path.isdir(static_dir):
+    logger.info(f"MAIN.PY: Contents of static_dir ('{static_dir}'): {os.listdir(static_dir)}")
+    css_subdir_path = os.path.join(static_dir, "css")
+    if os.path.isdir(css_subdir_path):
+        logger.info(
+            f"MAIN.PY: Contents of css_subdir ('{css_subdir_path}'): {os.listdir(css_subdir_path)}"
+        )
+    else:
+        logger.warning(
+            f"MAIN.PY: css_subdir ('{css_subdir_path}') does not exist or is not a directory."
+        )
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
     logger.info(f"MAIN.PY: Successfully mounted /static to directory: {static_dir}")
 else:
