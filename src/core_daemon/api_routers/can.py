@@ -52,7 +52,7 @@ async def get_can_status():
         try:
             # Check basic link status (UP/DOWN)
             proc_link_show = await asyncio.create_subprocess_shell(
-                f"/sbin/ip link show {iface_name}",  # Changed to /sbin/ip
+                f"/run/current-system/sw/bin/ip link show {iface_name}",  # Use explicit path
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -67,7 +67,7 @@ async def get_can_status():
 
             # Get detailed information (bitrate, state, error counters)
             proc_details = await asyncio.create_subprocess_shell(
-                f"/sbin/ip -details link show {iface_name}",  # Changed to /sbin/ip
+                f"/run/current-system/sw/bin/ip -details link show {iface_name}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
