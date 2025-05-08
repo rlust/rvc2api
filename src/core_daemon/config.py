@@ -14,7 +14,7 @@ module_logger = logging.getLogger(__name__)
 # Refactor configure_logger to properly handle logging levels and handlers
 def configure_logger():
     root_logger = logging.getLogger()  # Get the root logger
-    log_level_str = os.getenv("LOG_LEVEL", "ERROR").upper()
+    log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
 
     # Attempt to get the integer value for the log level string
     log_level_int = getattr(logging, log_level_str, None)
