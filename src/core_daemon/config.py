@@ -43,24 +43,30 @@ def configure_logger():
 
     log_format = "%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s"
 
-    # Set the root logger's level to capture all messages from DEBUG upwards.
-    # Handlers will then filter based on their own configured levels.
+    # Set the root logger's level to DEBUG. This allows all messages of DEBUG
+    # severity and above to pass through the root logger. Individual handlers
+    # attached to the root logger (or other loggers) can then filter messages
+    # based on their own configured levels (e.g., a console handler set to INFO).
     root_logger.setLevel(logging.DEBUG)
 
-    # Remove any existing handlers from the root logger to prevent duplication.
-    # This is important if this function could be called multiple times or if other
-    # libraries might have added handlers to the root logger.
+    # Remove any existing handlers from the root logger. This is crucial to prevent
+    # duplicate log messages if this function is called multiple times or if other
+    # libraries (or a previous run of this function) have already added handlers.
+    # Iterating over a copy of the list (list(root_logger.handlers)) is important
+    # for safe removal while iterating.
     for handler in list(root_logger.handlers):  # Iterate over a copy for safe removal
         root_logger.removeHandler(handler)
 
     # Configure coloredlogs. This will add its own StreamHandler to the root logger.
-    # `reconfigure=True` (default in recent versions) would also attempt to clear
-    # handlers from the logger it's installed on, but explicit clearing above is safer.
+    # The `level` argument here sets the minimum level this handler will output.
+    # `reconfigure=True` ensures that coloredlogs takes full control of the specified
+    # logger's console output, potentially clearing other handlers if it deems necessary,
+    # though our explicit clearing above is a more direct approach for our needs.
     coloredlogs.install(
-        level=log_level_int,  # Use the integer log level
+        level=log_level_int,  # Use the integer log level for this handler
         fmt=log_format,
         logger=root_logger,  # Install on the root logger
-        reconfigure=True,  # Ensure it takes full control of the specified logger's console output
+        reconfigure=True,
     )
 
     # The WebSocketLogHandler is added to the root logger in main.py's setup_websocket_logging.
@@ -76,10 +82,11 @@ def get_actual_paths():
     Determines and returns the actual paths to the RVC specification and device mapping files.
 
     It considers environment variables (CAN_SPEC_PATH, CAN_MAP_PATH) for overrides.
-    If overrides are not present, invalid, or unreadable, it falls back to
-    default paths, typically bundled with the rvc_decoder package.
+    If an environment variable is set, its path is used if it exists and is readable.
+    Otherwise, a warning is logged, and the system falls back to default paths,
+    typically bundled with the rvc_decoder package.
     The determined paths are stored in module-level globals ACTUAL_SPEC_PATH
-    and ACTUAL_MAP_PATH to avoid re-computation.
+    and ACTUAL_MAP_PATH to avoid re-computation on subsequent calls.
 
     Returns:
         tuple[str, str]: A tuple containing the actual path to the RVC specification file
@@ -87,7 +94,7 @@ def get_actual_paths():
     """
     global ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH  # Indicate assignment to module globals
 
-    # If already determined, return stored values
+    # If paths have already been determined and cached, return them immediately.
     if ACTUAL_SPEC_PATH is not None and ACTUAL_MAP_PATH is not None:
         # module_logger.info("Returning already determined actual paths.") # Optional debug
         return ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH
@@ -99,29 +106,45 @@ def get_actual_paths():
 
     _decoder_default_spec_path, _decoder_default_map_path = _default_paths()
 
-    # Determine actual spec path that will be used by load_config_data and for UI
-    actual_spec_path_for_ui = _decoder_default_spec_path
+    # Determine actual spec path. Prioritize environment variable if valid.
+    actual_spec_path_for_ui = _decoder_default_spec_path  # Default assumption
     if spec_override_env:
         if os.path.exists(spec_override_env) and os.access(spec_override_env, os.R_OK):
             actual_spec_path_for_ui = spec_override_env
+            module_logger.info(
+                f"Using RVC Spec Path from environment variable: {spec_override_env}"
+            )
         else:
             module_logger.warning(  # Changed from logger to module_logger
-                f"Override RVC Spec Path '{spec_override_env}' is missing or "
+                f"Override RVC Spec Path '{spec_override_env}' (from CAN_SPEC_PATH) is missing or "
                 f"unreadable. Core logic will attempt to use bundled default: "
                 f"'{_decoder_default_spec_path}'"
             )
+    else:
+        module_logger.info(
+            f"No CAN_SPEC_PATH override. Using default RVC Spec Path: {_decoder_default_spec_path}"
+        )
 
-    # Determine actual mapping path that will be used by load_config_data and for UI
-    actual_map_path_for_ui = _decoder_default_map_path
+    # Determine actual mapping path. Prioritize environment variable if valid.
+    actual_map_path_for_ui = _decoder_default_map_path  # Default assumption
     if mapping_override_env:
         if os.path.exists(mapping_override_env) and os.access(mapping_override_env, os.R_OK):
             actual_map_path_for_ui = mapping_override_env
+            module_logger.info(
+                f"Using Device Mapping Path from environment variable: {mapping_override_env}"
+            )
         else:
             module_logger.warning(  # Changed from logger to module_logger
-                f"Override Device Mapping Path '{mapping_override_env}' is missing "
-                f"or unreadable. Core logic will attempt to use bundled default: "
+                f"Override Device Mapping Path '{mapping_override_env}'  "
+                f"(from CAN_MAP_PATH) is missing or unreadable."
+                f"Core logic will attempt to use bundled default: "
                 f"'{_decoder_default_map_path}'"
             )
+    else:
+        module_logger.info(
+            f"No CAN_MAP_PATH override. Using default Device Mapping"
+            f"Path: {_decoder_default_map_path}"
+        )
 
     # Store them in the global variables
     ACTUAL_SPEC_PATH = actual_spec_path_for_ui
