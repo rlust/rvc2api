@@ -137,10 +137,33 @@
 
           <!-- CAN Bus Status Section -->
           <div class="mt-10">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-300">CAN Bus Status</h2>
-            <div id="can-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
-              <p id="can-status-loading-message" class="text-gray-400">Loading CAN status...</p>
-              <!-- CAN status will be loaded here by JavaScript -->
+            <h2 class="text-2xl font-semibold mb-6 text-gray-300">System Status</h2>
+
+            <!-- API Server Status -->
+            <div class="mb-6">
+              <h3 class="text-xl font-semibold mb-3 text-gray-200">API Server</h3>
+              <div id="api-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                <p id="api-status-loading-message" class="text-gray-400">Loading API server status...</p>
+                <!-- API server status will be loaded here by JavaScript -->
+              </div>
+            </div>
+
+            <!-- Application Health -->
+            <div class="mb-6">
+              <h3 class="text-xl font-semibold mb-3 text-gray-200">Application Health</h3>
+              <div id="app-health-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                <p id="app-health-loading-message" class="text-gray-400">Loading application health...</p>
+                <!-- Application health details (e.g., config load status, connected clients) will be loaded here -->
+              </div>
+            </div>
+
+            <!-- CAN Bus Status Sub-section -->
+            <div>
+              <h3 class="text-xl font-semibold mb-3 text-gray-200">CAN Bus Interfaces</h3>
+              <div id="can-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                <p id="can-status-loading-message" class="text-gray-400">Loading CAN status...</p>
+                <!-- CAN status will be loaded here by JavaScript -->
+              </div>
             </div>
           </div>
         </section>
@@ -245,6 +268,14 @@
       // CAN Status Elements
       const canStatusContainer = document.getElementById('can-status-container');
       const canStatusLoadingMessage = document.getElementById('can-status-loading-message');
+
+      // API Server Status Elements (New)
+      const apiStatusContainer = document.getElementById('api-status-container');
+      const apiStatusLoadingMessage = document.getElementById('api-status-loading-message');
+
+      // Application Health Elements (New)
+      const appHealthContainer = document.getElementById('app-health-container');
+      const appHealthLoadingMessage = document.getElementById('app-health-loading-message');
 
       // Pinned Logs Elements
       const pinnedLogsContainer = document.getElementById('pinnedLogsContainer');
@@ -551,6 +582,82 @@
           ul.appendChild(li);
         }
         canStatusContainer.appendChild(ul);
+      }
+
+      // --- Fetch and Display API Server Status (NEW) ---
+      async function fetchApiServerStatus() {
+        if (!apiStatusContainer) return;
+        try {
+          // This is a placeholder. You'll need an API endpoint that provides this info.
+          // For example, an endpoint like /api/status/server
+          // const response = await fetch(`${apiBasePath}/status/server`);
+          // if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+          // const statusData = await response.json();
+          // updateApiServerView(statusData);
+
+          // Simulate loading for now
+          setTimeout(() => {
+            updateApiServerView({ version: "1.0.0", uptime: "12h 30m", requests_processed: 10234, error_rate: "0.1%" });
+            apiStatusLoadingMessage.classList.add('hidden');
+          }, 1000);
+        } catch (error) {
+          console.error("Failed to fetch API server status:", error);
+          if (apiStatusLoadingMessage) {
+            apiStatusLoadingMessage.textContent = 'Failed to load API server status.';
+          } else {
+            apiStatusContainer.innerHTML = '<p class="text-red-400">Failed to load API server status.</p>';
+          }
+        }
+      }
+
+      function updateApiServerView(statusData) {
+        if (!apiStatusContainer) return;
+        apiStatusContainer.innerHTML = `
+          <ul class="space-y-2 text-sm">
+            <li><strong>Version:</strong> ${statusData.version || 'N/A'}</li>
+            <li><strong>Uptime:</strong> ${statusData.uptime || 'N/A'}</li>
+            <li><strong>Requests Processed:</strong> ${statusData.requests_processed || 'N/A'}</li>
+            <li><strong>Error Rate:</strong> ${statusData.error_rate || 'N/A'}</li>
+          </ul>
+        `;
+      }
+
+      // --- Fetch and Display Application Health (NEW) ---
+      async function fetchApplicationHealth() {
+        if (!appHealthContainer) return;
+        try {
+          // Placeholder for fetching application health data (e.g., config status, client count)
+          // Example endpoint: /api/status/application
+          // const response = await fetch(`${apiBasePath}/status/application`);
+          // if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+          // const healthData = await response.json();
+          // updateApplicationHealthView(healthData);
+
+          // Simulate loading for now
+          setTimeout(() => {
+            updateApplicationHealthView({ config_files_loaded: true, websocket_clients: 5, last_error: "None" });
+            appHealthLoadingMessage.classList.add('hidden');
+          }, 1200);
+        } catch (error) {
+          console.error("Failed to fetch application health:", error);
+          if (appHealthLoadingMessage) {
+            appHealthLoadingMessage.textContent = 'Failed to load application health.';
+          } else {
+            appHealthContainer.innerHTML = '<p class="text-red-400">Failed to load application health.</p>';
+          }
+        }
+      }
+
+      function updateApplicationHealthView(healthData) {
+        if (!appHealthContainer) return;
+        appHealthContainer.innerHTML = `
+          <ul class="space-y-2 text-sm">
+            <li><strong>Configuration Files Loaded:</strong> <span class="${healthData.config_files_loaded ? 'text-green-400' : 'text-red-400'}">${healthData.config_files_loaded ? 'Yes' : 'No'}</span></li>
+            <li><strong>Active WebSocket Clients:</strong> ${healthData.websocket_clients === undefined ? 'N/A' : healthData.websocket_clients}</li>
+            <li><strong>Last Critical Error:</strong> ${healthData.last_error || 'N/A'}</li>
+            <!-- Add more application-specific health indicators here -->
+          </ul>
+        `;
       }
 
       // Helper function to call light services (or any entity control)
@@ -1569,6 +1676,19 @@
         });
       });
       // --- End of Added Event Listeners for Quick Light Controls ---
+
+      // Initial data fetches
+      fetchEntitiesAndPopulateAreas();
+      fetchCanStatus(); // Existing
+      fetchApiServerStatus(); // New
+      fetchApplicationHealth(); // New
+
+      // Setup periodic refresh for status sections (optional, adjust intervals as needed)
+      setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
+      setInterval(fetchApiServerStatus, 30000); // Refresh API status every 30 seconds
+      setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
+
+      // Theme switcher
     </script>
     <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
   </body>
