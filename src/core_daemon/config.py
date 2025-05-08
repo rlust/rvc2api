@@ -105,37 +105,115 @@ def get_fastapi_config():
 
 # ── Static File and Template Paths ─────────────────────────────────────────
 def get_static_paths():
+    static_dir_path_str = None
+    templates_dir_path_str = None
+    web_ui_dir_path_str = None
+
     try:
-        static_pkg_path = importlib.resources.files("core_daemon.web_ui.static")
-        templates_pkg_path = importlib.resources.files("core_daemon.web_ui.templates")
-        # web_ui_pkg_path = importlib.resources.files('core_daemon.web_ui')
+        module_logger.info("Attempting to get static paths using importlib.resources...")
 
-        static_dir = str(static_pkg_path)
-        templates_dir = str(templates_pkg_path)
-        # web_ui_dir needs to be the parent of static_dir and templates_dir
-        # Assuming static_dir is .../core_daemon/web_ui/static
-        web_ui_dir = os.path.dirname(static_dir)
+        # For 'core_daemon.web_ui.static'
+        static_files_traversable = importlib.resources.files("core_daemon.web_ui.static")
+        if static_files_traversable.is_dir():
+            static_dir_path_str = str(static_files_traversable)
+            module_logger.info(f"importlib.resources resolved static_dir: {static_dir_path_str}")
+        else:
+            module_logger.error(
+                "'core_daemon.web_ui.static' resolved by importlib.resources is not a directory."
+            )
+            raise ValueError(
+                "'core_daemon.web_ui.static' is not a directory via importlib.resources"
+            )
 
-        module_logger.info(f"Located static_dir via importlib.resources: {static_dir}")
-        module_logger.info(f"Located templates_dir via importlib.resources: {templates_dir}")
-        module_logger.info(f"Determined web_ui_dir via importlib.resources: {web_ui_dir}")
+        # For 'core_daemon.web_ui.templates'
+        templates_files_traversable = importlib.resources.files("core_daemon.web_ui.templates")
+        if templates_files_traversable.is_dir():
+            templates_dir_path_str = str(templates_files_traversable)
+            module_logger.info(
+                f"importlib.resources resolved templates_dir: {templates_dir_path_str}"
+            )
+        else:
+            module_logger.error(
+                "'core_daemon.web_ui.templates' resolved by importlib.resources is not a directory."
+            )
+            raise ValueError(
+                "'core_daemon.web_ui.templates' is not a directory via importlib.resources"
+            )
 
-    except (ImportError, ModuleNotFoundError) as e:
-        module_logger.error(f"Could not load static/template paths via importlib.resources: {e}")
-        module_logger.warning("Falling back to __file__ based paths for static/templates.")
-        # Fallback to the old method if importlib.resources fails
-        base_dir = os.path.dirname(os.path.abspath(__file__))  # Ensure absolute path
-        web_ui_dir = os.path.join(base_dir, "web_ui")
-        static_dir = os.path.join(web_ui_dir, "static")
-        templates_dir = os.path.join(web_ui_dir, "templates")
-        module_logger.info(f"Determined static_dir via fallback: {static_dir}")
-        module_logger.info(f"Determined templates_dir via fallback: {templates_dir}")
-        module_logger.info(f"Determined web_ui_dir via fallback: {web_ui_dir}")
+        # For 'core_daemon.web_ui' (parent)
+        web_ui_files_traversable = importlib.resources.files("core_daemon.web_ui")
+        if web_ui_files_traversable.is_dir():
+            web_ui_dir_path_str = str(web_ui_files_traversable)
+            module_logger.info(f"importlib.resources resolved web_ui_dir: {web_ui_dir_path_str}")
+        elif static_dir_path_str:  # Try to derive from static_dir if direct web_ui fails
+            web_ui_dir_path_str = os.path.dirname(static_dir_path_str)
+            module_logger.info(
+                f"Derived web_ui_dir from static_dir"
+                f"('{static_dir_path_str}'): {web_ui_dir_path_str}"
+            )
+        else:
+            module_logger.error(
+                "'core_daemon.web_ui' not resolved as a directory and could not be derived."
+            )
+            raise ValueError("'core_daemon.web_ui' is not a directory via importlib.resources")
+
+        if not all([static_dir_path_str, templates_dir_path_str, web_ui_dir_path_str]):
+            # This case should ideally be caught by earlier ValueErrors
+            module_logger.error("Failed to resolve one or more paths using importlib.resources.")
+            raise ValueError("Path resolution failed with importlib.resources")
+
+    except Exception as e:
+        module_logger.error(
+            f"Error using importlib.resources ('{e}')."
+            f"Falling back to __file__-based path resolution.",
+            exc_info=True,
+        )
+
+        current_file_path = os.path.abspath(__file__)
+        module_logger.info(
+            f"Fallback: current_file_path (__file__ for config.py): {current_file_path}"
+        )
+        core_daemon_dir = os.path.dirname(current_file_path)
+        module_logger.info(f"Fallback: core_daemon_dir (parent of config.py): {core_daemon_dir}")
+
+        web_ui_dir_path_str = os.path.join(core_daemon_dir, "web_ui")
+        static_dir_path_str = os.path.join(web_ui_dir_path_str, "static")
+        templates_dir_path_str = os.path.join(web_ui_dir_path_str, "templates")
+
+        module_logger.info(f"Fallback resolved web_ui_dir: {web_ui_dir_path_str}")
+        module_logger.info(f"Fallback resolved static_dir: {static_dir_path_str}")
+        module_logger.info(f"Fallback resolved templates_dir: {templates_dir_path_str}")
+
+    # Final validation of determined paths
+    if not static_dir_path_str or not os.path.isdir(static_dir_path_str):
+        module_logger.critical(
+            f"CRITICAL FAILURE: Final static_dir ('{static_dir_path_str}')"
+            f"is invalid or not a directory. Static files will likely fail to serve."
+        )
+    else:
+        module_logger.info(f"Final static_dir to be used: {static_dir_path_str}")
+
+    if not templates_dir_path_str or not os.path.isdir(templates_dir_path_str):
+        module_logger.critical(
+            f"CRITICAL FAILURE: Final templates_dir ('{templates_dir_path_str}')"
+            f"is invalid or not a directory. Templates will likely fail to load."
+        )
+    else:
+        module_logger.info(f"Final templates_dir to be used: {templates_dir_path_str}")
+
+    if not web_ui_dir_path_str or not os.path.isdir(
+        web_ui_dir_path_str
+    ):  # Check if web_ui_dir is valid
+        module_logger.warning(
+            f"Warning: Final web_ui_dir ('{web_ui_dir_path_str}') is invalid or not a directory."
+        )
+    else:
+        module_logger.info(f"Final web_ui_dir to be used: {web_ui_dir_path_str}")
 
     return {
-        "web_ui_dir": web_ui_dir,
-        "static_dir": static_dir,
-        "templates_dir": templates_dir,
+        "web_ui_dir": web_ui_dir_path_str,
+        "static_dir": static_dir_path_str,
+        "templates_dir": templates_dir_path_str,
     }
 
 

@@ -138,8 +138,30 @@ web_ui_dir = static_paths["web_ui_dir"]
 static_dir = static_paths["static_dir"]
 templates_dir = static_paths["templates_dir"]
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-templates = Jinja2Templates(directory=templates_dir)
+logger.info(f"MAIN.PY: Received static_dir from get_static_paths: '{static_dir}'")
+logger.info(f"MAIN.PY: Received templates_dir from get_static_paths: '{templates_dir}'")
+logger.info(f"MAIN.PY: Received web_ui_dir from get_static_paths: '{web_ui_dir}'")
+
+if static_dir and os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    logger.info(f"MAIN.PY: Successfully mounted /static to directory: {static_dir}")
+else:
+    logger.error(
+        f"MAIN.PY: static_dir ('{static_dir}') is invalid or not found."
+        f"Static files will NOT be served from this path."
+    )
+
+if templates_dir and os.path.isdir(templates_dir):
+    templates = Jinja2Templates(directory=templates_dir)
+    logger.info(
+        f"MAIN.PY: Successfully initialized Jinja2Templates with directory: {templates_dir}"
+    )
+else:
+    logger.error(
+        f"MAIN.PY: templates_dir ('{templates_dir}') is invalid or not found."
+        f"Templates will NOT be loaded from this path."
+    )
+    templates = None  # Or provide a fallback Jinja2Templates instance with no loader
 
 
 # @app.on_event("startup")
