@@ -1362,6 +1362,7 @@
 
       const themeSwitcher = document.getElementById('themeSwitcher');
       const THEME_KEY = 'selectedTheme';
+      const VALID_THEMES = ['default', 'dark', 'light', 'catppuccin-mocha', 'catppuccin-latte'];
 
       // Toast Notification Function
       function showToast(message, type = 'info', duration = 5000) {
@@ -1399,25 +1400,41 @@
       }
 
       function applyTheme(theme) {
-        document.body.classList.remove('theme-default', 'theme-dark', 'theme-light', 'theme-catppuccin-mocha', 'theme-catppuccin-latte');
-        document.body.classList.add(`theme-${theme}`);
-        localStorage.setItem(THEME_KEY, theme);
-        themeSwitcher.value = theme; // Ensure dropdown reflects the current theme
+        let currentTheme = theme;
+        if (typeof currentTheme !== 'string' || !VALID_THEMES.includes(currentTheme)) {
+          console.warn(`Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`);
+          currentTheme = 'default';
+        }
+
+        document.body.classList.remove(...VALID_THEMES.map(t => `theme-${t}`));
+        document.body.classList.add(`theme-${currentTheme}`);
+        localStorage.setItem(THEME_KEY, currentTheme);
+
+        if (themeSwitcher) {
+          themeSwitcher.value = currentTheme;
+        } else {
+          // This case should ideally be caught by the check below before calling applyTheme initially
+          // or before adding the event listener.
+          console.warn('applyTheme called but themeSwitcher element not found when trying to set its value.');
+        }
       }
 
-      themeSwitcher.addEventListener('change', (event) => {
-        applyTheme(event.target.value);
-      });
+      if (themeSwitcher) {
+        themeSwitcher.addEventListener('change', (event) => {
+          applyTheme(event.target.value);
+        });
 
-      // Load saved theme on page load
-      const savedTheme = localStorage.getItem(THEME_KEY);
-      if (savedTheme) {
+        // Load saved theme on page load
+        const savedTheme = localStorage.getItem(THEME_KEY);
+        // applyTheme will validate and default if savedTheme is null or invalid
         applyTheme(savedTheme);
       } else {
-        applyTheme('default'); // Default to 'default' theme if nothing is saved
+        console.error("Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired.");
+        // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
+        // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
+        applyTheme('default');
       }
 
-      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
       window.addEventListener('resize', adjustPinnedLogsLayout);
 
       function updateSystemStatus() {
