@@ -4,12 +4,13 @@ rvc_decoder.decode
 Core decoding logic for RV-C CAN frames, including loading of spec and device mapping data.
 """
 
+import json
+import logging
 import os
 import sys
-import json
-import yaml
-import logging
 from importlib import resources
+
+import yaml
 
 logger = logging.getLogger(__name__)  # Added named logger
 
@@ -73,7 +74,16 @@ def decode_payload(entry: dict, data_bytes: bytes):
 def load_config_data(
     rvc_spec_path_override: str | None = None,  # Renamed parameter
     device_mapping_path_override: str | None = None,  # Renamed parameter
-):
+) -> tuple[
+    dict[int, dict],
+    dict,
+    dict[tuple[str, str], dict],
+    dict[tuple[str, str], dict],
+    set[str],
+    dict[str, dict],
+    dict[str, dict],
+    dict[str, str],  # Added for pgn_hex_to_name_map
+]:
     """
     Load and parse:
       1. RVC spec JSON → decoder_map (PGN→spec entry, adds 'dgn_hex')
@@ -93,7 +103,8 @@ def load_config_data(
       status_lookup: dict[tuple[str,str],dict],
       light_entity_ids: set[str],
       entity_id_lookup: dict[str,dict],
-      light_command_info: dict[str,dict]
+      light_command_info: dict[str,dict],
+      pgn_hex_to_name_map: dict[str, str]  # Added for pgn_hex_to_name_map
     """
     # --- MODIFICATION START: Path selection logic ---
     default_spec_path, default_mapping_path = _default_paths()
@@ -164,6 +175,17 @@ def load_config_data(
         decoder_map[dec_id] = entry
     logger.info(f"Loaded {len(decoder_map)} spec entries.")  # Changed to logger.info
 
+    # Create a map from PGN hex string to PGN name for unmapped entry enrichment
+    pgn_hex_to_name_map: dict[str, str] = {}
+    if decoder_map:  # Check if decoder_map was successfully populated
+        for spec_entry in decoder_map.values():
+            pgn_val_int = spec_entry.get("pgn")
+            pgn_name_str = spec_entry.get("name")
+            if pgn_val_int is not None and pgn_name_str:
+                current_pgn_hex_key = f"{pgn_val_int:X}".upper()
+                if current_pgn_hex_key not in pgn_hex_to_name_map:
+                    pgn_hex_to_name_map[current_pgn_hex_key] = pgn_name_str
+
     # 2) Load device mapping
     device_mapping: dict = {}
     device_lookup: dict = {}
@@ -230,4 +252,5 @@ def load_config_data(
         light_entity_ids,
         entity_id_lookup,
         light_command_info,
+        pgn_hex_to_name_map,  # Return the new map
     )

@@ -1,24 +1,37 @@
 #!/usr/bin/env python3
 import asyncio
+import functools  # Added for functools.partial
 import json
 import logging
 import os
-import threading
 import time
-from collections import deque
 from typing import Any, Dict, List, Optional
 
 import can
 import uvicorn  # Added for main()
-from can.exceptions import CanInterfaceNotImplementedError
 from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, WebSocket
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from rvc_decoder import decode_payload, load_config_data
 
+# Import application state variables and initialization function
+from core_daemon.app_state import get_last_known_brightness  # Added import
+from core_daemon.app_state import preseed_light_states  # Import the pre-seeding function
+from core_daemon.app_state import set_last_known_brightness  # Added import
+from core_daemon.app_state import (  # Import the new state update function
+    history,
+    initialize_history_deques,
+    state,
+    unmapped_entries,
+    update_entity_state_and_history,
+)
+
+# Import CAN components from can_manager
+from core_daemon.can_manager import can_tx_queue  # Shared CAN transmit queue
+from core_daemon.can_manager import initialize_can_writer_task  # Function to start the CAN writer
+from core_daemon.can_manager import create_light_can_message, initialize_can_listeners
 from core_daemon.config import (
     configure_logger,
     get_actual_paths,
@@ -32,14 +45,12 @@ from core_daemon.metrics import (
     CAN_TX_QUEUE_LENGTH,
     DECODE_ERRORS,
     DGN_TYPE_GAUGE,
-    ENTITY_COUNT,
     FRAME_COUNTER,
     FRAME_LATENCY,
     GENERATOR_COMMAND_COUNTER,
     GENERATOR_DEMAND_COMMAND_COUNTER,
     GENERATOR_STATUS_1_COUNTER,
     GENERATOR_STATUS_2_COUNTER,
-    HISTORY_SIZE_GAUGE,
     HTTP_LATENCY,
     HTTP_REQUESTS,
     INST_USAGE_COUNTER,
@@ -61,6 +72,7 @@ from core_daemon.websocket import (
     websocket_endpoint,
     websocket_logs_endpoint,
 )
+from rvc_decoder import decode_payload, load_config_data
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = configure_logger()
@@ -89,24 +101,25 @@ logger.info(
     light_entity_ids,
     entity_id_lookup,
     light_command_info,
+    pgn_hex_to_name_map,  # Unpack the new map
 ) = load_config_data(
     rvc_spec_path_override=os.getenv("CAN_SPEC_PATH"),
     device_mapping_path_override=os.getenv("CAN_MAP_PATH"),
 )
 
-# Create a map from PGN hex string to PGN name for unmapped entry enrichment
-pgn_hex_to_name_map: Dict[str, str] = {}
-if decoder_map:
-    for (
-        spec_entry
-    ) in decoder_map.values():  # spec_entry is a dict from rvc.json, value in decoder_map
-        pgn_val_int = spec_entry.get("pgn")  # Integer PGN value, e.g., 65228 for 0xFECC
-        pgn_name_str = spec_entry.get("name")  # PGN Name, e.g., "GENERATOR_COMMAND"
-        if pgn_val_int is not None and pgn_name_str:
-            current_pgn_hex_key = f"{pgn_val_int:X}".upper()  # e.g., "FECC"
-            if current_pgn_hex_key not in pgn_hex_to_name_map:
-                pgn_hex_to_name_map[current_pgn_hex_key] = pgn_name_str
+# Initialize history deques after entity_id_lookup is populated
+initialize_history_deques(entity_id_lookup)
 
+# Call the new pre-seeding function from app_state.py
+preseed_light_states(
+    light_entity_ids=light_entity_ids,
+    light_command_info=light_command_info,
+    decoder_map_values=list(decoder_map.values()),  # Pass decoder_map.values()
+    entity_id_lookup=entity_id_lookup,
+    decode_payload_func=decode_payload,  # Pass the actual decode_payload function
+)
+
+# Removed the manual creation of pgn_hex_to_name_map as it's now returned by load_config_data
 
 # ── Pydantic Models for API responses ────────────────────────────────────────
 # Models are now defined in core_daemon.models.py
@@ -165,97 +178,27 @@ async def prometheus_http_middleware(request: Request, call_next):
 
 
 # ── In‑memory state + history ────────────────────────────────────────────────
-state: Dict[str, Dict[str, Any]] = {}
-HISTORY_DURATION = 24 * 3600  # seconds
-history: Dict[str, deque[Dict[str, Any]]] = {eid: deque() for eid in entity_id_lookup}
-unmapped_entries: Dict[str, UnmappedEntryModel] = {}  # Added for unmapped entries
+# These variables are now imported from core_daemon.app_state.py
+# state: Dict[str, Dict[str, Any]] = {}
+# HISTORY_DURATION = 24 * 3600  # seconds
+# history: Dict[str, deque[Dict[str, Any]]] = {eid: deque() for eid in entity_id_lookup}
+# unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entries
 
 # ── Active CAN buses ─────────────────────────────────────────────────────────
-buses: Dict[str, can.Bus] = {}
+# 'buses' dictionary is now imported from can_manager.py
 
 # ── CAN Transmit Queue ───────────────────────────────────────────────────────
-can_tx_queue: asyncio.Queue[tuple[can.Message, str]] = asyncio.Queue()
+# 'can_tx_queue' is now imported from can_manager.py
 
-
-async def can_writer():
-    bustype = os.getenv("CAN_BUSTYPE", "socketcan")
-    while True:
-        msg, interface = await can_tx_queue.get()
-        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
-
-        try:
-            bus = buses.get(interface)
-            if not bus:
-                try:
-                    bus = can.interface.Bus(channel=interface, bustype=bustype)
-                    buses[interface] = bus
-                except Exception as e:
-                    logger.error(f"Failed to initialize CAN bus '{interface}' ({bustype}): {e}")
-                    can_tx_queue.task_done()
-                    continue
-
-            try:
-                bus.send(msg)
-                logger.info(  # Split long log line
-                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} "
-                    f"Data: {msg.data.hex().upper()}"
-                )  # Log first send
-                await asyncio.sleep(0.05)  # RV-C spec recommends sending commands twice
-                bus.send(msg)
-                logger.info(  # Split long log line (consistent with the one above)
-                    f"CAN TX: {interface} ID: {msg.arbitration_id:08X} "
-                    f"Data: {msg.data.hex().upper()}"
-                )  # Log second send
-            except Exception as e:
-                logger.error(f"CAN writer failed to send message on {interface}: {e}")
-        except Exception as e:
-            logger.error(f"CAN writer encountered an unexpected error for {interface}: {e}")
-        finally:
-            can_tx_queue.task_done()
-            CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
+# Removed can_writer async function (now in can_manager.py)
 
 
 @app.on_event("startup")
 async def start_can_writer():
-    asyncio.create_task(can_writer())
-    logger.info("CAN writer task started.")
+    # Call the imported function to initialize and start the CAN writer task
+    initialize_can_writer_task()
+    # logger.info("CAN writer task started.") # Logging is now handled by initialize_can_writer_task
 
-
-# ── Pre‑seed lights (off state) ───────────────────────────────────────────────
-now = time.time()
-for eid in light_entity_ids:
-    info = light_command_info.get(eid)
-    if not info:
-        continue
-    spec_entry = next(
-        entry
-        for entry in decoder_map.values()
-        if entry["dgn_hex"].upper() == format(info["dgn"], "X")
-    )
-    decoded, raw = decode_payload(spec_entry, bytes([0] * 8))
-
-    # Add human-readable state
-    brightness = raw.get("operating_status", 0)  # Changed key
-    human_state = "on" if brightness > 0 else "off"
-    lookup = entity_id_lookup.get(eid, {})
-    payload = {
-        "entity_id": eid,
-        "value": decoded,
-        "raw": raw,
-        "state": human_state,
-        "timestamp": now,
-        "suggested_area": lookup.get("suggested_area", "Unknown"),
-        "device_type": lookup.get("device_type", "unknown"),
-        "capabilities": lookup.get("capabilities", []),
-        "friendly_name": lookup.get("friendly_name"),
-        "groups": lookup.get("groups", []),  # Changed from locations to groups
-    }
-    state[eid] = payload
-    history[eid].append(payload)
-
-ENTITY_COUNT.set(len(state))
-for eid in history:
-    HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(history[eid]))
 
 # ── WebSocket components are now in core_daemon.websocket ───────────────────
 # Imports moved to the top of the file
@@ -279,6 +222,201 @@ async def setup_websocket_logging():
         logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
 
 
+# ── CAN Message Processing Callback ──────────────────────────────────────────
+
+
+def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.AbstractEventLoop):
+    """
+    Callback function to process a single CAN message.
+    This function is called by the CAN listener threads for each message received.
+    It contains the logic previously in the main read loop of `reader_thread_target`.
+    """
+    # Increment generator-specific counters
+    if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
+        GENERATOR_COMMAND_COUNTER.inc()
+    elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
+        GENERATOR_STATUS_1_COUNTER.inc()
+    elif msg.arbitration_id == 536861659:  # GENERATOR_STATUS_2
+        GENERATOR_STATUS_2_COUNTER.inc()
+    elif msg.arbitration_id == 536870895:  # GENERATOR_DEMAND_COMMAND
+        GENERATOR_DEMAND_COMMAND_COUNTER.inc()
+
+    FRAME_COUNTER.inc()
+    start_time = time.perf_counter()
+    decoded_payload_for_unmapped: Optional[Dict[str, Any]] = None
+    entry = decoder_map.get(msg.arbitration_id)
+
+    try:
+        if not entry:
+            LOOKUP_MISSES.inc()
+            # Store unmapped entry for unknown PGN
+            unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}"
+            now_ts = time.time()
+
+            model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+            model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
+            model_dgn_hex = f"{msg.arbitration_id:X}"
+            model_dgn_name = pgn_hex_to_name_map.get(model_dgn_hex)
+
+            if unmapped_key_str not in unmapped_entries:
+                unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
+                    pgn_hex=model_pgn_hex,
+                    pgn_name=model_pgn_name,
+                    dgn_hex=model_dgn_hex,
+                    dgn_name=model_dgn_name,
+                    instance="N/A",
+                    last_data_hex=msg.data.hex().upper(),
+                    decoded_signals=None,
+                    first_seen_timestamp=now_ts,
+                    last_seen_timestamp=now_ts,
+                    count=1,
+                    spec_entry=None,
+                )
+            else:
+                current_unmapped = unmapped_entries[unmapped_key_str]
+                current_unmapped.last_data_hex = msg.data.hex().upper()
+                current_unmapped.last_seen_timestamp = now_ts
+                current_unmapped.count += 1
+                if model_pgn_name and not current_unmapped.pgn_name:
+                    current_unmapped.pgn_name = model_pgn_name
+            return  # Exit processing for this message
+
+        # PGN is known, attempt to decode
+        decoded, raw = decode_payload(entry, msg.data)
+        decoded_payload_for_unmapped = decoded
+        SUCCESSFUL_DECODES.inc()
+
+    except Exception as e:
+        logger.error(
+            f"Decode error for PGN 0x{msg.arbitration_id:X} on {iface_name}: {e}",
+            exc_info=True,
+        )
+        DECODE_ERRORS.inc()
+        return  # Exit processing for this message
+    finally:
+        FRAME_LATENCY.observe(time.perf_counter() - start_time)
+
+    # At this point, PGN is known and decoded successfully
+    dgn = entry.get("dgn_hex")
+    inst = raw.get("instance")
+
+    if not dgn or inst is None:
+        LOOKUP_MISSES.inc()
+        logger.debug(
+            f"DGN or instance missing in decoded payload for PGN "
+            f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
+            f"DGN from payload: {dgn}, Instance from payload: {inst}"
+        )
+        return  # Exit processing for this message
+
+    key = (dgn.upper(), str(inst))
+    matching_devices = [dev for k, dev in status_lookup.items() if k == key]
+    if not matching_devices:
+        default_key = (dgn.upper(), "default")
+        if default_key in status_lookup:
+            matching_devices = [status_lookup[default_key]]
+    if not matching_devices:
+        if key in device_lookup:
+            matching_devices = [device_lookup[key]]
+        elif (dgn.upper(), "default") in device_lookup:
+            matching_devices = [device_lookup[(dgn.upper(), "default")]]
+
+    if not matching_devices:
+        LOOKUP_MISSES.inc()
+        logger.debug(
+            f"No device config for DGN={dgn}, Inst={inst} " f"(PGN 0x{msg.arbitration_id:X})"
+        )
+
+        unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
+        model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
+        model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
+        model_dgn_hex = dgn.upper()
+        model_dgn_name = entry.get("name")
+        now_ts = time.time()
+        suggestions_list = []
+        if raw_device_mapping and isinstance(raw_device_mapping.get("devices"), list):
+            for device_config in raw_device_mapping["devices"]:
+                if device_config.get("dgn_hex", "").upper() == dgn.upper() and str(
+                    device_config.get("instance")
+                ) != str(inst):
+                    suggestions_list.append(
+                        SuggestedMapping(
+                            instance=str(device_config.get("instance")),
+                            name=device_config.get("name", "Unknown Name"),
+                            suggested_area=device_config.get("suggested_area"),
+                        )
+                    )
+
+        if unmapped_key_str not in unmapped_entries:
+            unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
+                pgn_hex=model_pgn_hex,
+                pgn_name=model_pgn_name,
+                dgn_hex=model_dgn_hex,
+                dgn_name=model_dgn_name,
+                instance=str(inst),
+                last_data_hex=msg.data.hex().upper(),
+                decoded_signals=decoded_payload_for_unmapped,
+                first_seen_timestamp=now_ts,
+                last_seen_timestamp=now_ts,
+                count=1,
+                suggestions=suggestions_list if suggestions_list else None,
+                spec_entry=entry,
+            )
+        else:
+            current_unmapped = unmapped_entries[unmapped_key_str]
+            current_unmapped.last_data_hex = msg.data.hex().upper()
+            current_unmapped.decoded_signals = decoded_payload_for_unmapped
+            current_unmapped.last_seen_timestamp = now_ts
+            current_unmapped.count += 1
+            if model_pgn_name and not current_unmapped.pgn_name:
+                current_unmapped.pgn_name = model_pgn_name
+            if model_dgn_name and not current_unmapped.dgn_name:
+                current_unmapped.dgn_name = model_dgn_name
+            if entry and not current_unmapped.spec_entry:
+                current_unmapped.spec_entry = entry
+            if not current_unmapped.suggestions and suggestions_list:
+                current_unmapped.suggestions = suggestions_list
+        return  # Exit processing for this message
+
+    ts = time.time()
+    raw_brightness = raw.get("operating_status", 0)
+    state_str = "on" if raw_brightness > 0 else "off"
+
+    for device in matching_devices:
+        eid = device["entity_id"]
+        lookup_data = entity_id_lookup.get(eid, {})
+        payload = {
+            "entity_id": eid,
+            "value": decoded,
+            "raw": raw,
+            "state": state_str,
+            "timestamp": ts,
+            "suggested_area": lookup_data.get("suggested_area", "Unknown"),
+            "device_type": lookup_data.get("device_type", "unknown"),
+            "capabilities": lookup_data.get("capabilities", []),
+            "friendly_name": lookup_data.get("friendly_name"),
+            "groups": lookup_data.get("groups", []),
+        }
+        # Custom Metrics
+        pgn_val = msg.arbitration_id & 0x3FFFF  # Corrected: pgn was msg.arbitration_id & 0x3FFFF
+        PGN_USAGE_COUNTER.labels(
+            pgn=f"{pgn_val:X}"
+        ).inc()  # Corrected: pgn was msg.arbitration_id & 0x3FFFF
+        INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
+        device_type = device.get("device_type", "unknown")
+        DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
+
+        # Update state and history using the centralized function
+        update_entity_state_and_history(eid, payload)
+
+        text = json.dumps(payload)
+        if loop and loop.is_running():
+            target_coro = broadcast_to_clients(text)
+            loop.call_soon_threadsafe(loop.create_task, target_coro)
+
+        SUCCESSFUL_DECODES.inc()
+
+
 # ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
 async def start_can_readers():
@@ -287,265 +425,20 @@ async def start_can_readers():
     interfaces = canbus_config["channels"]
     bustype = canbus_config["bustype"]
     bitrate = canbus_config["bitrate"]
-    logger.info(
-        f"Preparing CAN readers for interfaces: {interfaces}, "
-        f"bustype: {bustype}, bitrate: {bitrate}"
+
+    # Create a handler that bundles the _process_can_message callback with the event loop
+    message_handler_with_loop = functools.partial(_process_can_message, loop=loop)
+
+    # Initialize CAN listeners using the function from can_manager
+    initialize_can_listeners(
+        interfaces=interfaces,
+        bustype=bustype,
+        bitrate=bitrate,
+        message_handler_callback=message_handler_with_loop,
+        logger_instance=logger,  # Pass the configured logger instance
     )
-
-    # Define the reader function once outside the loop
-    def reader_thread_target(iface_name: str) -> None:
-        try:
-            bus = can.interface.Bus(channel=iface_name, bustype=bustype, bitrate=bitrate)
-            buses[iface_name] = bus
-        except CanInterfaceNotImplementedError as e:
-            logger.error(f"Cannot open CAN bus '{iface_name}' ({bustype}, {bitrate}bps): {e}")
-            return
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize CAN bus '{iface_name}' ({bustype}, "
-                f"{bitrate}bps) due to an unexpected error: {e}"
-            )
-            return
-
-        logger.info(f"Started CAN reader on {iface_name} via {bustype} @ {bitrate}bps")
-        while True:
-            try:
-                msg = bus.recv(timeout=1.0)
-                if msg is None:
-                    continue
-
-                # Increment generator-specific counters
-                if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
-                    GENERATOR_COMMAND_COUNTER.inc()
-                elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
-                    GENERATOR_STATUS_1_COUNTER.inc()
-                elif msg.arbitration_id == 536861659:  # GENERATOR_STATUS_2
-                    GENERATOR_STATUS_2_COUNTER.inc()
-                elif msg.arbitration_id == 536870895:  # GENERATOR_DEMAND_COMMAND
-                    GENERATOR_DEMAND_COMMAND_COUNTER.inc()
-
-                FRAME_COUNTER.inc()
-                start_time = time.perf_counter()
-                decoded_payload_for_unmapped: Optional[Dict[str, Any]] = (
-                    None  # Variable to hold decoded data
-                )
-                entry = decoder_map.get(msg.arbitration_id)
-
-                try:
-                    if not entry:
-                        LOOKUP_MISSES.inc()
-                        # Store unmapped entry for unknown PGN
-                        unmapped_key_str = (
-                            f"PGN_UNKNOWN-{msg.arbitration_id:X}"  # Ensure unique key
-                        )
-                        now_ts = time.time()
-
-                        model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                        model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
-                        model_dgn_hex = (
-                            f"{msg.arbitration_id:X}"  # Full Arb ID as DGN for unknown PGN
-                        )
-                        model_dgn_name = pgn_hex_to_name_map.get(
-                            model_dgn_hex
-                        )  # Attempt to name ArbID if it's a PGN
-
-                        if unmapped_key_str not in unmapped_entries:
-                            unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                                pgn_hex=model_pgn_hex,
-                                pgn_name=model_pgn_name,
-                                dgn_hex=model_dgn_hex,
-                                dgn_name=model_dgn_name,
-                                instance="N/A",
-                                last_data_hex=msg.data.hex().upper(),
-                                decoded_signals=None,  # No decoded signals if PGN is unknown
-                                first_seen_timestamp=now_ts,
-                                last_seen_timestamp=now_ts,
-                                count=1,
-                                spec_entry=None,  # PGN unknown, so no specific spec entry
-                            )
-                        else:
-                            current_unmapped = unmapped_entries[unmapped_key_str]
-                            current_unmapped.last_data_hex = msg.data.hex().upper()
-                            current_unmapped.last_seen_timestamp = now_ts
-                            current_unmapped.count += 1
-                            if model_pgn_name and not current_unmapped.pgn_name:
-                                current_unmapped.pgn_name = model_pgn_name
-                        continue  # Skip further processing
-
-                    # PGN is known, attempt to decode
-                    decoded, raw = decode_payload(entry, msg.data)
-                    decoded_payload_for_unmapped = decoded  # Store for potential unmapped entry
-                    SUCCESSFUL_DECODES.inc()
-
-                except Exception as e:
-                    logger.error(
-                        f"Decode error for PGN 0x{msg.arbitration_id:X} on {iface}: {e}",
-                        exc_info=True,
-                    )
-                    DECODE_ERRORS.inc()
-                    continue
-                finally:
-                    FRAME_LATENCY.observe(time.perf_counter() - start_time)
-
-                # At this point, PGN is known and decoded successfully
-                dgn = entry.get("dgn_hex")
-                inst = raw.get("instance")  # instance can be 0
-
-                if not dgn or inst is None:
-                    LOOKUP_MISSES.inc()
-                    logger.debug(
-                        f"DGN or instance missing in decoded payload for PGN "
-                        f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
-                        f"DGN from payload: {dgn}, Instance from payload: {inst}"
-                    )
-                    # Potentially log this as a specific type of unmapped if DGN/Inst
-                    # couldn't be derived from a known PGN's signals
-                    # For now, we assume `decode_payload` populates `raw` with `instance`
-                    # if the PGN spec defines it.
-                    # If `dgn` from spec or `instance` from raw signals is missing,
-                    # it's a config/spec issue or unexpected payload.
-                    continue
-
-                key = (dgn.upper(), str(inst))
-                # Find all matching devices for this status DGN/instance
-                matching_devices = [dev for k, dev in status_lookup.items() if k == key]
-                # If no match, try default instance
-                if not matching_devices:
-                    default_key = (dgn.upper(), "default")
-                    if default_key in status_lookup:
-                        matching_devices = [status_lookup[default_key]]
-                # Fallback to device_lookup if still not found
-                if not matching_devices:
-                    if key in device_lookup:
-                        matching_devices = [device_lookup[key]]
-                    elif (dgn.upper(), "default") in device_lookup:
-                        matching_devices = [device_lookup[(dgn.upper(), "default")]]
-
-                if not matching_devices:
-                    LOOKUP_MISSES.inc()
-                    logger.debug(
-                        f"No device config for DGN={dgn}, Inst={inst} "
-                        f"(PGN 0x{msg.arbitration_id:X})"
-                    )
-
-                    unmapped_key_str = f"{dgn.upper()}-{str(inst)}"
-                    # For consistency, UnmappedEntryModel.pgn_hex should be the PGN from ArbID
-                    # pgn_name_from_spec was entry.get('name'),
-                    # which is better suited for dgn_name
-
-                    model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-                    model_pgn_name = pgn_hex_to_name_map.get(
-                        model_pgn_hex
-                    )  # Name of the PGN part of ArbID
-
-                    model_dgn_hex = dgn.upper()  # dgn here is entry.get("dgn_hex")
-                    model_dgn_name = entry.get("name")  # Name from spec entry is DGN's name
-
-                    now_ts = time.time()
-
-                    # Generate suggestions
-                    suggestions_list = []
-                    if raw_device_mapping and isinstance(raw_device_mapping.get("devices"), list):
-                        for device_config in raw_device_mapping["devices"]:
-                            if device_config.get("dgn_hex", "").upper() == dgn.upper() and str(
-                                device_config.get("instance")
-                            ) != str(inst):
-                                suggestions_list.append(
-                                    SuggestedMapping(
-                                        instance=str(device_config.get("instance")),
-                                        name=device_config.get("name", "Unknown Name"),
-                                        suggested_area=device_config.get("suggested_area"),
-                                    )
-                                )
-
-                    if unmapped_key_str not in unmapped_entries:
-                        unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-                            pgn_hex=model_pgn_hex,
-                            pgn_name=model_pgn_name,
-                            dgn_hex=model_dgn_hex,
-                            dgn_name=model_dgn_name,
-                            instance=str(inst),
-                            last_data_hex=msg.data.hex().upper(),
-                            decoded_signals=decoded_payload_for_unmapped,  # Store decoded
-                            first_seen_timestamp=now_ts,
-                            last_seen_timestamp=now_ts,
-                            count=1,
-                            suggestions=suggestions_list if suggestions_list else None,
-                            spec_entry=entry,  # Store the spec entry used for decoding
-                        )
-                    else:
-                        current_unmapped = unmapped_entries[unmapped_key_str]
-                        current_unmapped.last_data_hex = msg.data.hex().upper()
-                        current_unmapped.decoded_signals = (
-                            decoded_payload_for_unmapped  # Update decoded signals
-                        )
-                        current_unmapped.last_seen_timestamp = now_ts
-                        current_unmapped.count += 1
-                        if model_pgn_name and not current_unmapped.pgn_name:
-                            current_unmapped.pgn_name = model_pgn_name
-                        if model_dgn_name and not current_unmapped.dgn_name:
-                            current_unmapped.dgn_name = model_dgn_name
-                        if (
-                            entry and not current_unmapped.spec_entry
-                        ):  # Add spec_entry if initially missing
-                            current_unmapped.spec_entry = entry
-                        # Update suggestions if they weren't there or if logic changes
-                        if not current_unmapped.suggestions and suggestions_list:
-                            current_unmapped.suggestions = suggestions_list
-                    continue
-
-                ts = time.time()
-                raw_brightness = raw.get("operating_status", 0)
-                state_str = "on" if raw_brightness > 0 else "off"
-
-                for device in matching_devices:
-                    eid = device["entity_id"]
-                    lookup = entity_id_lookup.get(eid, {})  # Get full lookup for additional fields
-                    payload = {
-                        "entity_id": eid,
-                        "value": decoded,
-                        "raw": raw,
-                        "state": state_str,
-                        "timestamp": ts,
-                        "suggested_area": lookup.get("suggested_area", "Unknown"),
-                        "device_type": lookup.get("device_type", "unknown"),
-                        "capabilities": lookup.get("capabilities", []),
-                        "friendly_name": lookup.get("friendly_name"),
-                        "groups": lookup.get("groups", []),  # Changed from locations to groups
-                    }
-                    # Custom Metrics
-                    pgn = msg.arbitration_id & 0x3FFFF
-                    PGN_USAGE_COUNTER.labels(pgn=f"{pgn:X}").inc()
-                    INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
-                    device_type = device.get("device_type", "unknown")
-                    DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
-                    # update state
-                    state[eid] = payload
-                    ENTITY_COUNT.set(len(state))
-                    # record into time‑based history
-                    hq = history[eid]
-                    hq.append(payload)
-                    cutoff = ts - HISTORY_DURATION
-                    while hq and hq[0]["timestamp"] < cutoff:
-                        hq.popleft()
-                    HISTORY_SIZE_GAUGE.labels(entity_id=eid).set(len(hq))
-                    text = json.dumps(payload)
-                    # Use imported broadcast_to_clients
-                    loop.call_soon_threadsafe(
-                        lambda t=text: loop.create_task(broadcast_to_clients(t))
-                    )
-            except Exception as e_reader_loop:
-                logger.error(
-                    f"CRITICAL ERROR IN CAN READER LOOP for {iface}: {e_reader_loop}",
-                    exc_info=True,
-                )
-                time.sleep(
-                    1
-                )  # Add a small delay to prevent log spamming if the error is persistent
-
-    # Corrected loop: Start one thread per interface
-    for iface in interfaces:
-        threading.Thread(target=reader_thread_target, args=(iface,), daemon=True).start()
+    # The old reader_thread_target and threading.Thread creation logic is now removed
+    # and handled by initialize_can_listeners in can_manager.py
 
 
 # ── REST Endpoints ─────────────────────────────────────────────────────────
@@ -858,40 +751,19 @@ async def _send_light_can_command(
     # (0-200, capped at 0xC8 as per RV-C for 100%)
     brightness_can_level = min(target_brightness_ui * 2, 0xC8)
 
-    prio = 6
-    sa = 0xF9
-    dp = (pgn >> 16) & 1
-    pf = (pgn >> 8) & 0xFF
-    da = 0xFF
-
-    if pf < 0xF0:
-        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (da << 8) | sa
-    else:
-        ps = pgn & 0xFF
-        arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (ps << 8) | sa
-
-    payload_data = bytes(
-        [
-            instance,
-            0x7C,  # Group Mask
-            brightness_can_level,
-            0x00,  # Command: SetLevel
-            0x00,  # Duration: Instantaneous
-            0xFF,
-            0xFF,
-            0xFF,
-        ]
-    )
+    # Use the new function from can_manager.py to create the CAN message
+    msg = create_light_can_message(pgn, instance, brightness_can_level)
 
     logger.info(
         f"CAN CMD OUT (Helper): entity_id={entity_id}, "
-        f"arbitration_id=0x{arbitration_id:08X}, "
-        f"data={payload_data.hex().upper()}, instance={instance}, "
+        f"arbitration_id=0x{msg.arbitration_id:08X}, "  # Use msg.arbitration_id
+        f"data={msg.data.hex().upper()}, instance={instance}, "  # Use msg.data
         f"action='{action_description}'"
     )
 
+    # Use the imported can_tx_queue from can_manager.py
     try:
-        msg = can.Message(arbitration_id=arbitration_id, data=payload_data, is_extended_id=True)
+        # msg is already created by create_light_can_message
         with CAN_TX_ENQUEUE_LATENCY.time():
             await can_tx_queue.put((msg, interface))
             CAN_TX_ENQUEUE_TOTAL.inc()
@@ -917,49 +789,45 @@ async def _send_light_can_command(
         ts = time.time()
         lookup = entity_id_lookup.get(entity_id, {})
 
-        current_payload = state.get(
-            entity_id, {}
-        ).copy()  # Get current state to preserve other fields
-        current_payload.update(
-            {
-                "entity_id": entity_id,  # Ensure entity_id is present
-                "value": optimistic_value_val,
-                "raw": optimistic_raw_val,
-                "state": optimistic_state_str,
-                "timestamp": ts,
-                # Preserve existing fields if not updated by this command type
-                "suggested_area": lookup.get(
-                    "suggested_area", current_payload.get("suggested_area", "Unknown")
-                ),
-                "device_type": lookup.get(
-                    "device_type", current_payload.get("device_type", "light")
-                ),
-                "capabilities": lookup.get("capabilities", current_payload.get("capabilities", [])),
-                "friendly_name": lookup.get("friendly_name", current_payload.get("friendly_name")),
-                "groups": lookup.get(
-                    "groups", current_payload.get("groups", [])
-                ),  # Changed from locations to groups
-            }
-        )
-        state[entity_id] = current_payload  # Update state with the merged payload
+        # Construct the complete payload for the optimistic update
+        optimistic_payload_to_store = {
+            "entity_id": entity_id,
+            "value": optimistic_value_val,
+            "raw": optimistic_raw_val,
+            "state": optimistic_state_str,
+            "timestamp": ts,
+            "suggested_area": lookup.get(
+                "suggested_area", state.get(entity_id, {}).get("suggested_area", "Unknown")
+            ),
+            "device_type": lookup.get(
+                "device_type", state.get(entity_id, {}).get("device_type", "light")
+            ),
+            "capabilities": lookup.get(
+                "capabilities", state.get(entity_id, {}).get("capabilities", [])
+            ),
+            "friendly_name": lookup.get(
+                "friendly_name", state.get(entity_id, {}).get("friendly_name")
+            ),
+            "groups": lookup.get("groups", state.get(entity_id, {}).get("groups", [])),
+        }
 
-        if entity_id in history:  # Ensure history deque exists
-            history[entity_id].append(current_payload)
-            cutoff = ts - HISTORY_DURATION
-            while history[entity_id] and history[entity_id][0]["timestamp"] < cutoff:
-                history[entity_id].popleft()
-            HISTORY_SIZE_GAUGE.labels(entity_id=entity_id).set(len(history[entity_id]))
-        else:  # Should not happen if pre-seeded correctly
-            logger.warning(f"History deque not found for {entity_id} during optimistic update.")
+        # Call the centralized state update function from app_state.py
+        update_entity_state_and_history(entity_id, optimistic_payload_to_store)
 
-        ENTITY_COUNT.set(len(state))
-        text = json.dumps(current_payload)
+        # The lines for directly updating state, history, ENTITY_COUNT, HISTORY_SIZE_GAUGE
+        # are now handled by update_entity_state_and_history and can be removed from here.
+        # state[entity_id] = current_payload # Removed
+        # ENTITY_COUNT.set(len(state)) # Removed
+        # if entity_id in history: # Removed block
+        # else: # Removed block
+
+        text = json.dumps(optimistic_payload_to_store)  # Use the constructed payload for broadcast
         await broadcast_to_clients(text)
         return True
     except Exception as e:
         logger.error(
             f"Failed to enqueue or optimistically update CAN control for {entity_id} "
-            f"(Action: '{action_description}'): {e}",  # Split long f-string
+            f"(Action: '{action_description}'): {e}",
             exc_info=True,
         )
         return False
@@ -1013,22 +881,11 @@ async def control_entity(
     current_on_str = current_state_data.get("state", "off")
     current_on = current_on_str.lower() == "on"
     current_raw_values = current_state_data.get("raw", {})
-    # current_brightness_raw = current_raw_values.get("operating_status", 0) # instance was removed
-    current_brightness_raw = current_raw_values.get("operating_status", 0)
-
-    current_brightness_ui = 0
-    if isinstance(current_brightness_raw, (int, float)):
-        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+    current_brightness_raw = current_raw_values.get("operating_status", 0)  # Added back
+    current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
 
     # Get or initialize last known brightness for this entity
-    last_known_brightness_key = f"{entity_id}_last_brightness"
-    # Ensure state dictionary has a sub-dictionary for app-specific data if not present
-    if "_app_data" not in state:
-        state["_app_data"] = {}
-
-    last_brightness_ui = state["_app_data"].get(
-        last_known_brightness_key, 100
-    )  # Default to 100 if never set
+    last_brightness_ui = get_last_known_brightness(entity_id)  # Added
 
     logger.debug(
         f"Control for {entity_id}: current_on_str='{current_on_str}', "
@@ -1060,7 +917,7 @@ async def control_entity(
         else:  # cmd.state == "off"
             # Store current brightness before turning off, if it was on
             if current_on and current_brightness_ui > 0:
-                state["_app_data"][last_known_brightness_key] = current_brightness_ui
+                set_last_known_brightness(entity_id, current_brightness_ui)  # Changed
                 logger.info(f"Stored last brightness for {entity_id}: {current_brightness_ui}%")
             target_brightness_ui = 0
             action = "Set OFF"
@@ -1069,7 +926,7 @@ async def control_entity(
         if current_on:
             # Store current brightness before toggling off
             if current_brightness_ui > 0:
-                state["_app_data"][last_known_brightness_key] = current_brightness_ui
+                set_last_known_brightness(entity_id, current_brightness_ui)  # Changed
                 logger.info(
                     f"Stored last brightness for {entity_id} before toggle OFF: "
                     f"{current_brightness_ui}%"
@@ -1096,9 +953,7 @@ async def control_entity(
 
     # --- Use Helper to Send CAN Message and Update State ---
     if target_brightness_ui > 0:
-        state["_app_data"][
-            last_known_brightness_key
-        ] = target_brightness_ui  # Store brightness if setting to a value > 0
+        set_last_known_brightness(entity_id, target_brightness_ui)  # Changed
         logger.info(
             f"Stored/updated last brightness for {entity_id} after command: "
             f"{target_brightness_ui}%"
@@ -1122,76 +977,193 @@ async def control_entity(
 # --- Bulk Light Control Endpoints ---
 async def _bulk_control_lights(
     group_filter: Optional[str],  # Changed from location_filter to group_filter
-    target_state_on: bool,  # True for ON, False for OFF
-    action_name: str,
-) -> BulkLightControlResponse:
-    lights_processed = 0
-    lights_commanded = 0
-    errors = []
+    command: str,
+    state_cmd: Optional[str] = None,
+    brightness_val: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Helper function to apply a command to multiple lights based on a group filter.
+    Returns a list of results from individual control attempts.
+    """
+    results = []
+    action_description_base = f"Bulk {command}"
+    if state_cmd:
+        action_description_base += f" {state_cmd}"
+    if brightness_val is not None:
+        action_description_base += f" to {brightness_val}%"
+    if group_filter:
+        logger.info(
+            f"Processing bulk command for group: {group_filter}, command: {command}, "
+            f"state: {state_cmd}, brightness: {brightness_val}"
+        )
+    else:
+        logger.info(
+            f"Processing bulk command for ALL lights, command: {command}, "
+            f"state: {state_cmd}, brightness: {brightness_val}"
+        )
 
-    target_brightness_ui = 100 if target_state_on else 0
-    action_verb = "ON" if target_state_on else "OFF"
+    controlled_entity_ids = set()  # Keep track of entities already processed
 
-    for eid in light_entity_ids:
-        device_config = entity_id_lookup.get(eid, {})
-        if device_config.get("device_type") != "light":
-            continue  # Skip non-light devices
-
-        lights_processed += 1
-
-        if group_filter:  # Changed from location_filter
-            entity_groups = device_config.get("groups", [])  # Changed from locations
-            if group_filter not in entity_groups:  # Corrected line
-                continue  # Skip if group_filter is not in the entity's groups list
-
-        action_description = f"Bulk: {action_name} {action_verb} - {eid}"
-        if eid not in light_command_info:
-            logger.warning(f"{action_description}: Skipped, not in light_command_info.")
-            errors.append(f"{eid}: Not controllable (missing command info)")
+    for entity_id, entity_config in entity_id_lookup.items():
+        if entity_id in controlled_entity_ids:  # Skip if already processed
             continue
 
-        if await _send_light_can_command(eid, target_brightness_ui, action_description):
-            lights_commanded += 1
+        # Filter by group if group_filter is provided
+        if group_filter and group_filter not in entity_config.get("groups", []):
+            continue
+
+        # Ensure this entity is a light and is controllable
+        if entity_id not in light_command_info or entity_config.get("device_type") != "light":
+            continue
+
+        # --- Read Current State for this light ---
+        current_state_data = state.get(entity_id, {})
+        current_on_str = current_state_data.get("state", "off")
+        current_on = current_on_str.lower() == "on"
+        current_raw_values = current_state_data.get("raw", {})
+        current_brightness_raw = current_raw_values.get("operating_status", 0)
+        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
+        last_brightness_ui = get_last_known_brightness(entity_id)
+
+        # --- Determine Target State for this light ---
+        target_brightness_ui = current_brightness_ui
+        action_suffix = ""
+
+        if command == "set":
+            if state_cmd not in {"on", "off"}:
+                results.append(
+                    {
+                        "entity_id": entity_id,
+                        "status": "error",
+                        "detail": "State must be 'on' or 'off' for set command",
+                    }
+                )
+                continue
+            if state_cmd == "on":
+                if brightness_val is not None:
+                    target_brightness_ui = brightness_val
+                elif not current_on:
+                    target_brightness_ui = last_brightness_ui
+                action_suffix = f"ON to {target_brightness_ui}%"
+            else:  # state_cmd == "off"
+                if current_on and current_brightness_ui > 0:
+                    set_last_known_brightness(entity_id, current_brightness_ui)
+                target_brightness_ui = 0
+                action_suffix = "OFF"
+
+        elif command == "toggle":
+            if current_on:
+                if current_brightness_ui > 0:
+                    set_last_known_brightness(entity_id, current_brightness_ui)
+                target_brightness_ui = 0
+                action_suffix = "Toggle OFF"
+            else:
+                target_brightness_ui = last_brightness_ui
+                action_suffix = f"Toggle ON to {target_brightness_ui}%"
+
+        elif command == "brightness_up":
+            if not current_on and current_brightness_ui == 0:
+                target_brightness_ui = 10
+            else:
+                target_brightness_ui = min(current_brightness_ui + 10, 100)
+            action_suffix = f"Brightness UP to {target_brightness_ui}%"
+
+        elif command == "brightness_down":
+            target_brightness_ui = max(current_brightness_ui - 10, 0)
+            action_suffix = f"Brightness DOWN to {target_brightness_ui}%"
         else:
-            errors.append(f"{eid}: Failed to send command")
+            results.append(
+                {
+                    "entity_id": entity_id,
+                    "status": "error",
+                    "detail": f"Invalid command: {command}",
+                }
+            )
+            continue
+
+        full_action_description = f"{action_description_base} ({action_suffix}) for {entity_id}"
+
+        if target_brightness_ui > 0:
+            set_last_known_brightness(entity_id, target_brightness_ui)
+
+        success = await _send_light_can_command(
+            entity_id, target_brightness_ui, full_action_description
+        )
+        results.append(
+            {
+                "entity_id": entity_id,
+                "status": "sent" if success else "error",
+                "action": full_action_description,
+                "brightness": target_brightness_ui,
+            }
+        )
+        controlled_entity_ids.add(entity_id)  # Mark as processed
+
+    if not controlled_entity_ids:
+        logger.warning(
+            f"Bulk control command ({action_description_base}) did not match any lights "
+            f"for group_filter: '{group_filter}'."
+        )
+
+    return results
+
+
+@app.post("/lights/control", response_model=BulkLightControlResponse)
+async def control_lights_bulk(
+    cmd: ControlCommand = Body(...),
+    group: Optional[str] = Query(None, description="Group to apply the command to"),
+):
+    """
+    Control multiple lights based on a group or all lights if no group is specified.
+    Example: Turn all 'kitchen' lights on: POST /lights/control?group=kitchen with body
+    {"command": "set", "state": "on"}
+    Example: Turn ALL lights off: POST /lights/control with body {"command": "set", "state": "off"}
+    """
+    logger.info(
+        f"HTTP Bulk CMD RX: group='{group}', command='{cmd.command}', "
+        f"state='{cmd.state}', brightness='{cmd.brightness}'"
+    )
+
+    results = await _bulk_control_lights(
+        group_filter=group,
+        command=cmd.command,
+        state_cmd=cmd.state,
+        brightness_val=cmd.brightness,
+    )
+
+    # Determine overall status
+    if not results:  # No lights were targeted
+        # Consider if this case should be a 404 or a specific message
+        # For now, returning a 200 with a message indicating no lights matched.
+        return BulkLightControlResponse(
+            status="no_match",
+            message=f"No lights found for the specified criteria (group: {group}).",
+            group=group,
+            command=cmd.command,
+            details=[],
+        )
+
+    # Check if all individual operations were successful
+    all_successful = all(r.get("status") == "sent" for r in results)
+    overall_status = "success" if all_successful else "partial_error"
+
+    # If any operation failed, it might be good to log that here or
+    # ensure _bulk_control_lights does.
+    if not all_successful:
+        logger.warning(
+            f"Partial error in bulk light control for group" f"'{group}', command '{cmd.command}'."
+        )
 
     return BulkLightControlResponse(
-        status="completed",
-        action=f"{action_name} {action_verb}",
-        lights_processed=lights_processed,
-        lights_commanded=lights_commanded,
-        errors=errors,
+        status=overall_status,
+        message="Bulk command processing complete.",
+        group=group,
+        command=cmd.command,
+        details=results,
     )
 
 
-@app.post("/lights/all/on", response_model=BulkLightControlResponse)
-async def lights_all_on():
-    return await _bulk_control_lights(None, True, "All Lights")
-
-
-@app.post("/lights/all/off", response_model=BulkLightControlResponse)
-async def lights_all_off():
-    return await _bulk_control_lights(None, False, "All Lights")
-
-
-@app.post("/lights/interior/on", response_model=BulkLightControlResponse)
-async def lights_interior_on():
-    return await _bulk_control_lights("interior", True, "Interior Lights")
-
-
-@app.post("/lights/interior/off", response_model=BulkLightControlResponse)
-async def lights_interior_off():
-    return await _bulk_control_lights("interior", False, "Interior Lights")
-
-
-@app.post("/lights/exterior/on", response_model=BulkLightControlResponse)
-async def lights_exterior_on():
-    return await _bulk_control_lights("exterior", True, "Exterior Lights")
-
-
-@app.post("/lights/exterior/off", response_model=BulkLightControlResponse)
-async def lights_exterior_off():
-    return await _bulk_control_lights("exterior", False, "Exterior Lights")
+# ── Main Application Setup ───────────────────────────────────────────────────
 
 
 @app.get("/queue", response_model=dict)  # Removed /api/ prefix
@@ -1199,6 +1171,7 @@ async def get_queue_status():
     """
     Return the current status of the CAN transmit queue.
     """
+    # Use the imported can_tx_queue from can_manager.py
     return {"length": can_tx_queue.qsize(), "maxsize": can_tx_queue.maxsize or "unbounded"}
 
 
