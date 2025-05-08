@@ -37,7 +37,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.12.6" # Updated to avoid Python 3.12.5 issues with Black
 fastapi    = "^0.115"                 # Updated from ^0.95
-uvicorn    = { extras = ["standard"], version = "^0.32" } # Updated from ^0.22
+uvicorn = { extras = ["standard"], version = "^0.34" }
 python-can = "^4.0"
 pydantic   = "^2.9"                   # Updated from ^1.10 (Major V2 update)
 pyyaml     = "^6.0"
