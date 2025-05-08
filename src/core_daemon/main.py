@@ -169,8 +169,10 @@ if static_dir and os.path.isdir(static_dir):
         logger.warning(
             f"MAIN.PY: css_subdir ('{css_subdir_path}') does not exist or is not a directory."
         )
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-    logger.info(f"MAIN.PY: Successfully mounted /static to directory: {static_dir}")
+    app.mount("/static", StaticFiles(directory=static_dir, follow_symlink=True), name="static")
+    logger.info(
+        f"MAIN.PY: Successfully mounted /static to directory: {static_dir} with follow_symlink=True"
+    )
 else:
     logger.error(
         f"MAIN.PY: static_dir ('{static_dir}') is invalid or not found."
