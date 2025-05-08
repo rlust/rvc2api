@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import re
-from typing import Any, Dict, List  # Added Dict, Any
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 # Assuming can_tx_queue is in core_daemon.can_manager
 from core_daemon.can_manager import can_tx_queue
@@ -26,11 +26,19 @@ async def get_can_status():
     Uses 'ip' command to get details like state, bitrate, and error counters.
     """
     can_config = get_canbus_config()
-    interfaces_config = can_config.get("interfaces", [])  # Renamed to avoid conflict
+    interfaces_config = can_config.get(
+        "channels", []
+    )  # Corrected key from "interfaces" to "channels"
     status_list = []
 
-    for iface_conf in interfaces_config:
-        iface_name = iface_conf.get("name")
+    if not interfaces_config:
+        logger.info("CAN status endpoint: No CAN interfaces configured (empty 'channels' list).")
+        # Return empty list or raise HTTPException, depending on desired behavior for no channels
+        return []  # Or raise HTTPException(status_code=404, detail="No CAN interfaces configured")
+
+    for (
+        iface_name
+    ) in interfaces_config:  # Iterate directly over names if interfaces_config is a list of strings
         if not iface_name:
             continue
 
@@ -100,14 +108,19 @@ async def get_can_status():
                 CANInterfaceStats(interface_name=iface_name, is_up=False, state="UNKNOWN")
             )
 
-    if not status_list and interfaces_config:
+    # Adjusted logging for clarity when status_list might be empty due to errors vs. no config
+    if not status_list and interfaces_config:  # interfaces_config is not empty, but status_list is
         logger.warning(
             "CAN status endpoint: No interface status could be retrieved, "
-            "though interfaces are configured."
+            "though interfaces are configured. Check 'ip' command availability "
+            "and interface states."
         )
-        raise HTTPException(status_code=500, detail="Could not retrieve CAN interface status.")
-    elif not interfaces_config:
-        logger.info("CAN status endpoint: No CAN interfaces configured.")
+        # Consider raising an error if no statuses could be retrieved despite configuration
+        # raise HTTPException(
+        #     status_code=500,
+        #     detail="Could not retrieve CAN interface status for configured channels."
+        # )
+    # The case for not interfaces_config is handled at the beginning of the function now.
 
     return status_list
 
