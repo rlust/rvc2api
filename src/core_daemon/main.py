@@ -24,18 +24,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Import application state variables and initialization function
+from core_daemon import app_state  # Import the module itself
 from core_daemon.app_state import (
-    # get_last_known_brightness, # Unused import
     initialize_history_deques,
     preseed_light_states,
-    # set_last_known_brightness, # Unused import
-    # state, # Redefined and unused before redefinition by later import
-    # history, # Redefined and unused before redefinition by later import
-    # unmapped_entries, # Redefined and unused before redefinition by later import
-    # update_entity_state_and_history, # Redefined and unused before redefinition by later import
-    # entity_id_lookup, # Unused import - used by preseed_light_states but passed as arg
-    # light_entity_ids, # Unused import - used by preseed_light_states but passed as arg
-    # light_command_info, # Unused import - used by preseed_light_states but passed as arg
 )
 
 # Import CAN components from can_manager
@@ -87,8 +79,6 @@ from core_daemon.models import UnmappedEntryModel, SuggestedMapping
 
 # App state used by _process_can_message, moved to top
 from core_daemon.app_state import (
-    # history, # Unused - _process_can_message uses the global history directly
-    # state, # Unused - _process_can_message uses the global state directly
     unmapped_entries,  # Keep for _process_can_message
     update_entity_state_and_history,  # Keep for _process_can_message
 )
@@ -113,9 +103,6 @@ logger.info(
     raw_device_mapping,
     device_lookup,
     status_lookup,
-    # light_entity_ids, # Already imported from app_state
-    # entity_id_lookup, # Already imported from app_state
-    # light_command_info, # Already imported from app_state
     _light_entity_ids,  # Use temporary names to avoid conflict if needed
     _entity_id_lookup,  # or ensure they are not needed here if already in app_state
     _light_command_info,
@@ -125,16 +112,26 @@ logger.info(
     device_mapping_path_override=os.getenv("CAN_MAP_PATH"),
 )
 
-# Initialize history deques after entity_id_lookup is populated
-# Ensure entity_id_lookup from app_state is used or the one from load_config_data
-initialize_history_deques(_entity_id_lookup)  # Using _entity_id_lookup from load_config_data
+# Populate the global config variables in app_state module
+app_state.entity_id_lookup = _entity_id_lookup
+app_state.light_entity_ids = _light_entity_ids
+app_state.light_command_info = _light_command_info
+# Optionally, populate others if they are also made global in app_state
+# app_state.decoder_map = decoder_map
+# app_state.raw_device_mapping = raw_device_mapping
+# app_state.device_lookup = device_lookup
+# app_state.status_lookup = status_lookup
+# app_state.pgn_hex_to_name_map = pgn_hex_to_name_map
+
+# Initialize history deques after entity_id_lookup is populated in app_state
+initialize_history_deques(app_state.entity_id_lookup)
 
 # Call the new pre-seeding function from app_state.py
 preseed_light_states(
-    light_entity_ids=_light_entity_ids,  # Using _light_entity_ids from load_config_data
-    light_command_info=_light_command_info,  # Using _light_command_info from load_config_data
-    decoder_map_values=list(decoder_map.values()),
-    entity_id_lookup=_entity_id_lookup,  # Using _entity_id_lookup from load_config_data
+    light_entity_ids=app_state.light_entity_ids,
+    light_command_info=app_state.light_command_info,
+    decoder_map_values=list(decoder_map.values()),  # decoder_map is local to main.py
+    entity_id_lookup=app_state.entity_id_lookup,
     decode_payload_func=decode_payload,
 )
 
@@ -173,7 +170,6 @@ async def ensure_static_dir_exists():
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
 @app.middleware("http")
 async def prometheus_http_middleware(request: Request, call_next):
-    # from prometheus_client import Counter, Histogram # Unused imports
     start = time.perf_counter()
     response = await call_next(request)
     latency = time.perf_counter() - start
@@ -208,8 +204,6 @@ async def setup_websocket_logging():
 
 # ── CAN Message Processing Callback ──────────────────────────────────────────
 def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.AbstractEventLoop):
-    # ... (rest of the function remains the same, ensure all its own imports are satisfied)
-    # ... existing code ...
     if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
         GENERATOR_COMMAND_COUNTER.inc()
     elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
@@ -285,8 +279,6 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
         return
 
     key = (dgn.upper(), str(inst))
-    # Ensure entity_id_lookup used here is the one from load_config_data or app_state
-    # This part of the logic might need adjustment based on which entity_id_lookup is authoritative
     matching_devices = [dev for k, dev in status_lookup.items() if k == key]
     if not matching_devices:
         default_key = (dgn.upper(), "default")
@@ -361,8 +353,7 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
 
     for device in matching_devices:
         eid = device["entity_id"]
-        # Use _entity_id_lookup from load_config_data for consistency with preseed
-        lookup_data = _entity_id_lookup.get(eid, {})
+        lookup_data = app_state.entity_id_lookup.get(eid, {})
         payload = {
             "entity_id": eid,
             "value": decoded,
@@ -429,7 +420,6 @@ app.include_router(api_router_entities, prefix="/api")
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
-    # Line was too long
     return PlainTextResponse(f"Validation error: {exc}", status_code=500)
 
 

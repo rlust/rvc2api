@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import deque
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List  # Added List
 
 # Import metrics that are directly related to the state managed here
 from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
@@ -27,6 +27,17 @@ unmapped_entries: Dict[str, UnmappedEntryModel] = {}
 
 # Last known brightness levels for lights
 last_known_brightness_levels: Dict[str, int] = {}
+
+# Configuration data loaded at startup, to be populated by main.py
+entity_id_lookup: Dict[str, Any] = {}
+light_entity_ids: List[str] = []
+light_command_info: Dict[str, Any] = {}
+# Potentially others if needed by routers/modules directly from app_state:
+# decoder_map: Dict[int, Any] = {}
+# raw_device_mapping: Dict[str, Any] = {}
+# device_lookup: Dict[tuple, Any] = {}
+# status_lookup: Dict[tuple, Any] = {}
+# pgn_hex_to_name_map: Dict[str, str] = {}
 
 
 def get_last_known_brightness(entity_id: str) -> int:
