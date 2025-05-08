@@ -150,6 +150,21 @@ if static_dir and os.path.isdir(static_dir):
         logger.info(
             f"MAIN.PY: Contents of css_subdir ('{css_subdir_path}'): {os.listdir(css_subdir_path)}"
         )
+        # ADD THIS DIAGNOSTIC BLOCK
+        custom_css_path = os.path.join(css_subdir_path, "custom.css")
+        logger.info(f"MAIN.PY: Checking for custom.css at: {custom_css_path}")
+        if os.path.isfile(custom_css_path):
+            logger.info(f"MAIN.PY: custom.css FOUND via os.path.isfile at {custom_css_path}")
+            try:
+                with open(custom_css_path, "rb") as f:  # Open in binary mode for safety
+                    logger.info(
+                        f"MAIN.PY: Successfully opened custom.css, first 10 bytes: {f.read(10)!r}"
+                    )
+            except Exception as e:
+                logger.error(f"MAIN.PY: Error reading custom.css: {e}", exc_info=True)
+        else:
+            logger.warning(f"MAIN.PY: custom.css NOT FOUND via os.path.isfile at {custom_css_path}")
+        # END OF ADDED DIAGNOSTIC BLOCK
     else:
         logger.warning(
             f"MAIN.PY: css_subdir ('{css_subdir_path}') does not exist or is not a directory."
