@@ -4,44 +4,47 @@ import functools  # Added for functools.partial
 import json
 import logging
 import os
-import re
+
+# import re # Unused import
 import time
-from typing import Any, Dict, List, Optional
+
+# from typing import Any, Dict, List, Optional # Unused import (List was unused)
+from typing import Any, Dict, Optional  # Keep Any, Dict, Optional for _process_can_message
 
 import can
-import uvicorn  # Added for main()
+import uvicorn
 from fastapi import (
-    APIRouter,
-    Body,
-    FastAPI,  # Modified import
-    HTTPException,
-    Query,
+    FastAPI,
     Request,
-    Response,
-    WebSocket,
+    # Response, # Unused import
 )
 from fastapi.exceptions import ResponseValidationError
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse  # Removed JSONResponse (unused)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 # Import application state variables and initialization function
-from core_daemon.app_state import get_last_known_brightness  # Added import
-from core_daemon.app_state import preseed_light_states  # Import the pre-seeding function
-from core_daemon.app_state import set_last_known_brightness  # Added import
-from core_daemon.app_state import (  # Import the new state update function
-    history,
+from core_daemon.app_state import (
+    # get_last_known_brightness, # Unused import
     initialize_history_deques,
-    state,
-    unmapped_entries,
-    update_entity_state_and_history,
+    preseed_light_states,
+    # set_last_known_brightness, # Unused import
+    # state, # Redefined and unused before redefinition by later import
+    # history, # Redefined and unused before redefinition by later import
+    # unmapped_entries, # Redefined and unused before redefinition by later import
+    # update_entity_state_and_history, # Redefined and unused before redefinition by later import
+    # entity_id_lookup, # Unused import - used by preseed_light_states but passed as arg
+    # light_entity_ids, # Unused import - used by preseed_light_states but passed as arg
+    # light_command_info, # Unused import - used by preseed_light_states but passed as arg
 )
 
 # Import CAN components from can_manager
-from core_daemon.can_manager import can_tx_queue  # Shared CAN transmit queue
-from core_daemon.can_manager import initialize_can_writer_task  # Function to start the CAN writer
-from core_daemon.can_manager import create_light_can_message, initialize_can_listeners
+from core_daemon.can_manager import (
+    # can_tx_queue, # Unused import
+    initialize_can_writer_task,
+    # create_light_can_message, # Unused import
+    initialize_can_listeners,
+)
 from core_daemon.config import (
     configure_logger,
     get_actual_paths,
@@ -49,10 +52,20 @@ from core_daemon.config import (
     get_fastapi_config,
     get_static_paths,
 )
+
+from core_daemon.websocket import (
+    WebSocketLogHandler,
+    broadcast_to_clients,  # Moved to top for _process_can_message
+)
+from rvc_decoder import decode_payload, load_config_data
+
+# Import the new routers
+from .api_routers.can import api_router_can
+from .api_routers.config_and_ws import api_router_config_ws
+from .api_routers.entities import api_router_entities
+
+# Metrics that are specific to _process_can_message or global
 from core_daemon.metrics import (
-    CAN_TX_ENQUEUE_LATENCY,
-    CAN_TX_ENQUEUE_TOTAL,
-    CAN_TX_QUEUE_LENGTH,
     DECODE_ERRORS,
     DGN_TYPE_GAUGE,
     FRAME_COUNTER,
@@ -61,29 +74,25 @@ from core_daemon.metrics import (
     GENERATOR_DEMAND_COMMAND_COUNTER,
     GENERATOR_STATUS_1_COUNTER,
     GENERATOR_STATUS_2_COUNTER,
-    HTTP_LATENCY,
-    HTTP_REQUESTS,
+    HTTP_LATENCY,  # Used by middleware
+    HTTP_REQUESTS,  # Used by middleware
     INST_USAGE_COUNTER,
     LOOKUP_MISSES,
     PGN_USAGE_COUNTER,
     SUCCESSFUL_DECODES,
 )
-from core_daemon.models import CANInterfaceStats  # Added import
-from core_daemon.models import (
-    BulkLightControlResponse,
-    ControlCommand,
-    ControlEntityResponse,
-    Entity,
-    SuggestedMapping,
-    UnmappedEntryModel,
+
+# Models used by _process_can_message
+from core_daemon.models import UnmappedEntryModel, SuggestedMapping
+
+# App state used by _process_can_message, moved to top
+from core_daemon.app_state import (
+    # history, # Unused - _process_can_message uses the global history directly
+    # state, # Unused - _process_can_message uses the global state directly
+    unmapped_entries,  # Keep for _process_can_message
+    update_entity_state_and_history,  # Keep for _process_can_message
 )
-from core_daemon.websocket import (
-    WebSocketLogHandler,
-    broadcast_to_clients,
-    websocket_endpoint,
-    websocket_logs_endpoint,
-)
-from rvc_decoder import decode_payload, load_config_data
+
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logger = configure_logger()
@@ -93,12 +102,7 @@ logger.info("rvc2api starting up...")
 # ── Determine actual config paths for core logic and UI display ────────────────
 actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
 
-# The following logs are now redundant as get_actual_paths() in config.py logs them.
-# logger.info(f"UI will attempt to display RVC spec from: {actual_spec_path_for_ui}")
-# logger.info(f"UI will attempt to display device mapping from: {actual_map_path_for_ui}")
-
 # ── Load spec & mappings for core logic ──────────────────────────────────────
-# load_config_data will perform its own logging regarding path resolution
 logger.info(
     "Core logic attempting to load CAN spec from: %s, mapping from: %s",
     os.getenv("CAN_SPEC_PATH") or "(default)",
@@ -109,34 +113,32 @@ logger.info(
     raw_device_mapping,
     device_lookup,
     status_lookup,
-    light_entity_ids,
-    entity_id_lookup,
-    light_command_info,
-    pgn_hex_to_name_map,  # Unpack the new map
+    # light_entity_ids, # Already imported from app_state
+    # entity_id_lookup, # Already imported from app_state
+    # light_command_info, # Already imported from app_state
+    _light_entity_ids,  # Use temporary names to avoid conflict if needed
+    _entity_id_lookup,  # or ensure they are not needed here if already in app_state
+    _light_command_info,
+    pgn_hex_to_name_map,
 ) = load_config_data(
     rvc_spec_path_override=os.getenv("CAN_SPEC_PATH"),
     device_mapping_path_override=os.getenv("CAN_MAP_PATH"),
 )
 
 # Initialize history deques after entity_id_lookup is populated
-initialize_history_deques(entity_id_lookup)
+# Ensure entity_id_lookup from app_state is used or the one from load_config_data
+initialize_history_deques(_entity_id_lookup)  # Using _entity_id_lookup from load_config_data
 
 # Call the new pre-seeding function from app_state.py
 preseed_light_states(
-    light_entity_ids=light_entity_ids,
-    light_command_info=light_command_info,
-    decoder_map_values=list(decoder_map.values()),  # Pass decoder_map.values()
-    entity_id_lookup=entity_id_lookup,
-    decode_payload_func=decode_payload,  # Pass the actual decode_payload function
+    light_entity_ids=_light_entity_ids,  # Using _light_entity_ids from load_config_data
+    light_command_info=_light_command_info,  # Using _light_command_info from load_config_data
+    decoder_map_values=list(decoder_map.values()),
+    entity_id_lookup=_entity_id_lookup,  # Using _entity_id_lookup from load_config_data
+    decode_payload_func=decode_payload,
 )
 
-# Removed the manual creation of pgn_hex_to_name_map as it's now returned by load_config_data
-
-# ── Pydantic Models for API responses ────────────────────────────────────────
-# Models are now defined in core_daemon.models.py
-
 # ── FastAPI setup ──────────────────────────────────────────────────────────
-# Get FastAPI configuration
 fastapi_config = get_fastapi_config()
 API_TITLE = fastapi_config["title"]
 API_SERVER_DESCRIPTION = fastapi_config["server_description"]
@@ -144,33 +146,25 @@ API_ROOT_PATH = fastapi_config["root_path"]
 
 logger.info(f"API Title: {API_TITLE}")
 logger.info(f"API Server Description: {API_SERVER_DESCRIPTION}")
-logger.info(f"API Root Path: {API_ROOT_PATH}")  # This will now typically log "/"
+logger.info(f"API Root Path: {API_ROOT_PATH}")
 
 app = FastAPI(
     title=API_TITLE,
-    servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],  # URL is relative to root_path
+    servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],
     root_path=API_ROOT_PATH,
 )
 
-# Create an APIRouter for API specific endpoints
-api_router = APIRouter(prefix="/api")
-
-
-# Get static and template paths
 static_paths = get_static_paths()
 web_ui_dir = static_paths["web_ui_dir"]
 static_dir = static_paths["static_dir"]
 templates_dir = static_paths["templates_dir"]
 
-# Mount static files and templates
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
 
 @app.on_event("startup")
 async def ensure_static_dir_exists():
-    # Ensures the /static directory for FastAPI's StaticFiles mount exists.
-    # This was previously done by copy_config_files.
     static_dir_for_mount = os.path.join(web_ui_dir, "static")
     os.makedirs(static_dir_for_mount, exist_ok=True)
     logger.info(f"Ensured static directory for mount exists: {static_dir_for_mount}")
@@ -179,6 +173,7 @@ async def ensure_static_dir_exists():
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
 @app.middleware("http")
 async def prometheus_http_middleware(request: Request, call_next):
+    # from prometheus_client import Counter, Histogram # Unused imports
     start = time.perf_counter()
     response = await call_next(request)
     latency = time.perf_counter() - start
@@ -192,154 +187,16 @@ async def prometheus_http_middleware(request: Request, call_next):
     return response
 
 
-# ── CAN Status Endpoint ──────────────────────────────────────────────────────
-@api_router.get("/can/status", response_model=List[CANInterfaceStats])  # Changed from app.get
-async def get_can_status():
-    """
-    Retrieves the status of configured CAN interfaces.
-    Uses 'ip' command to get details like state, bitrate, and error counters.
-    """
-    can_config = get_canbus_config()
-    interfaces = can_config.get("interfaces", [])
-    status_list = []
-
-    for iface_conf in interfaces:
-        iface_name = iface_conf.get("name")
-        if not iface_name:
-            continue
-
-        try:
-            # Check basic link status (UP/DOWN)
-            proc_link_show = await asyncio.create_subprocess_shell(
-                f"ip link show {iface_name}",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout_link, stderr_link = await proc_link_show.communicate()
-
-            if proc_link_show.returncode != 0:
-                logger.error(f"Error getting link status for {iface_name}: {stderr_link.decode()}")
-                # Even if 'ip link show' fails, try 'ip -details' as it might still give info
-                # or confirm the interface doesn't exist.
-                is_up = False
-            else:
-                link_output = stdout_link.decode()
-                is_up = (
-                    "state UP" in link_output or "state UNKNOWN" in link_output
-                )  # UNKNOWN often means up for virtual CAN
-
-            # Get detailed information (bitrate, state, error counters)
-            proc_details = await asyncio.create_subprocess_shell(
-                f"ip -details link show {iface_name}",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout_details, stderr_details = await proc_details.communicate()
-
-            if proc_details.returncode != 0:
-                logger.error(
-                    f"Error getting detailed status for {iface_name}: {stderr_details.decode()}"
-                )
-                status_list.append(
-                    CANInterfaceStats(interface_name=iface_name, is_up=is_up)
-                )  # Basic info
-                continue
-
-            details_output = stdout_details.decode()
-
-            # Initialize with basic info
-            stats = CANInterfaceStats(interface_name=iface_name, is_up=is_up)
-
-            # Parse bitrate
-            bitrate_match = re.search(r"bitrate (\d+)", details_output)
-            if bitrate_match:
-                stats.bitrate = int(bitrate_match.group(1))
-
-            # Parse CAN state (e.g., ERROR-ACTIVE, ERROR-PASSIVE, BUS-OFF)
-            state_match = re.search(
-                r"state (ERROR-ACTIVE|ERROR-WARNING|ERROR-PASSIVE|BUS-OFF)", details_output
-            )
-            if state_match:
-                stats.state = state_match.group(1)
-            elif is_up:  # If no specific error state, but is_up, assume active
-                stats.state = "ACTIVE"
-
-            # Parse error counters (tx_errors, rx_errors)
-            # Example: 'can <BERR-COUNTER restart-ms 0> state ERROR-ACTIVE
-            # (berr-counter tx 0 rx 0)\n'
-            # Or on newer iproute2: 'can <BERR-COUNTER restart-ms 0> state
-            # ERROR-ACTIVE txqueuelen 1000 numtxqueues 1 numrxqueues 1
-            # gso_max_size 65536 gso_max_segs 65535\n         tx_errors 0 rx_errors 0\n'
-            errors_match = re.search(
-                r"tx_errors (\d+) rx_errors (\d+)", details_output, re.MULTILINE
-            )
-            if not errors_match:  # Try older format
-                errors_match = re.search(r"berr-counter tx (\d+) rx (\d+)", details_output)
-
-            if errors_match:
-                stats.error_counters = {
-                    "tx_errors": int(errors_match.group(1)),
-                    "rx_errors": int(errors_match.group(2)),
-                }
-
-            status_list.append(stats)
-
-        except Exception as e:
-            logger.error(f"Failed to get status for CAN interface {iface_name}: {e}")
-            status_list.append(
-                CANInterfaceStats(interface_name=iface_name, is_up=False, state="UNKNOWN")
-            )
-
-    if not status_list and interfaces:
-        # If no interfaces could be processed but some were configured
-        logger.warning(
-            "CAN status endpoint: No interface status could be retrieved, "
-            "though interfaces are configured."
-        )
-        raise HTTPException(status_code=500, detail="Could not retrieve CAN interface status.")
-    elif not interfaces:
-        logger.info("CAN status endpoint: No CAN interfaces configured.")
-        # Return empty list, not an error, if no interfaces are defined in config
-
-    return status_list
-
-
-# ── In‑memory state + history ────────────────────────────────────────────────
-# These variables are now imported from core_daemon.app_state.py
-# state: Dict[str, Dict[str, Any]] = {}
-# HISTORY_DURATION = 24 * 3600  # seconds
-# history: Dict[str, deque[Dict[str, Any]]] = {eid: deque() for eid in entity_id_lookup}
-# unmapped_entries: Dict[str, UnmappedEntryModel] = {} # Added for unmapped entries
-
-# ── Active CAN buses ─────────────────────────────────────────────────────────
-# 'buses' dictionary is now imported from can_manager.py
-
-# ── CAN Transmit Queue ───────────────────────────────────────────────────────
-# 'can_tx_queue' is now imported from can_manager.py
-
-# Removed can_writer async function (now in can_manager.py)
-
-
 @app.on_event("startup")
 async def start_can_writer():
-    # Call the imported function to initialize and start the CAN writer task
     initialize_can_writer_task()
-    # logger.info("CAN writer task started.") # Logging is now handled by initialize_can_writer_task
 
 
-# ── WebSocket components are now in core_daemon.websocket ───────────────────
-# Imports moved to the top of the file
-
-
-# setup_websocket_logging now uses imported components
 @app.on_event("startup")
 async def setup_websocket_logging():
-    """Initializes and adds the WebSocketLogHandler to the root logger."""
     try:
         main_loop = asyncio.get_running_loop()
-        # Use WebSocketLogHandler and log_ws_clients from websocket.py
         log_ws_handler = WebSocketLogHandler(loop=main_loop)
-
         log_ws_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
         log_ws_handler.setFormatter(formatter)
@@ -350,15 +207,9 @@ async def setup_websocket_logging():
 
 
 # ── CAN Message Processing Callback ──────────────────────────────────────────
-
-
 def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.AbstractEventLoop):
-    """
-    Callback function to process a single CAN message.
-    This function is called by the CAN listener threads for each message received.
-    It contains the logic previously in the main read loop of `reader_thread_target`.
-    """
-    # Increment generator-specific counters
+    # ... (rest of the function remains the same, ensure all its own imports are satisfied)
+    # ... existing code ...
     if msg.arbitration_id == 536861658:  # GENERATOR_COMMAND
         GENERATOR_COMMAND_COUNTER.inc()
     elif msg.arbitration_id == 436198557:  # GENERATOR_STATUS_1
@@ -376,7 +227,6 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
     try:
         if not entry:
             LOOKUP_MISSES.inc()
-            # Store unmapped entry for unknown PGN
             unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}"
             now_ts = time.time()
 
@@ -406,9 +256,8 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
                 current_unmapped.count += 1
                 if model_pgn_name and not current_unmapped.pgn_name:
                     current_unmapped.pgn_name = model_pgn_name
-            return  # Exit processing for this message
+            return
 
-        # PGN is known, attempt to decode
         decoded, raw = decode_payload(entry, msg.data)
         decoded_payload_for_unmapped = decoded
         SUCCESSFUL_DECODES.inc()
@@ -419,11 +268,10 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
             exc_info=True,
         )
         DECODE_ERRORS.inc()
-        return  # Exit processing for this message
+        return
     finally:
         FRAME_LATENCY.observe(time.perf_counter() - start_time)
 
-    # At this point, PGN is known and decoded successfully
     dgn = entry.get("dgn_hex")
     inst = raw.get("instance")
 
@@ -434,9 +282,11 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
             f"0x{msg.arbitration_id:X} (Spec DGN: {entry.get('dgn_hex')}). "
             f"DGN from payload: {dgn}, Instance from payload: {inst}"
         )
-        return  # Exit processing for this message
+        return
 
     key = (dgn.upper(), str(inst))
+    # Ensure entity_id_lookup used here is the one from load_config_data or app_state
+    # This part of the logic might need adjustment based on which entity_id_lookup is authoritative
     matching_devices = [dev for k, dev in status_lookup.items() if k == key]
     if not matching_devices:
         default_key = (dgn.upper(), "default")
@@ -503,7 +353,7 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
                 current_unmapped.spec_entry = entry
             if not current_unmapped.suggestions and suggestions_list:
                 current_unmapped.suggestions = suggestions_list
-        return  # Exit processing for this message
+        return
 
     ts = time.time()
     raw_brightness = raw.get("operating_status", 0)
@@ -511,7 +361,8 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
 
     for device in matching_devices:
         eid = device["entity_id"]
-        lookup_data = entity_id_lookup.get(eid, {})
+        # Use _entity_id_lookup from load_config_data for consistency with preseed
+        lookup_data = _entity_id_lookup.get(eid, {})
         payload = {
             "entity_id": eid,
             "value": decoded,
@@ -524,16 +375,12 @@ def _process_can_message(msg: can.Message, iface_name: str, loop: asyncio.Abstra
             "friendly_name": lookup_data.get("friendly_name"),
             "groups": lookup_data.get("groups", []),
         }
-        # Custom Metrics
-        pgn_val = msg.arbitration_id & 0x3FFFF  # Corrected: pgn was msg.arbitration_id & 0x3FFFF
-        PGN_USAGE_COUNTER.labels(
-            pgn=f"{pgn_val:X}"
-        ).inc()  # Corrected: pgn was msg.arbitration_id & 0x3FFFF
+        pgn_val = msg.arbitration_id & 0x3FFFF
+        PGN_USAGE_COUNTER.labels(pgn=f"{pgn_val:X}").inc()
         INST_USAGE_COUNTER.labels(dgn=dgn.upper(), instance=str(inst)).inc()
         device_type = device.get("device_type", "unknown")
         DGN_TYPE_GAUGE.labels(device_type=device_type).set(1)
 
-        # Update state and history using the centralized function
         update_entity_state_and_history(eid, payload)
 
         text = json.dumps(payload)
@@ -553,763 +400,18 @@ async def start_can_readers():
     bustype = canbus_config["bustype"]
     bitrate = canbus_config["bitrate"]
 
-    # Create a handler that bundles the _process_can_message callback with the event loop
     message_handler_with_loop = functools.partial(_process_can_message, loop=loop)
 
-    # Initialize CAN listeners using the function from can_manager
     initialize_can_listeners(
         interfaces=interfaces,
         bustype=bustype,
         bitrate=bitrate,
         message_handler_callback=message_handler_with_loop,
-        logger_instance=logger,  # Pass the configured logger instance
-    )
-    # The old reader_thread_target and threading.Thread creation logic is now removed
-    # and handled by initialize_can_listeners in can_manager.py
-
-
-# ── REST Endpoints ─────────────────────────────────────────────────────────
-@api_router.get("/entities", response_model=Dict[str, Entity])  # Changed from app.get
-async def list_entities(
-    type: Optional[str] = Query(None),
-    area: Optional[str] = Query(None),
-):
-    """
-    Return all entities, optionally filtered by device_type and/or area.
-    """
-
-    def matches(eid: str) -> bool:
-        cfg = entity_id_lookup.get(eid, {})
-        if type and cfg.get("device_type") != type:
-            return False
-        if area and cfg.get("suggested_area") != area:
-            return False
-        return True
-
-    return {eid: ent for eid, ent in state.items() if matches(eid)}
-
-
-@api_router.get("/entities/ids", response_model=List[str])  # Changed from app.get
-async def list_entity_ids():
-    """Return all known entity IDs."""
-    return list(state.keys())
-
-
-@api_router.get("/entities/{entity_id}", response_model=Entity)  # Changed from app.get
-async def get_entity(entity_id: str):
-    """Return the latest value for one entity."""
-    ent = state.get(entity_id)
-    if not ent:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    return ent
-
-
-@api_router.get(
-    "/entities/{entity_id}/history", response_model=List[Entity]
-)  # Changed from app.get
-async def get_history(
-    entity_id: str,
-    since: Optional[float] = Query(
-        None, description="Unix timestamp; only entries newer than this"
-    ),
-    limit: Optional[int] = Query(1000, ge=1, description="Max number of points to return"),
-):
-    if entity_id not in history:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    entries = list(history[entity_id])
-    if since is not None:
-        entries = [e for e in entries if e["timestamp"] > since]
-
-    # FastAPI Query provides a default, so limit should be int.
-    # This reassures MyPy about Optional[int] for the unary minus in slicing.
-    actual_limit = limit if limit is not None else 1000
-    return entries[-actual_limit:]
-
-
-@api_router.get(
-    "/unmapped_entries", response_model=Dict[str, UnmappedEntryModel]
-)  # Changed from app.get
-async def get_unmapped_entries():
-    """
-    Return all DGN/instance pairs that were seen on the bus but not mapped in device_mapping.yml.
-    Stores the last seen data payload for each and provides suggestions based on existing mappings.
-    """
-    # The suggestions are now added when the unmapped entry is first created or updated.
-    # So, we can just return the unmapped_entries dictionary as is.
-    return unmapped_entries
-
-
-@api_router.get("/lights", response_model=Dict[str, Entity])  # Changed from app.get
-async def list_lights(
-    state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
-    capability: Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
-    area: Optional[str] = Query(None),
-):
-    """
-    Return lights, optionally filtered by:
-    - state ('on' or 'off')
-    - a specific capability (e.g. 'brightness')
-    - area (suggested_area)
-    """
-    results: Dict[str, Entity] = {}
-    for eid, ent in state.items():
-        if eid not in light_entity_ids:
-            continue
-        cfg = entity_id_lookup.get(eid, {})
-        # Ensure only device_type 'light' is included
-        if cfg.get("device_type") != "light":
-            continue
-        if area and cfg.get("suggested_area") != area:
-            continue
-        caps = cfg.get("capabilities", [])
-        if capability and capability not in caps:
-            continue
-        if state_filter:
-            val = ent.get("state")
-            if not val or val.strip().lower() != state_filter.strip().lower():
-                continue
-        # Construct Entity from ent, which should conform to Entity structure
-        # The existing ent already contains suggested_area, device_type etc. from its creation.
-        results[eid] = Entity(**ent)
-    return results
-
-
-@api_router.get("/meta", response_model=Dict[str, List[str]])  # Changed from app.get
-async def metadata():
-    """
-    Expose groupable dimensions:
-    - type        (device_type)
-    - area        (suggested_area)
-    - capability  (defined in mapping)
-    - command     (derived from capabilities)
-    """
-    mapping = {
-        "type": "device_type",
-        "area": "suggested_area",
-        "capability": "capabilities",
-    }
-    out: Dict[str, List[str]] = {}
-
-    for public, internal in mapping.items():
-        values = set()
-        for cfg in entity_id_lookup.values():
-            val = cfg.get(internal)
-            if isinstance(val, list):
-                values.update(val)
-            elif val is not None:  # Corrected from 'is not none'
-                values.add(val)
-        out[public] = sorted(values)
-
-    # Include derived command set based on capabilities
-    command_set = set()
-    for eid, cfg in entity_id_lookup.items():
-        if eid in light_command_info:
-            caps = cfg.get("capabilities", [])
-            command_set.add("on_off")
-            command_set.add("set")
-            command_set.add("toggle")
-            if "brightness" in caps:
-                command_set.add("brightness")
-                command_set.add("brightness_increase")
-                command_set.add("brightness_decrease")
-    out["command"] = sorted(command_set)
-
-    # Ensure all keys are included
-    for key in ["type", "area", "capability", "command"]:
-        out.setdefault(key, [])
-    # Add groups to meta
-    all_groups = set()
-    for cfg in entity_id_lookup.values():
-        grps = cfg.get("groups")  # Changed from locations
-        if grps and isinstance(grps, list):
-            all_groups.update(grps)
-    out["groups"] = sorted(list(all_groups))  # Changed from locations to groups
-
-    return out
-
-
-@api_router.get("/healthz")  # Changed from app.get
-async def healthz():
-    """Liveness probe."""
-    return JSONResponse(status_code=200, content={"status": "ok"})
-
-
-@api_router.get("/readyz")  # Changed from app.get
-async def readyz():
-    """
-    Readiness probe: 200 once at least one frame decoded, else 503.
-    """
-    ready = len(state) > 0
-    code = 200 if ready else 503
-    return JSONResponse(
-        status_code=code,
-        content={"status": "ready" if ready else "pending", "entities": len(state)},
-    )
-
-
-@api_router.get("/metrics")  # Changed from app.get
-def metrics():
-    """Prometheus metrics endpoint."""
-    data = generate_latest()
-    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
-
-
-@api_router.get("/config/device_mapping", response_class=PlainTextResponse)  # Changed from app.get
-async def get_device_mapping_config_content_api():
-    # Serves the content of the device mapping file that the application is effectively using.
-    if os.path.exists(actual_map_path_for_ui):
-        try:
-            with open(actual_map_path_for_ui, "r") as f:
-                return PlainTextResponse(f.read())
-        except Exception as e:
-            logger.error(
-                f"API Error: Could not read device mapping from " f"'{actual_map_path_for_ui}': {e}"
-            )
-            raise HTTPException(
-                status_code=500, detail=f"Error reading device mapping file: {str(e)}"
-            )
-    else:
-        logger.error(
-            f"API Error: Device mapping file not found for UI display at "
-            f"'{actual_map_path_for_ui}'"
-        )
-        raise HTTPException(status_code=404, detail="Device mapping file not found.")
-
-
-# Removed CONFIG_PATH, RVC_SPEC_FILE, DEVICE_MAPPING_FILE definitions from previous version
-
-
-@api_router.get("/config/rvc_spec_details")  # Changed from app.get
-async def get_rvc_spec_details():
-    """Returns metadata from the rvc.json spec file."""
-    # Use actual_spec_path_for_ui which is determined at startup
-    if not os.path.exists(actual_spec_path_for_ui):
-        logger.error(
-            f"RVC spec file not found at {actual_spec_path_for_ui} " f"for spec details endpoint"
-        )
-        raise HTTPException(
-            status_code=404, detail=f"RVC spec file not found at {actual_spec_path_for_ui}"
-        )
-    try:
-        with open(actual_spec_path_for_ui, "r") as f:  # Use the correct path
-            spec_data = json.load(f)
-        return {
-            "version": spec_data.get("version"),
-            "spec_document": spec_data.get("spec_document"),
-        }
-    except json.JSONDecodeError:
-        logger.error(f"Error decoding RVC spec from {actual_spec_path_for_ui}")
-        raise HTTPException(status_code=500, detail="Error decoding RVC spec file.")
-    except Exception as e:
-        logger.error(f"Error reading RVC spec from {actual_spec_path_for_ui}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
-
-
-@api_router.get("/config/rvc_spec_metadata")  # Changed from app.get
-async def get_rvc_spec_metadata():
-    """Returns metadata (version and spec_document URL) from the rvc.json spec file."""
-    if not os.path.exists(actual_spec_path_for_ui):
-        logger.error(
-            f"API Error: RVC spec file not found at '{actual_spec_path_for_ui}' "
-            f"for metadata endpoint"
-        )
-        raise HTTPException(status_code=404, detail="RVC spec file not found.")
-    try:
-        with open(actual_spec_path_for_ui, "r") as f:  # Corrected line
-            spec_data = json.load(f)
-        return {
-            "version": spec_data.get("version"),
-            "spec_document": spec_data.get("spec_document"),
-        }
-    except json.JSONDecodeError:
-        logger.error(f"API Error: Could not decode RVC spec from '{actual_spec_path_for_ui}'")
-        raise HTTPException(status_code=500, detail="Error decoding RVC spec file.")
-    except Exception as e:
-        logger.error(f"API Error: Could not read RVC spec from '{actual_spec_path_for_ui}': {e}")
-        raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
-
-
-@api_router.get("/config/rvc_spec", response_class=PlainTextResponse)  # Changed from app.get
-async def get_rvc_spec_config_content_api():
-    # Serves the content of the RVC spec file that the application is effectively using.
-    if os.path.exists(actual_spec_path_for_ui):
-        try:
-            with open(actual_spec_path_for_ui, "r") as f:
-                return PlainTextResponse(f.read())
-        except Exception as e:
-            logger.error(
-                f"API Error: Could not read RVC spec from " f"'{actual_spec_path_for_ui}': {e}"
-            )
-            raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
-    else:
-        logger.error(
-            f"API Error: RVC spec file not found for UI display at " f"'{actual_spec_path_for_ui}'"
-        )
-        raise HTTPException(status_code=404, detail="RVC spec file not found.")
-
-
-# Use imported WebSocket handlers
-@api_router.websocket("/ws")  # Changed from app.websocket
-async def serve_websocket_endpoint(ws: WebSocket):
-    await websocket_endpoint(ws)  # Call the correctly imported function
-
-
-@api_router.websocket("/ws/logs")  # Changed from app.websocket
-async def serve_websocket_logs_endpoint(ws: WebSocket):
-    await websocket_logs_endpoint(ws)  # Call the correctly imported function
-
-
-async def _send_light_can_command(
-    entity_id: str, target_brightness_ui: int, action_description: str  # 0-100
-) -> bool:
-    """
-    Helper function to construct, send a CAN command for a light, and perform optimistic update.
-    Returns True if the command was successfully queued, False otherwise.
-    """
-    if entity_id not in light_command_info:
-        logger.error(
-            f"Control Error: {entity_id} not found in light_command_info for "
-            f"action '{action_description}'."
-        )
-        return False
-
-    info = light_command_info[entity_id]
-    pgn = info["dgn"]  # Reinstate pgn
-    instance = info["instance"]  # Reinstate instance
-    interface = info["interface"]  # This is still used below
-
-    # Scale UI brightness (0-100) to CAN brightness level
-    # (0-200, capped at 0xC8 as per RV-C for 100%)
-    brightness_can_level = min(target_brightness_ui * 2, 0xC8)
-
-    # Use the new function from can_manager.py to create the CAN message
-    msg = create_light_can_message(pgn, instance, brightness_can_level)
-
-    logger.info(
-        f"CAN CMD OUT (Helper): entity_id={entity_id}, "
-        f"arbitration_id=0x{msg.arbitration_id:08X}, "  # Use msg.arbitration_id
-        f"data={msg.data.hex().upper()}, instance={instance}, "  # Use msg.data
-        f"action='{action_description}'"
-    )
-
-    # Use the imported can_tx_queue from can_manager.py
-    try:
-        # msg is already created by create_light_can_message
-        with CAN_TX_ENQUEUE_LATENCY.time():
-            await can_tx_queue.put((msg, interface))
-            CAN_TX_ENQUEUE_TOTAL.inc()
-        CAN_TX_QUEUE_LENGTH.set(can_tx_queue.qsize())
-        logger.info(
-            f"CAN CMD Queued (Helper): '{action_description}' for {entity_id} "
-            f"(CAN Lvl: {brightness_can_level}) -> {interface}"
-        )
-
-        # Optimistic State Update
-        optimistic_state_str = "on" if target_brightness_ui > 0 else "off"
-        optimistic_raw_val = {
-            "operating_status": brightness_can_level,
-            "instance": instance,  # Reinstate instance here
-            "group": 0x7C,
-        }
-        # Ensure 'value' reflects the UI-scale brightness (0-100) for operating_status
-        optimistic_value_val = {
-            "operating_status": str(target_brightness_ui),
-            "instance": str(instance),  # Reinstate instance here
-            "group": str(0x7C),
-        }
-        ts = time.time()
-        lookup = entity_id_lookup.get(entity_id, {})
-
-        # Construct the complete payload for the optimistic update
-        optimistic_payload_to_store = {
-            "entity_id": entity_id,
-            "value": optimistic_value_val,
-            "raw": optimistic_raw_val,
-            "state": optimistic_state_str,
-            "timestamp": ts,
-            "suggested_area": lookup.get(
-                "suggested_area", state.get(entity_id, {}).get("suggested_area", "Unknown")
-            ),
-            "device_type": lookup.get(
-                "device_type", state.get(entity_id, {}).get("device_type", "light")
-            ),
-            "capabilities": lookup.get(
-                "capabilities", state.get(entity_id, {}).get("capabilities", [])
-            ),
-            "friendly_name": lookup.get(
-                "friendly_name", state.get(entity_id, {}).get("friendly_name")
-            ),
-            "groups": lookup.get("groups", state.get(entity_id, {}).get("groups", [])),
-        }
-
-        # Call the centralized state update function from app_state.py
-        update_entity_state_and_history(entity_id, optimistic_payload_to_store)
-
-        # The lines for directly updating state, history, ENTITY_COUNT, HISTORY_SIZE_GAUGE
-        # are now handled by update_entity_state_and_history and can be removed from here.
-        # state[entity_id] = current_payload # Removed
-        # ENTITY_COUNT.set(len(state)) # Removed
-        # if entity_id in history: # Removed block
-        # else: # Removed block
-
-        text = json.dumps(optimistic_payload_to_store)  # Use the constructed payload for broadcast
-        await broadcast_to_clients(text)
-        return True
-    except Exception as e:
-        logger.error(
-            f"Failed to enqueue or optimistically update CAN control for {entity_id} "
-            f"(Action: '{action_description}'): {e}",
-            exc_info=True,
-        )
-        return False
-
-
-@api_router.post(
-    "/entities/{entity_id}/control", response_model=ControlEntityResponse
-)  # Changed from app.post
-async def control_entity(
-    entity_id: str,
-    cmd: ControlCommand = Body(
-        ...,
-        examples={
-            "turn_on": {"summary": "Turn light on", "value": {"command": "set", "state": "on"}},
-            "turn_off": {"summary": "Turn light off", "value": {"command": "set", "state": "off"}},
-            "set_brightness": {
-                "summary": "Set brightness to 75%",
-                "value": {"command": "set", "state": "on", "brightness": 75},
-            },
-            "toggle": {"summary": "Toggle current state", "value": {"command": "toggle"}},
-            "brightness_up": {
-                "summary": "Increase brightness by 10%",
-                "value": {"command": "brightness_up"},
-            },
-            "brightness_down": {
-                "summary": "Decrease brightness by 10%",
-                "value": {"command": "brightness_down"},
-            },
-        },
-    ),
-) -> ControlEntityResponse:
-    device = entity_id_lookup.get(entity_id)
-    if not device:
-        logger.debug(f"Control command for unknown entity_id: {entity_id}")
-        raise HTTPException(status_code=404, detail="Entity not found")
-
-    if entity_id not in light_command_info:
-        logger.debug(f"Control command for non-controllable entity_id: {entity_id}")
-        raise HTTPException(status_code=400, detail="Entity is not controllable")
-
-    logger.info(
-        f"HTTP CMD RX: entity_id='{entity_id}', command='{cmd.command}', "
-        f"state='{cmd.state}', brightness='{cmd.brightness}'"
-    )
-
-    # info = light_command_info[entity_id]
-    # pgn = info["dgn"]  # This is the PGN, e.g., 0x1FEDB for DC_DIMMER_COMMAND_2
-    # instance = info["instance"] # instance was removed
-    # interface = info["interface"] # interface was removed
-
-    # --- Read Current State ---
-    current_state_data = state.get(entity_id, {})
-    current_on_str = current_state_data.get("state", "off")
-    current_on = current_on_str.lower() == "on"
-    current_raw_values = current_state_data.get("raw", {})
-    current_brightness_raw = current_raw_values.get("operating_status", 0)  # Added back
-    current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
-
-    # Get or initialize last known brightness for this entity
-    last_brightness_ui = get_last_known_brightness(entity_id)  # Added
-
-    logger.debug(
-        f"Control for {entity_id}: current_on_str='{current_on_str}', "
-        f"current_on={current_on}, current_brightness_ui={current_brightness_ui}%, "
-        f"last_known_brightness_ui={last_brightness_ui}%"
-    )
-
-    # --- Determine Target State ---
-    target_brightness_ui = current_brightness_ui  # Default: no change in brightness if already on
-    action = "No change"
-
-    if cmd.command == "set":
-        if cmd.state not in {"on", "off"}:
-            raise HTTPException(
-                status_code=400, detail="State must be 'on' or 'off' for set command"
-            )
-        if cmd.state == "on":
-            # If brightness is specified, use it.
-            # Else, if light is already on, keep its current brightness.
-            # Else (light is off and turning on without specific brightness),
-            # restore last known brightness.
-            if cmd.brightness is not None:
-                target_brightness_ui = cmd.brightness
-            elif not current_on:  # Turning on from off state, and no brightness specified
-                target_brightness_ui = last_brightness_ui  # Restore last known brightness
-            # If current_on is true and cmd.brightness is None,
-            # target_brightness_ui remains current_brightness_ui (no change)
-            action = f"Set ON to {target_brightness_ui}%"
-        else:  # cmd.state == "off"
-            # Store current brightness before turning off, if it was on
-            if current_on and current_brightness_ui > 0:
-                set_last_known_brightness(entity_id, current_brightness_ui)  # Changed
-                logger.info(f"Stored last brightness for {entity_id}: {current_brightness_ui}%")
-            target_brightness_ui = 0
-            action = "Set OFF"
-
-    elif cmd.command == "toggle":
-        if current_on:
-            # Store current brightness before toggling off
-            if current_brightness_ui > 0:
-                set_last_known_brightness(entity_id, current_brightness_ui)  # Changed
-                logger.info(
-                    f"Stored last brightness for {entity_id} before toggle OFF: "
-                    f"{current_brightness_ui}%"
-                )
-            target_brightness_ui = 0
-            action = "Toggle OFF"
-        else:
-            # When toggling ON from OFF state, restore last known brightness.
-            target_brightness_ui = last_brightness_ui
-            action = f"Toggle ON to {target_brightness_ui}%"
-
-    elif cmd.command == "brightness_up":
-        if not current_on and current_brightness_ui == 0:  # If light is off, start at 10%
-            target_brightness_ui = 10
-        else:
-            target_brightness_ui = min(current_brightness_ui + 10, 100)
-        action = f"Brightness UP to {target_brightness_ui}%"
-
-    elif cmd.command == "brightness_down":
-        target_brightness_ui = max(current_brightness_ui - 10, 0)
-        action = f"Brightness DOWN to {target_brightness_ui}%"
-    else:
-        raise HTTPException(status_code=400, detail=f"Invalid command: {cmd.command}")
-
-    # --- Use Helper to Send CAN Message and Update State ---
-    if target_brightness_ui > 0:
-        set_last_known_brightness(entity_id, target_brightness_ui)  # Changed
-        logger.info(
-            f"Stored/updated last brightness for {entity_id} after command: "
-            f"{target_brightness_ui}%"
-        )
-
-    if not await _send_light_can_command(entity_id, target_brightness_ui, action):
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to send CAN command for {entity_id} (Action: {action})",
-        )
-
-    return ControlEntityResponse(
-        status="sent",
-        entity_id=entity_id,
-        command=cmd.command,
-        brightness=target_brightness_ui,
-        action=action,
-    )
-
-
-# --- Bulk Light Control Endpoints ---
-async def _bulk_control_lights(
-    group_filter: Optional[str],  # Changed from location_filter to group_filter
-    command: str,
-    state_cmd: Optional[str] = None,
-    brightness_val: Optional[int] = None,
-) -> List[Dict[str, Any]]:
-    """
-    Helper function to apply a command to multiple lights based on a group filter.
-    Returns a list of results from individual control attempts.
-    """
-    results = []
-    action_description_base = f"Bulk {command}"
-    if state_cmd:
-        action_description_base += f" {state_cmd}"
-    if brightness_val is not None:
-        action_description_base += f" to {brightness_val}%"
-    if group_filter:
-        logger.info(
-            f"Processing bulk command for group: {group_filter}, command: {command}, "
-            f"state: {state_cmd}, brightness: {brightness_val}"
-        )
-    else:
-        logger.info(
-            f"Processing bulk command for ALL lights, command: {command}, "
-            f"state: {state_cmd}, brightness: {brightness_val}"
-        )
-
-    controlled_entity_ids = set()  # Keep track of entities already processed
-
-    for entity_id, entity_config in entity_id_lookup.items():
-        if entity_id in controlled_entity_ids:  # Skip if already processed
-            continue
-
-        # Filter by group if group_filter is provided
-        if group_filter and group_filter not in entity_config.get("groups", []):
-            continue
-
-        # Ensure this entity is a light and is controllable
-        if entity_id not in light_command_info or entity_config.get("device_type") != "light":
-            continue
-
-        # --- Read Current State for this light ---
-        current_state_data = state.get(entity_id, {})
-        current_on_str = current_state_data.get("state", "off")
-        current_on = current_on_str.lower() == "on"
-        current_raw_values = current_state_data.get("raw", {})
-        current_brightness_raw = current_raw_values.get("operating_status", 0)
-        current_brightness_ui = min(int(current_brightness_raw) // 2, 100)
-        last_brightness_ui = get_last_known_brightness(entity_id)
-
-        # --- Determine Target State for this light ---
-        target_brightness_ui = current_brightness_ui
-        action_suffix = ""
-
-        if command == "set":
-            if state_cmd not in {"on", "off"}:
-                results.append(
-                    {
-                        "entity_id": entity_id,
-                        "status": "error",
-                        "detail": "State must be 'on' or 'off' for set command",
-                    }
-                )
-                continue
-            if state_cmd == "on":
-                if brightness_val is not None:
-                    target_brightness_ui = brightness_val
-                elif not current_on:
-                    target_brightness_ui = last_brightness_ui
-                action_suffix = f"ON to {target_brightness_ui}%"
-            else:  # state_cmd == "off"
-                if current_on and current_brightness_ui > 0:
-                    set_last_known_brightness(entity_id, current_brightness_ui)
-                target_brightness_ui = 0
-                action_suffix = "OFF"
-
-        elif command == "toggle":
-            if current_on:
-                if current_brightness_ui > 0:
-                    set_last_known_brightness(entity_id, current_brightness_ui)
-                target_brightness_ui = 0
-                action_suffix = "Toggle OFF"
-            else:
-                target_brightness_ui = last_brightness_ui
-                action_suffix = f"Toggle ON to {target_brightness_ui}%"
-
-        elif command == "brightness_up":
-            if not current_on and current_brightness_ui == 0:
-                target_brightness_ui = 10
-            else:
-                target_brightness_ui = min(current_brightness_ui + 10, 100)
-            action_suffix = f"Brightness UP to {target_brightness_ui}%"
-
-        elif command == "brightness_down":
-            target_brightness_ui = max(current_brightness_ui - 10, 0)
-            action_suffix = f"Brightness DOWN to {target_brightness_ui}%"
-        else:
-            results.append(
-                {
-                    "entity_id": entity_id,
-                    "status": "error",
-                    "detail": f"Invalid command: {command}",
-                }
-            )
-            continue
-
-        full_action_description = f"{action_description_base} ({action_suffix}) for {entity_id}"
-
-        if target_brightness_ui > 0:
-            set_last_known_brightness(entity_id, target_brightness_ui)
-
-        success = await _send_light_can_command(
-            entity_id, target_brightness_ui, full_action_description
-        )
-        results.append(
-            {
-                "entity_id": entity_id,
-                "status": "sent" if success else "error",
-                "action": full_action_description,
-                "brightness": target_brightness_ui,
-            }
-        )
-        controlled_entity_ids.add(entity_id)  # Mark as processed
-
-    if not controlled_entity_ids:
-        logger.warning(
-            f"Bulk control command ({action_description_base}) did not match any lights "
-            f"for group_filter: '{group_filter}'."
-        )
-
-    return results
-
-
-@api_router.post(
-    "/lights/control", response_model=BulkLightControlResponse
-)  # Changed from app.post
-async def control_lights_bulk(
-    cmd: ControlCommand = Body(...),
-    group: Optional[str] = Query(None, description="Group to apply the command to"),
-):
-    """
-    Control multiple lights based on a group or all lights if no group is specified.
-    Example: Turn all 'kitchen' lights on: POST /lights/control?group=kitchen with body
-    {"command": "set", "state": "on"}
-    Example: Turn ALL lights off: POST /lights/control with body {"command": "set", "state": "off"}
-    """
-    logger.info(
-        f"HTTP Bulk CMD RX: group='{group}', command='{cmd.command}', "
-        f"state='{cmd.state}', brightness='{cmd.brightness}'"
-    )
-
-    results = await _bulk_control_lights(
-        group_filter=group,
-        command=cmd.command,
-        state_cmd=cmd.state,
-        brightness_val=cmd.brightness,
-    )
-
-    # Determine overall status
-    if not results:  # No lights were targeted
-        # Consider if this case should be a 404 or a specific message
-        # For now, returning a 200 with a message indicating no lights matched.
-        return BulkLightControlResponse(
-            status="no_match",
-            message=f"No lights found for the specified criteria (group: {group}).",
-            group=group,
-            command=cmd.command,
-            details=[],
-        )
-
-    # Check if all individual operations were successful
-    all_successful = all(r.get("status") == "sent" for r in results)
-    overall_status = "success" if all_successful else "partial_error"
-
-    # If any operation failed, it might be good to log that here or
-    # ensure _bulk_control_lights does.
-    if not all_successful:
-        logger.warning(
-            f"Partial error in bulk light control for group" f"'{group}', command '{cmd.command}'."
-        )
-
-    return BulkLightControlResponse(
-        status=overall_status,
-        message="Bulk command processing complete.",
-        group=group,
-        command=cmd.command,
-        details=results,
+        logger_instance=logger,
     )
 
 
 # ── Main Application Setup ───────────────────────────────────────────────────
-
-
-@api_router.get("/queue", response_model=dict)  # Changed from app.get
-async def get_queue_status():
-    """
-    Return the current status of the CAN transmit queue.
-    """
-    # Use the imported can_tx_queue from can_manager.py
-    return {"length": can_tx_queue.qsize(), "maxsize": can_tx_queue.maxsize or "unbounded"}
-
-
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("rvc2api shutting down...")
@@ -1320,19 +422,18 @@ async def serve_home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-# Include the API router
-app.include_router(api_router)
+app.include_router(api_router_can, prefix="/api")
+app.include_router(api_router_config_ws, prefix="/api")
+app.include_router(api_router_entities, prefix="/api")
 
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request, exc):
+    # Line was too long
     return PlainTextResponse(f"Validation error: {exc}", status_code=500)
 
 
 def main():
-    """Runs the FastAPI application using Uvicorn."""
-    # Configuration for Uvicorn can be extended here (e.g., from environment variables)
-    # For example, to set host and port from environment variables with defaults:
     host = os.getenv("RVC2API_HOST", "0.0.0.0")
     port = int(os.getenv("RVC2API_PORT", "8000"))
     log_level = os.getenv("RVC2API_LOG_LEVEL", "info").lower()
@@ -1342,6 +443,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # This allows running the app directly with `python app.py` for development
-    # The script entry point `rvc2api-daemon` will call the `main()` function.
     main()

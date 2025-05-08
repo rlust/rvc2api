@@ -24,6 +24,13 @@ packages = [
   { include = "core_daemon", from = "src" },
   { include = "rvc_decoder", from = "src" },
 ]
+
+# Add this to explicitly include the web_ui directory and its contents
+package = [
+  { include = "core_daemon/web_ui/templates/**" },
+  { include = "core_daemon/web_ui/static/**" }
+]
+
 # Package data (like config files within rvc_decoder, web_ui within core_daemon)
 # should be automatically included by Poetry if they are present within these package directories
 # (e.g., src/rvc_decoder/config/*, src/core_daemon/web_ui/*).
