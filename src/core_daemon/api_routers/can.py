@@ -8,6 +8,7 @@ check the CAN transmit queue, and potentially other CAN-specific actions.
 import asyncio
 import logging
 import re
+import shutil  # Add this import
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -171,10 +172,20 @@ async def get_can_interfaces() -> list[str]:
         A list of CAN interface names (e.g., ["can0", "can1"]), or an empty
         list if none are found or an error occurs.
     """
+    ip_exe = shutil.which("ip")
+    awk_exe = shutil.which("awk")
+
+    if not ip_exe:
+        logger.error("ip command not found in PATH.")
+        return []
+    if not awk_exe:
+        logger.error("awk command not found in PATH.")
+        return []
+
+    command = f"{ip_exe} -o link show type can | {awk_exe} -F': ' '{{print $2}}'"
     try:
         proc = await asyncio.create_subprocess_shell(
-            "/run/current-system/sw/bin/ip -o link show type can \
-            | /run/current-system/sw/bin/awk -F': ' '{print $2}'",
+            command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -210,14 +221,24 @@ async def get_can_status():
     interface_names = await get_can_interfaces()
 
     if not interface_names:
-        # Return empty if no interfaces found, or error occurred.
-        # Frontend should handle this by showing "No CAN interfaces found".
+        # Return empty if no interfaces found, or error occurred
+        # (e.g. ip/awk not found by get_can_interfaces).
         return AllCANStats(interfaces={})
+
+    ip_exe = shutil.which("ip")
+    if not ip_exe:
+        logger.error("ip command not found in PATH. Cannot get detailed CAN status.")
+        # Populate existing interface names with an error state
+        for iface_name in interface_names:
+            interfaces_data[iface_name] = CANInterfaceStats(
+                name=iface_name, state="Error/IPCommandNotFound"
+            )
+        return AllCANStats(interfaces=interfaces_data)
 
     for iface_name in interface_names:
         try:
             # Using -details -statistics for the most comprehensive output
-            command = f"/run/current-system/sw/bin/ip -details -statistics link show {iface_name}"
+            command = f"{ip_exe} -details -statistics link show {iface_name}"
             proc = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
