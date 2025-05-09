@@ -5,6 +5,11 @@
   "labels": ["dependencies"],
   "rebaseWhen": "behind-base-branch",
 
+  "matchPackagePatterns": ["black", "flake8", "mypy", "pytest", "pre-commit"],
+  "matchManagers": ["poetry", "nix"],
+  "groupName": "shared dev tools (black, mypy, etc)",
+  "addLabels": ["python", "nix", "shared-dev"]
+
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": false,
