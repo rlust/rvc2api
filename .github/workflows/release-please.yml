@@ -18,8 +18,4 @@ jobs:
       - name: Bump & draft release
         uses: googleapis/release-please-action@v4
         with:
-          # this is automatically provided by GitHub; no need to create your own PAT
           token: ${{ secrets.GITHUB_TOKEN }}
-
-          # point at your new manifest
-          manifest-file: .release-please-manifest.json
