@@ -756,3 +756,58 @@ def test_get_static_paths_importlib_resource_is_not_dir(
         "via importlib.resources'). Falling back to __file__-based path resolution.",
         exc_info=True,
     )
+
+
+@patch("core_daemon.config.os.path.isdir")
+@patch("core_daemon.config.importlib.resources.files")
+@patch.object(config_module_logger, "info")
+@patch.object(config_module_logger, "error")
+def test_get_static_paths_importlib_derive_web_ui_dir(
+    mock_logger_error, mock_logger_info, mock_importlib_files, mock_os_path_isdir
+):
+    """
+    Test `get_static_paths` successfully derives web_ui_dir from static_dir
+    when importlib.resources.files("core_daemon.web_ui").is_dir() is False,
+    but static and templates dirs are resolved correctly.
+    """
+    mock_os_path_isdir.return_value = True  # All resolved paths are valid directories
+
+    # Store the original os.path.dirname to mock it and restore later
+    original_os_path_dirname = os.path.dirname
+
+    def mock_files_side_effect(package_path):
+        mock_traversable = MagicMock()
+        if package_path == "core_daemon.web_ui.static":
+            mock_traversable.__str__ = MagicMock(return_value=MOCK_STATIC_PATH_LIB)
+            mock_traversable.is_dir.return_value = True
+        elif package_path == "core_daemon.web_ui.templates":
+            mock_traversable.__str__ = MagicMock(return_value=MOCK_TEMPLATES_PATH_LIB)
+            mock_traversable.is_dir.return_value = True
+        elif package_path == "core_daemon.web_ui":
+            # Simulate web_ui path itself not being a directory directly
+            mock_traversable.is_dir.return_value = False
+            # __str__ might still be called, so give it a value
+            mock_traversable.__str__ = MagicMock(return_value="dummy_web_ui_path_not_dir")
+        else:
+            raise ValueError(f"Unexpected package_path: {package_path}")
+        return mock_traversable
+
+    mock_importlib_files.side_effect = mock_files_side_effect
+
+    # Mock os.path.dirname specifically for deriving web_ui_dir from static_dir
+    def mocked_dirname(path):
+        if path == MOCK_STATIC_PATH_LIB:
+            return MOCK_WEB_UI_PATH_LIB  # Expected derived path
+        return original_os_path_dirname(path)  # Fallback to real dirname for other calls
+
+    with patch("core_daemon.config.os.path.dirname", side_effect=mocked_dirname):
+        paths = get_static_paths()
+
+    assert paths["static_dir"] == MOCK_STATIC_PATH_LIB
+    assert paths["templates_dir"] == MOCK_TEMPLATES_PATH_LIB
+    assert paths["web_ui_dir"] == MOCK_WEB_UI_PATH_LIB  # Crucially, this should be derived
+
+    mock_logger_info.assert_any_call(
+        f"Derived web_ui_dir from static_dir('{MOCK_STATIC_PATH_LIB}'): {MOCK_WEB_UI_PATH_LIB}"
+    )
+    mock_logger_error.assert_not_called()  # No errors expected in this scenario
