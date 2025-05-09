@@ -18,16 +18,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-
-from core_daemon.api_routers.entities import api_router_entities
 from core_daemon.models import Entity, UnknownPGNEntry, UnmappedEntryModel
-
-# Setup FastAPI app with the router for testing
-app = FastAPI()
-app.include_router(api_router_entities)
-client = TestClient(app)
 
 # --- Mock Data and Fixtures ---
 
@@ -185,13 +176,13 @@ def mock_light_entity_ids_data():
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
 @patch("core_daemon.api_routers.entities.entity_id_lookup", new_callable=MagicMock)
 def test_list_entities_no_filters(
-    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data
+    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data, client
 ):
     """Tests listing all entities without any filters."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
 
-    response = client.get("/entities")
+    response = client.get("/api/entities")
     assert response.status_code == 200
     assert len(response.json()) == 3
     assert "light.living_room" in response.json()
@@ -200,13 +191,13 @@ def test_list_entities_no_filters(
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
 @patch("core_daemon.api_routers.entities.entity_id_lookup", new_callable=MagicMock)
 def test_list_entities_filter_by_type(
-    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data
+    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data, client
 ):
     """Tests listing entities filtered by type."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
 
-    response = client.get("/entities?type=light")
+    response = client.get("/api/entities?type=light")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -218,13 +209,13 @@ def test_list_entities_filter_by_type(
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
 @patch("core_daemon.api_routers.entities.entity_id_lookup", new_callable=MagicMock)
 def test_list_entities_filter_by_area(
-    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data
+    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data, client
 ):
     """Tests listing entities filtered by area."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
 
-    response = client.get("/entities?area=Living Room")
+    response = client.get("/api/entities?area=Living Room")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -234,13 +225,13 @@ def test_list_entities_filter_by_area(
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
 @patch("core_daemon.api_routers.entities.entity_id_lookup", new_callable=MagicMock)
 def test_list_entities_filter_by_type_and_area(
-    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data
+    mock_lookup, mock_state, mock_app_state_data, mock_entity_id_lookup_data, client
 ):
     """Tests listing entities filtered by type and area."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
 
-    response = client.get("/entities?type=light&area=Kitchen")
+    response = client.get("/api/entities?type=light&area=Kitchen")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -249,10 +240,10 @@ def test_list_entities_filter_by_type_and_area(
 
 # --- GET /entities/ids ---
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
-def test_list_entity_ids(mock_state, mock_app_state_data):
+def test_list_entity_ids(mock_state, mock_app_state_data, client):
     """Tests retrieving IDs of all entities."""
     mock_state.keys.return_value = mock_app_state_data.keys()
-    response = client.get("/entities/ids")
+    response = client.get("/api/entities/ids")
     assert response.status_code == 200
     ids = response.json()
     assert len(ids) == 3
@@ -262,31 +253,31 @@ def test_list_entity_ids(mock_state, mock_app_state_data):
 
 # --- GET /entities/{entity_id} ---
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
-def test_get_entity_success(mock_state, mock_app_state_data):
+def test_get_entity_success(mock_state, mock_app_state_data, client):
     """Tests retrieving a specific entity successfully."""
     mock_state.get.return_value = mock_app_state_data["light.living_room"]
-    response = client.get("/entities/light.living_room")
+    response = client.get("/api/entities/light.living_room")
     assert response.status_code == 200
     assert response.json()["entity_id"] == "light.living_room"
 
 
 @patch("core_daemon.api_routers.entities.state", new_callable=MagicMock)
-def test_get_entity_not_found(mock_state):
+def test_get_entity_not_found(mock_state, client):
     """Tests retrieving a non-existent entity."""
     mock_state.get.return_value = None
-    response = client.get("/entities/non.existent")
+    response = client.get("/api/entities/non.existent")
     assert response.status_code == 404
     assert response.json() == {"detail": "Entity not found"}
 
 
 # --- GET /entities/{entity_id}/history ---
 @patch("core_daemon.api_routers.entities.history", new_callable=MagicMock)
-def test_get_history_success(mock_hist, mock_history_data):
+def test_get_history_success(mock_hist, mock_history_data, client):
     """Tests retrieving history for an entity successfully."""
     mock_hist.__contains__.return_value = True  # For `entity_id not in history`
     mock_hist.__getitem__.return_value = mock_history_data["light.living_room"]
 
-    response = client.get("/entities/light.living_room/history")
+    response = client.get("/api/entities/light.living_room/history")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -294,22 +285,22 @@ def test_get_history_success(mock_hist, mock_history_data):
 
 
 @patch("core_daemon.api_routers.entities.history", new_callable=MagicMock)
-def test_get_history_not_found(mock_hist):
+def test_get_history_not_found(mock_hist, client):
     """Tests retrieving history for a non-existent entity."""
     mock_hist.__contains__.return_value = False
-    response = client.get("/entities/non.existent/history")
+    response = client.get("/api/entities/non.existent/history")
     assert response.status_code == 404
     assert response.json() == {"detail": "Entity not found"}
 
 
 @patch("core_daemon.api_routers.entities.history", new_callable=MagicMock)
-def test_get_history_with_since(mock_hist, mock_history_data):
+def test_get_history_with_since(mock_hist, mock_history_data, client):
     """Tests retrieving entity history with a 'since' timestamp."""
     mock_hist.__contains__.return_value = True
     mock_hist.__getitem__.return_value = mock_history_data["light.living_room"]
     since_ts = mock_history_data["light.living_room"][0].timestamp + 1  # after the first entry
 
-    response = client.get(f"/entities/light.living_room/history?since={since_ts}")
+    response = client.get(f"/api/entities/light.living_room/history?since={since_ts}")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -317,12 +308,12 @@ def test_get_history_with_since(mock_hist, mock_history_data):
 
 
 @patch("core_daemon.api_routers.entities.history", new_callable=MagicMock)
-def test_get_history_with_limit(mock_hist, mock_history_data):
+def test_get_history_with_limit(mock_hist, mock_history_data, client):
     """Tests retrieving entity history with a 'limit'."""
     mock_hist.__contains__.return_value = True
     mock_hist.__getitem__.return_value = mock_history_data["light.living_room"]
 
-    response = client.get("/entities/light.living_room/history?limit=1")
+    response = client.get("/api/entities/light.living_room/history?limit=1")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -331,22 +322,22 @@ def test_get_history_with_limit(mock_hist, mock_history_data):
 
 # --- GET /unmapped_entries ---
 @patch("core_daemon.api_routers.entities.unmapped_entries", new_callable=MagicMock)
-def test_get_unmapped_entries_api(mock_unmapped, mock_unmapped_entries_data):
+def test_get_unmapped_entries_api(mock_unmapped, mock_unmapped_entries_data, client):
     """Tests the API endpoint for unmapped CAN PGN entries."""
     mock_unmapped.return_value = mock_unmapped_entries_data  # Direct assignment if it's a variable
     # If unmapped_entries is a dict that's directly used:
     with patch("core_daemon.api_routers.entities.unmapped_entries", mock_unmapped_entries_data):
-        response = client.get("/unmapped_entries")
+        response = client.get("/api/unmapped_entries")
     assert response.status_code == 200
     assert "0x1EF00_0" in response.json()
 
 
 # --- GET /unknown_pgns ---
 @patch("core_daemon.api_routers.entities.unknown_pgns", new_callable=MagicMock)
-def test_get_unknown_pgns_api(mock_unknown, mock_unknown_pgns_data):
+def test_get_unknown_pgns_api(mock_unknown, mock_unknown_pgns_data, client):
     """Tests the API endpoint for unknown CAN PGN entries."""
     with patch("core_daemon.api_routers.entities.unknown_pgns", mock_unknown_pgns_data):
-        response = client.get("/unknown_pgns")
+        response = client.get("/api/unknown_pgns")
     assert response.status_code == 200
     assert "0x12345" in response.json()
 
@@ -362,6 +353,7 @@ def test_list_lights_no_filters(
     mock_app_state_data,
     mock_entity_id_lookup_data,
     mock_light_entity_ids_data,
+    client,
 ):
     """Tests listing all light entities without filters."""
     mock_state.items.return_value = mock_app_state_data.items()
@@ -370,7 +362,7 @@ def test_list_lights_no_filters(
         lambda x: x in mock_light_entity_ids_data
     )  # Simulate `eid in light_entity_ids`
 
-    response = client.get("/lights")
+    response = client.get("/api/lights")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -388,13 +380,14 @@ def test_list_lights_filter_state_on(
     mock_app_state_data,
     mock_entity_id_lookup_data,
     mock_light_entity_ids_data,
+    client,
 ):
     """Tests listing light entities filtered by 'on' state."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
     mock_light_ids.__contains__ = lambda x: x in mock_light_entity_ids_data
 
-    response = client.get("/lights?state=on")
+    response = client.get("/api/lights?state=on")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -411,13 +404,14 @@ def test_list_lights_filter_capability_brightness(
     mock_app_state_data,
     mock_entity_id_lookup_data,
     mock_light_entity_ids_data,
+    client,
 ):
     """Tests listing light entities filtered by 'brightness' capability."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
     mock_light_ids.__contains__ = lambda x: x in mock_light_entity_ids_data
 
-    response = client.get("/lights?capability=brightness")
+    response = client.get("/api/lights?capability=brightness")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -434,13 +428,14 @@ def test_list_lights_filter_area(
     mock_app_state_data,
     mock_entity_id_lookup_data,
     mock_light_entity_ids_data,
+    client,
 ):
     """Tests listing light entities filtered by area."""
     mock_state.items.return_value = mock_app_state_data.items()
     mock_lookup.get = lambda key, default: mock_entity_id_lookup_data.get(key, default)
     mock_light_ids.__contains__ = lambda x: x in mock_light_entity_ids_data
 
-    response = client.get("/lights?area=Kitchen")
+    response = client.get("/api/lights?area=Kitchen")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -451,7 +446,11 @@ def test_list_lights_filter_area(
 @patch("core_daemon.api_routers.entities.entity_id_lookup", new_callable=MagicMock)
 @patch("core_daemon.api_routers.entities.light_command_info", new_callable=MagicMock)
 def test_get_metadata(
-    mock_light_cmd_info, mock_lookup, mock_entity_id_lookup_data, mock_light_command_info_data
+    mock_light_cmd_info,
+    mock_lookup,
+    mock_entity_id_lookup_data,
+    mock_light_command_info_data,
+    client,
 ):
     """Tests the /meta endpoint for retrieving metadata about entities."""
     mock_lookup.values.return_value = mock_entity_id_lookup_data.values()
@@ -460,7 +459,7 @@ def test_get_metadata(
         lambda x: x in mock_light_command_info_data
     )  # For command part
 
-    response = client.get("/meta")
+    response = client.get("/api/meta")
     assert response.status_code == 200
     data = response.json()
 
@@ -534,7 +533,7 @@ def mock_control_dependencies(
         p.stop()
 
 
-def test_control_entity_turn_on_from_off(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_turn_on_from_off(mock_control_dependencies, mock_app_state_data, client):
     """Tests turning a light on (from off state) via control endpoint."""
     entity_id = "light.kitchen"  # Starts off
     mock_control_dependencies["state_patch"].get.return_value = mock_app_state_data[
@@ -545,7 +544,7 @@ def test_control_entity_turn_on_from_off(mock_control_dependencies, mock_app_sta
     )
 
     payload = {"command": "set", "state": "on"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -559,11 +558,11 @@ def test_control_entity_turn_on_from_off(mock_control_dependencies, mock_app_sta
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 70)
 
 
-def test_control_entity_turn_on_with_brightness(mock_control_dependencies):
+def test_control_entity_turn_on_with_brightness(mock_control_dependencies, client):
     """Tests turning a light on with a specific brightness."""
     entity_id = "light.living_room"
     payload = {"command": "set", "state": "on", "brightness": 85}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -575,7 +574,7 @@ def test_control_entity_turn_on_with_brightness(mock_control_dependencies):
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 85)
 
 
-def test_control_entity_turn_off(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_turn_off(mock_control_dependencies, mock_app_state_data, client):
     """Tests turning a light off via control endpoint."""
     entity_id = "light.living_room"  # Starts on
     # Simulate current brightness is 60%
@@ -585,7 +584,7 @@ def test_control_entity_turn_off(mock_control_dependencies, mock_app_state_data)
     mock_control_dependencies["state_patch"].get.return_value = current_entity_state
 
     payload = {"command": "set", "state": "off"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -598,11 +597,11 @@ def test_control_entity_turn_off(mock_control_dependencies, mock_app_state_data)
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 60)
 
 
-def test_control_entity_set_brightness_implies_on(mock_control_dependencies):
+def test_control_entity_set_brightness_implies_on(mock_control_dependencies, client):
     """Tests that setting brightness also turns the light on."""
     entity_id = "light.kitchen"  # Starts off
     payload = {"command": "set", "brightness": 40}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -614,7 +613,7 @@ def test_control_entity_set_brightness_implies_on(mock_control_dependencies):
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 40)
 
 
-def test_control_entity_toggle_on_to_off(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_toggle_on_to_off(mock_control_dependencies, mock_app_state_data, client):
     """Tests toggling a light from on to off."""
     entity_id = "light.living_room"  # Starts on
     current_entity_state = mock_app_state_data[entity_id].model_copy(deep=True)
@@ -623,7 +622,7 @@ def test_control_entity_toggle_on_to_off(mock_control_dependencies, mock_app_sta
     mock_control_dependencies["state_patch"].get.return_value = current_entity_state
 
     payload = {"command": "toggle"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -637,7 +636,7 @@ def test_control_entity_toggle_on_to_off(mock_control_dependencies, mock_app_sta
     )  # Stored current before turning off
 
 
-def test_control_entity_toggle_off_to_on(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_toggle_off_to_on(mock_control_dependencies, mock_app_state_data, client):
     """Tests toggling a light from off to on."""
     entity_id = "light.kitchen"  # Starts off
     mock_control_dependencies["state_patch"].get.return_value = mock_app_state_data[
@@ -646,7 +645,7 @@ def test_control_entity_toggle_off_to_on(mock_control_dependencies, mock_app_sta
     mock_control_dependencies["get_last_known_brightness_patch"].return_value = 65
 
     payload = {"command": "toggle"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -658,7 +657,7 @@ def test_control_entity_toggle_off_to_on(mock_control_dependencies, mock_app_sta
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 65)
 
 
-def test_control_entity_brightness_up(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_brightness_up(mock_control_dependencies, mock_app_state_data, client):
     """Tests increasing light brightness."""
     entity_id = "light.living_room"
     current_entity_state = mock_app_state_data[entity_id].model_copy(deep=True)
@@ -667,7 +666,7 @@ def test_control_entity_brightness_up(mock_control_dependencies, mock_app_state_
     mock_control_dependencies["state_patch"].get.return_value = current_entity_state
 
     payload = {"command": "brightness_up"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["brightness"] == 50  # 40 + 10
@@ -677,7 +676,9 @@ def test_control_entity_brightness_up(mock_control_dependencies, mock_app_state_
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 50)
 
 
-def test_control_entity_brightness_up_from_off(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_brightness_up_from_off(
+    mock_control_dependencies, mock_app_state_data, client
+):
     """Tests increasing brightness for a light that is off (should turn on)."""
     entity_id = "light.kitchen"  # Starts off
     mock_control_dependencies["state_patch"].get.return_value = mock_app_state_data[
@@ -685,7 +686,7 @@ def test_control_entity_brightness_up_from_off(mock_control_dependencies, mock_a
     ].model_copy(deep=True)
 
     payload = {"command": "brightness_up"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["brightness"] == 10  # Turns on to 10%
@@ -695,7 +696,7 @@ def test_control_entity_brightness_up_from_off(mock_control_dependencies, mock_a
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 10)
 
 
-def test_control_entity_brightness_down(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_brightness_down(mock_control_dependencies, mock_app_state_data, client):
     """Tests decreasing light brightness."""
     entity_id = "light.living_room"
     current_entity_state = mock_app_state_data[entity_id].model_copy(deep=True)
@@ -704,7 +705,7 @@ def test_control_entity_brightness_down(mock_control_dependencies, mock_app_stat
     mock_control_dependencies["state_patch"].get.return_value = current_entity_state
 
     payload = {"command": "brightness_down"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["brightness"] == 40  # 50 - 10
@@ -714,7 +715,9 @@ def test_control_entity_brightness_down(mock_control_dependencies, mock_app_stat
     mock_control_dependencies["set_last_known_brightness_patch"].assert_any_call(entity_id, 40)
 
 
-def test_control_entity_brightness_down_to_zero(mock_control_dependencies, mock_app_state_data):
+def test_control_entity_brightness_down_to_zero(
+    mock_control_dependencies, mock_app_state_data, client
+):
     """Tests decreasing light brightness to zero (should turn off)."""
     entity_id = "light.living_room"
     current_entity_state = mock_app_state_data[entity_id].model_copy(deep=True)
@@ -723,7 +726,7 @@ def test_control_entity_brightness_down_to_zero(mock_control_dependencies, mock_
     mock_control_dependencies["state_patch"].get.return_value = current_entity_state
 
     payload = {"command": "brightness_down"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["brightness"] == 0  # 5 - 10 = -5, so 0
@@ -742,53 +745,53 @@ def test_control_entity_brightness_down_to_zero(mock_control_dependencies, mock_
 
 
 # Error Cases for control_entity
-def test_control_entity_not_found(mock_control_dependencies):
+def test_control_entity_not_found(mock_control_dependencies, client):
     """Tests control endpoint behavior for a non-existent entity."""
     mock_control_dependencies["entity_id_lookup_patch"].get.return_value = None
     payload = {"command": "set", "state": "on"}
-    response = client.post("/entities/non.existent/control", json=payload)
+    response = client.post("/api/entities/non.existent/control", json=payload)
     assert response.status_code == 404
     assert response.json() == {"detail": "Entity not found"}
 
 
-def test_control_entity_not_controllable_light(mock_control_dependencies):
+def test_control_entity_not_controllable_light(mock_control_dependencies, client):
     """Tests control endpoint behavior for an entity not controllable as a light."""
     entity_id = "sensor.temp_patio"  # Not in light_command_info
     mock_control_dependencies["light_command_info_patch"].__contains__ = (
         lambda key: key != entity_id
     )
     payload = {"command": "set", "state": "on"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 400
     assert response.json() == {"detail": "Entity is not controllable as a light"}
 
 
-def test_control_entity_invalid_command_str(mock_control_dependencies):
+def test_control_entity_invalid_command_str(mock_control_dependencies, client):
     """Tests control endpoint behavior with an invalid command string."""
     entity_id = "light.living_room"
     payload = {"command": "invalid_cmd", "state": "on"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 400  # Based on current Pydantic model, this might be 422
     assert response.json() == {"detail": "Invalid command: invalid_cmd"}
 
 
-def test_control_entity_invalid_state_for_set(mock_control_dependencies):
+def test_control_entity_invalid_state_for_set(mock_control_dependencies, client):
     """Tests control endpoint behavior with an invalid state for the 'set' command."""
     entity_id = "light.living_room"
     payload = {"command": "set", "state": "invalid_state"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 400
     assert response.json() == {"detail": "State must be 'on' or 'off' for set command"}
 
 
-def test_control_entity_send_can_command_fails(mock_control_dependencies):
+def test_control_entity_send_can_command_fails(mock_control_dependencies, client):
     """Tests control endpoint behavior when sending the CAN command fails."""
     entity_id = "light.living_room"
     mock_control_dependencies["send_light_can_command_patch"].return_value = (
         False  # Simulate failure
     )
     payload = {"command": "set", "state": "on"}
-    response = client.post(f"/entities/{entity_id}/control", json=payload)
+    response = client.post(f"/api/entities/{entity_id}/control", json=payload)
     assert response.status_code == 500
     action_str = "Set ON to 50%"  # Default last known brightness is 50 from fixture
     assert response.json() == {
@@ -864,12 +867,12 @@ def mock_bulk_control_dependencies(
 
 
 def test_control_lights_bulk_set_on_all(
-    mock_bulk_control_dependencies, mock_light_command_info_data
+    mock_bulk_control_dependencies, mock_light_command_info_data, client
 ):
     """Tests bulk controlling all lights to 'on'."""
     payload = {"command": "set", "state": "on"}
     # No group specified, should target all controllable lights
-    response = client.post("/lights/control", json=payload)
+    response = client.post("/api/lights/control", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -891,12 +894,12 @@ def test_control_lights_bulk_set_on_all(
 
 
 def test_control_lights_bulk_set_off_group(
-    mock_bulk_control_dependencies, mock_entity_id_lookup_data
+    mock_bulk_control_dependencies, mock_entity_id_lookup_data, client
 ):
     """Tests bulk controlling lights in a specific group to 'off'."""
     # Target group1, which only contains light.living_room
     payload = {"command": "set", "state": "off"}
-    response = client.post("/lights/control?group=group1", json=payload)
+    response = client.post("/api/lights/control?group=group1", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -921,14 +924,14 @@ def test_control_lights_bulk_set_off_group(
 
 
 def test_control_lights_bulk_toggle_group_all_lights(
-    mock_bulk_control_dependencies, mock_light_command_info_data, mock_app_state_data
+    mock_bulk_control_dependencies, mock_light_command_info_data, mock_app_state_data, client
 ):
     """Tests bulk toggling lights in the 'all_lights' group."""
     # group "all_lights" contains both kitchen (off) and living_room (on)
     # living_room (on) -> should turn off, last brightness 100 (default from state)
     # kitchen (off) -> should turn on to 60 (default last_known_brightness from bulk fixture)
     payload = {"command": "toggle"}
-    response = client.post("/lights/control?group=all_lights", json=payload)
+    response = client.post("/api/lights/control?group=all_lights", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -958,13 +961,13 @@ def test_control_lights_bulk_toggle_group_all_lights(
 
 
 def test_control_lights_bulk_brightness_up_no_group(
-    mock_bulk_control_dependencies, mock_app_state_data
+    mock_bulk_control_dependencies, mock_app_state_data, client
 ):
     """Tests bulk increasing brightness for all lights."""
     # living_room: on, raw not set -> current_brightness_ui = 100. 100+10 = 100 (capped)
     # kitchen: off -> current_brightness_ui = 0. 0+10 = 10.
     payload = {"command": "brightness_up"}
-    response = client.post("/lights/control", json=payload)  # All lights
+    response = client.post("/api/lights/control", json=payload)  # All lights
 
     assert response.status_code == 200
     data = response.json()
@@ -980,10 +983,10 @@ def test_control_lights_bulk_brightness_up_no_group(
             assert "Brightness UP to 10%" in detail["action"]
 
 
-def test_control_lights_bulk_no_matching_group(mock_bulk_control_dependencies):
+def test_control_lights_bulk_no_matching_group(mock_bulk_control_dependencies, client):
     """Tests bulk control behavior when no lights match the specified group."""
     payload = {"command": "set", "state": "on"}
-    response = client.post("/lights/control?group=non_existent_group", json=payload)
+    response = client.post("/api/lights/control?group=non_existent_group", json=payload)
 
     assert response.status_code == 200  # Endpoint returns 200 but with specific status
     data = response.json()
@@ -994,7 +997,9 @@ def test_control_lights_bulk_no_matching_group(mock_bulk_control_dependencies):
     mock_bulk_control_dependencies["send_light_can_command_patch"].assert_not_called()
 
 
-def test_control_lights_bulk_no_controllable_lights_in_system(mock_bulk_control_dependencies):
+def test_control_lights_bulk_no_controllable_lights_in_system(
+    mock_bulk_control_dependencies, client
+):
     """Tests bulk control behavior when no controllable lights exist."""
     # Simulate no lights are controllable by making light_command_info empty
     mock_bulk_control_dependencies["light_command_info_patch"].__contains__ = lambda key: False
@@ -1002,7 +1007,7 @@ def test_control_lights_bulk_no_controllable_lights_in_system(mock_bulk_control_
     mock_bulk_control_dependencies["light_entity_ids_patch"].__contains__ = lambda key: False
 
     payload = {"command": "set", "state": "on"}
-    response = client.post("/lights/control", json=payload)  # All lights
+    response = client.post("/api/lights/control", json=payload)  # All lights
 
     assert response.status_code == 200
     data = response.json()
@@ -1012,7 +1017,7 @@ def test_control_lights_bulk_no_controllable_lights_in_system(mock_bulk_control_
     mock_bulk_control_dependencies["send_light_can_command_patch"].assert_not_called()
 
 
-def test_control_lights_bulk_one_fails(mock_bulk_control_dependencies, mock_app_state_data):
+def test_control_lights_bulk_one_fails(mock_bulk_control_dependencies, mock_app_state_data, client):
     """Tests bulk control behavior when one of the CAN commands fails."""
 
     # Make sending command for kitchen light fail
@@ -1024,7 +1029,7 @@ def test_control_lights_bulk_one_fails(mock_bulk_control_dependencies, mock_app_
     mock_bulk_control_dependencies["send_light_can_command_patch"].side_effect = send_side_effect
 
     payload = {"command": "set", "state": "on"}
-    response = client.post("/lights/control", json=payload)  # All lights
+    response = client.post("/api/lights/control", json=payload)  # All lights
 
     assert response.status_code == 200
     data = response.json()
