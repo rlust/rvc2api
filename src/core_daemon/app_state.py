@@ -160,34 +160,61 @@ def preseed_light_states_internal(decode_payload_func: Callable) -> None:
     Uses global state variables like light_entity_ids, light_command_info, decoder_map,
     and entity_id_lookup.
     """
-    global light_entity_ids, light_command_info, decoder_map, entity_id_lookup
+    global light_entity_ids, light_command_info, decoder_map, entity_id_lookup, state
 
     now = time.time()
     logger.info(f"Pre-seeding states for {len(light_entity_ids)} light entities.")
     for eid in light_entity_ids:
         info = light_command_info.get(eid)
-        if not info:
-            logger.warning(f"Pre-seeding: No command info for light entity ID: {eid}")
+        entity_config = entity_id_lookup.get(eid)
+
+        if not info or not entity_config:
+            logger.warning(f"Pre-seeding: Missing info or entity_config for light entity ID: {eid}")
             continue
 
+        # Determine DGN for status pre-seeding:
+        # Prefer status_dgn (hex string from YAML) if available.
+        # Else, use the DGN from command_info (integer, under which the light is
+        # defined in mapping).
+        dgn_for_status_hex_str = None
+        raw_status_dgn_from_config = entity_config.get("status_dgn")
+
+        if raw_status_dgn_from_config:
+            dgn_for_status_hex_str = str(raw_status_dgn_from_config).upper().replace("0X", "")
+        else:
+            # Fallback to the DGN the light is defined under (for commands)
+            dgn_for_status_hex_str = format(info["dgn"], "X").upper()
+
+        logger.debug(f"Pre-seeding {eid}: Using DGN {dgn_for_status_hex_str} for initial status.")
+
         spec_entry = None
-        target_dgn_hex = format(info["dgn"], "X").upper()
+        # Search decoder_map using the determined DGN hex string
+        # decoder_map values are dictionaries from rvc.json, which contain 'dgn_hex'
         for entry_val in decoder_map.values():
-            if entry_val.get("dgn_hex", "").upper() == target_dgn_hex:
+            if entry_val.get("dgn_hex", "").upper().replace("0X", "") == dgn_for_status_hex_str:
                 spec_entry = entry_val
                 break
 
         if not spec_entry:
             logger.warning(
-                f"Pre-seeding: No spec entry found for DGN {target_dgn_hex} (from light {eid})"
+                f"Pre-seeding: No spec entry found for DGN {dgn_for_status_hex_str} (entity: {eid})"
             )
             continue
 
-        decoded, raw = decode_payload_func(spec_entry, bytes([0] * 8))
+        # Assume an all-zero payload means "off" for pre-seeding
+        # The length of the data should match the spec_entry's expected data length if available,
+        # otherwise default to 8 bytes.
+        data_length = spec_entry.get("data_length", 8)  # Assuming spec_entry might have data_length
+        initial_can_payload = bytes([0] * data_length)
 
-        brightness = raw.get("operating_status", 0)
+        decoded, raw = decode_payload_func(spec_entry, initial_can_payload)
+
+        brightness = raw.get(
+            "operating_status", 0
+        )  # This might need adjustment based on actual decoded data
         human_state = "on" if brightness > 0 else "off"
-        lookup = entity_id_lookup.get(eid, {})
+        # Ensure 'lookup' is the entity_config itself, which was already fetched
+        # lookup = entity_id_lookup.get(eid, {}) # This is redundant
 
         payload = {
             "entity_id": eid,
@@ -195,13 +222,13 @@ def preseed_light_states_internal(decode_payload_func: Callable) -> None:
             "raw": raw,
             "state": human_state,
             "timestamp": now,
-            "suggested_area": lookup.get("suggested_area", "Unknown"),
-            "device_type": lookup.get(
+            "suggested_area": entity_config.get("suggested_area", "Unknown"),
+            "device_type": entity_config.get(
                 "device_type", "light"
             ),  # Default to 'light' for these entities
-            "capabilities": lookup.get("capabilities", []),
-            "friendly_name": lookup.get("friendly_name"),
-            "groups": lookup.get("groups", []),
+            "capabilities": entity_config.get("capabilities", []),
+            "friendly_name": entity_config.get("friendly_name"),
+            "groups": entity_config.get("groups", []),
         }
         update_entity_state_and_history(eid, payload)
     logger.info("Finished pre-seeding light states.")
