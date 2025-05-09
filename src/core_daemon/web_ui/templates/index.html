@@ -820,6 +820,7 @@
         if (hasBrightness) {
           // Brightness is determined from entity.raw.operating_status (typically 0-200 from CAN).
           // This needs to be converted to a 0-100% scale for the UI slider.
+          // Max CAN brightness for 100% is 0xC8 (200).
           let currentBrightnessPercent = 0;
           if (state.toLowerCase() === 'on') {
             if (raw_attrs.operating_status !== undefined) {
@@ -908,175 +909,143 @@
       };
 
       function renderGroupedLights() {
-        grid.innerHTML = '';
-        const selected = filter.value;
-        const grouped = {};
-
-        for (const entity of Object.values(lightStates)) {
-          if (entity.device_type !== 'light') { // Explicitly check if the entity is a light
-            continue;
-          }
-          const area = entity?.suggested_area || 'Unknown';
-          if (selected !== 'All' && selected !== area) continue;
-
-          if (!grouped[area]) grouped[area] = [];
-          grouped[area].push(entity);
-        }
-
-        for (const area of Object.keys(grouped).sort()) {
-          const section = document.createElement('div');
-          section.innerHTML = `
-            <h2 class="text-2xl font-bold mb-1">${area}</h2>
-            <div class="border-t border-gray-600 my-2"></div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
-          `;
-          const sectionGrid = section.querySelector('div.grid');
-
-          grouped[area].forEach(entity => {
-            sectionGrid.appendChild(renderCard(entity));
-          });
-
-          grid.appendChild(section);
-        }
-      }
-
-      filter.addEventListener('change', renderGroupedLights);
-
-      // WebSocket for logs - to be initialized when log view is active
-      // This section needs to be adapted for the pinned logs.
-      // connectLogSocket() and disconnectLogSocket() will be used by setPinnedLogsState.
-
-      // Original log control event listeners (pause, resume, filter changes)
-      // Ensure these are correctly scoped if they were inside a view-specific block before.
-      logPauseBtn.addEventListener('click', () => {
-        isLogPaused = true;
-        logPauseBtn.disabled = true;
-        logResumeBtn.disabled = false;
-      });
-
-      logResumeBtn.addEventListener('click', () => {
-        isLogPaused = false;
-        logPauseBtn.disabled = false;
-        logResumeBtn.disabled = true;
-        logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
-      });
-
-      // Event listener for the Clear Logs button
-      logClearBtn.addEventListener('click', () => {
-        logStream.innerHTML = ''; // Clear the log display
-        // If the log socket is connected and the panel is open, show "Waiting for logs..."
-        if (logSocket && logSocket.readyState === WebSocket.OPEN && !pinnedLogsContent.classList.contains('hidden')) {
-          logsWaitingMessage.classList.remove('hidden');
-        }
-        // No need to pause or resume, just clear the current display
-      });
-
-      logLevelFilter.addEventListener('change', () => {
-        logStream.innerHTML = '';
-        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
-            logsWaitingMessage.classList.remove('hidden');
-        }
-      });
-      logSearchInput.addEventListener('input', () => {
-        logStream.innerHTML = '';
-        if (logSocket && logSocket.readyState === WebSocket.OPEN && logStream.childElementCount === 0) {
-            logsWaitingMessage.classList.remove('hidden');
-        }
-      });
-
-      // connectLogSocket function (ensure it's defined correctly)
-      function connectLogSocket() {
-        if (logSocket && logSocket.readyState === WebSocket.OPEN) {
+        console.log('renderGroupedLights called. lightStates:', JSON.parse(JSON.stringify(lightStates)), 'Filter:', filter ? filter.value : 'N/A');
+        if (!grid) {
+          console.error('renderGroupedLights: grid element not found!');
           return;
         }
-        logSocket = new WebSocket(`ws://${location.host}${apiBasePath}/ws/logs`);
-        // logsWaitingMessage.classList.remove('hidden'); // Managed by setPinnedLogsState
 
-        logSocket.onopen = () => {
-          console.log("Log WebSocket connected");
-          // logStream.innerHTML = ''; // Clearing is now handled by filter changes or explicit actions
-          if (pinnedLogsContent.classList.contains('hidden') === false && logStream.childElementCount === 0) {
-             logsWaitingMessage.classList.remove('hidden');
-          }
-        };
-
-        logSocket.onmessage = (event) => {
-          if (isLogPaused) return;
-          logsWaitingMessage.classList.add('hidden');
-
-          const logEntry = event.data;
-          const currentLogLevel = logLevelFilter.value.toUpperCase();
-          const searchTerm = logSearchInput.value.toLowerCase();
-
-          const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/);
-          const entryLogLevel = levelMatch ? levelMatch[1].toUpperCase() : "UNKNOWN";
-
-          const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
-          const currentFilterIndex = logLevels.indexOf(currentLogLevel);
-          const entryLevelIndex = logLevels.indexOf(entryLogLevel);
-
-          if (entryLevelIndex < currentFilterIndex) return;
-          if (searchTerm && !logEntry.toLowerCase().includes(searchTerm)) return;
-
-          const logLine = document.createElement('div');
-          logLine.textContent = logEntry;
-          logStream.appendChild(logLine);
-          // Optimized scroll: only scroll if user is already near the bottom
-          const scrollThreshold = 20; // Pixels from bottom
-          if (logStream.scrollHeight - logStream.scrollTop - logStream.clientHeight < scrollThreshold) {
-            logStream.scrollTop = logStream.scrollHeight;
-          }
-        };
-
-        logSocket.onerror = (error) => {
-          console.error("Log WebSocket error:", error);
-          logStream.innerHTML += '<div class="text-red-500">Log WebSocket error. See console.</div>';
-        };
-
-        logSocket.onclose = () => {
-          console.log("Log WebSocket disconnected");
-          // logsWaitingMessage.classList.remove('hidden'); // Show waiting if it was open
-          // logsWaitingMessage.textContent = 'Log stream disconnected. Attempting to reconnect...';
-          // Basic auto-reconnect could be added here if desired
-        };
-      }
-
-      function disconnectLogSocket() {
-        if (logSocket) {
-          logSocket.close();
-          logSocket = null;
-          console.log("Log WebSocket intentionally disconnected");
+        const lightsLoadingP = document.getElementById('lights-loading-message');
+        if (lightsLoadingP) {
+            lightsLoadingP.classList.add('hidden');
         }
+
+        grid.innerHTML = ''; // Clear previous content (cards, "No lights" message, etc.)
+
+        const selectedAreaFilter = filter.value;
+        const groupedByArea = {};
+        let lightsExistToDisplay = false;
+
+        // Group lights by area, applying the filter
+        for (const entityId in lightStates) {
+          const entity = lightStates[entityId];
+          if (entity.device_type === 'light') {
+            const area = entity.suggested_area || 'Unknown';
+            if (selectedAreaFilter === 'All' || selectedAreaFilter === area) {
+              if (!groupedByArea[area]) {
+                groupedByArea[area] = [];
+              }
+              groupedByArea[area].push(entity);
+              lightsExistToDisplay = true;
+            }
+          }
+        }
+
+        if (!lightsExistToDisplay) {
+          const messageP = document.createElement('p');
+          messageP.className = 'text-gray-500 text-center py-8';
+          if (Object.keys(lightStates).length === 0 && (!filter.value || filter.value === 'All')) {
+            messageP.textContent = 'No lights are currently configured or available.';
+            console.log('renderGroupedLights: Displaying "No lights configured" message.');
+          } else {
+            messageP.textContent = `No lights found for the current filter ("${selectedAreaFilter}").`;
+            console.log(`renderGroupedLights: Displaying "No lights found for filter: ${selectedAreaFilter}" message.`);
+          }
+          grid.appendChild(messageP);
+          return;
+        }
+
+        const sortedAreas = Object.keys(groupedByArea).sort();
+
+        for (const areaName of sortedAreas) {
+          const areaSectionDiv = document.createElement('div');
+          areaSectionDiv.className = 'area-section mb-8';
+          areaSectionDiv.dataset.areaName = areaName;
+
+          const areaTitleH2 = document.createElement('h2');
+          areaTitleH2.className = 'text-2xl font-semibold mb-3 text-gray-200';
+          areaTitleH2.textContent = areaName;
+          areaSectionDiv.appendChild(areaTitleH2);
+
+          const dividerDiv = document.createElement('div');
+          dividerDiv.className = 'border-t border-gray-700 mb-6';
+          areaSectionDiv.appendChild(dividerDiv);
+
+          const entitiesGridDiv = document.createElement('div');
+          entitiesGridDiv.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 entity-grid';
+          areaSectionDiv.appendChild(entitiesGridDiv);
+
+          groupedByArea[areaName].forEach(entity => {
+            try {
+              const cardElement = renderCard(entity);
+              if (cardElement) {
+                entitiesGridDiv.appendChild(cardElement);
+              } else {
+                console.warn(`renderCard for entity ${entity.entity_id} returned null or undefined.`);
+                const errorCardPlaceholder = document.createElement('div');
+                errorCardPlaceholder.className = 'p-4 rounded-lg shadow-md entity-card bg-yellow-700 text-white';
+                errorCardPlaceholder.textContent = `Could not render ${entity.friendly_name || entity.entity_id}. See console.`;
+                entitiesGridDiv.appendChild(errorCardPlaceholder);
+              }
+            } catch (e) {
+              console.error(`Error rendering card for entity ${entity.entity_id} (Area: ${areaName}):`, e);
+              const errorCardPlaceholder = document.createElement('div');
+              errorCardPlaceholder.className = 'p-4 rounded-lg shadow-md entity-card bg-red-800 text-white';
+              errorCardPlaceholder.textContent = `Error loading ${entity.friendly_name || entity.entity_id}. Check console.`;
+              entitiesGridDiv.appendChild(errorCardPlaceholder);
+            }
+          });
+          grid.appendChild(areaSectionDiv);
+        }
+        console.log('renderGroupedLights: Finished rendering areas and cards.');
       }
 
+      // Fetch initial light states
       fetch(`${apiBasePath}/lights`)
         .then(res => {
           if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+            return res.text().then(text => {
+              throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}. Response: ${text}`);
+            });
           }
           return res.json();
         })
         .then(data => {
-          lightsLoadingMessage.classList.add('hidden');
-          for (const entity of Object.values(data)) {
-            lightStates[entity.entity_id] = entity;
+          const lightsLoadingP = document.getElementById('lights-loading-message');
+          if (lightsLoadingP) {
+            lightsLoadingP.classList.add('hidden');
           }
-
-          const areas = new Set(Object.values(lightStates).map(e => e?.suggested_area || 'Unknown'));
-          for (const area of [...areas].sort()) {
-            const opt = document.createElement('option');
-            opt.value = area;
-            opt.textContent = area;
-            filter.appendChild(opt);
+          if (data && Array.isArray(data)) {
+            data.forEach(entity => {
+              if (entity.device_type === 'light') {
+                lightStates[entity.entity_id] = entity;
+                const area = entity.suggested_area || 'Unknown';
+                const areaFilter = document.getElementById('area-filter');
+                if (areaFilter) {
+                    const existingOptions = Array.from(areaFilter.options).map(opt => opt.value);
+                    if (!existingOptions.includes(area)) {
+                        const opt = document.createElement('option');
+                        opt.value = area;
+                        opt.textContent = area;
+                        areaFilter.appendChild(opt);
+                    }
+                }
+              }
+            });
+          } else if (data) {
+            console.warn("Received non-array data for lights:", data);
           }
-
           renderGroupedLights();
         })
         .catch(error => {
           console.error("Failed to fetch lights:", error);
-          lightsLoadingMessage.textContent = 'Error loading lights. Please check console.';
-          lightsLoadingMessage.classList.remove('hidden');
-          lightsLoadingMessage.classList.add('text-red-500');
+          const lightsLoadingP = document.getElementById('lights-loading-message');
+          if (lightsLoadingP) {
+            lightsLoadingP.classList.add('hidden');
+          }
+          if (grid) {
+            grid.innerHTML = `<p class="text-red-500 text-center py-8">Error loading lights: ${error.message}. Check console for details.</p>`;
+          }
         });
 
       document.querySelectorAll('.nav-link').forEach(btn => {
