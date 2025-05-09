@@ -15,7 +15,7 @@
 
         rvc2apiPackage = pythonPackages.buildPythonPackage {
           pname = "rvc2api";
-          version = "0.1.0";
+          version = builtins.replaceStrings ["\n"] [""] (builtins.readFile ./VERSION);
           src = self;
           format = "pyproject";
 
