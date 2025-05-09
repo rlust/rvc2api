@@ -187,9 +187,10 @@
               name          = "ci";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
+                SKIP=djlint
                 poetry install --no-root
                 poetry check --lock --no-interaction
-                poetry run pre-commit run --all-files --hook-stage commit --skip djlint
+                poetry run pre-commit run --all-files --hook-stage commit
                 poetry run djlint src/core_daemon/web_ui/templates --check
               '';
             };
