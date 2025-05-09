@@ -274,6 +274,13 @@ def test_validation_exception_handler(
         return {"message": "hello"}  # Missing 'count', will cause ResponseValidationError
 
     client = TestClient(app)
+    if not any(
+        route.path == "/test_validation_error" for route in app.routes if hasattr(route, "path")
+    ):
+        app.add_api_route(
+            "/test_validation_error", route_with_validation_error, response_model=SimpleResponse
+        )
+
     response = client.get("/test_validation_error")
 
     assert response.status_code == 500  # As per our handler
