@@ -260,7 +260,7 @@ def test_control_entity_response_success():
         "status": "sent",
         "entity_id": "light.bedroom",
         "command": "set",
-        "brightness": 50,  # Corrected: was string, model expects int
+        "brightness": 50,  # Corrected: was string "50", model expects int
         "action": "Set ON to 50%",
     }
     response = ControlEntityResponse(**data)
