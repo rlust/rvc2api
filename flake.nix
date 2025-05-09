@@ -140,6 +140,22 @@
               '';
             };
           };
+
+          ${system}.check = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "check";
+              runtimeInputs = [ pkgs.poetry ];
+              text = ''
+                poetry install --no-root
+                poetry lock --check
+                poetry run pre-commit run --all-files
+                poetry run pytest
+                poetry run flake8
+                poetry run mypy src
+                poetry run djlint src/core_daemon/web_ui/templates --check
+              '';
+            };
+          };
         };
 
         checks = {
