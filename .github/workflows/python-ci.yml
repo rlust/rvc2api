@@ -31,14 +31,8 @@ jobs:
       - name: Check poetry.lock consistency
         run: nix develop .#ci --command poetry lock --check
 
-      - name: Run pre-commit
-        run: nix run .#precommit
-
-      - name: Run tests
-        run: nix run .#test
-
-      - name: Run lint checks
-        run: nix run .#lint
+      - name: Run flake checks
+        run: nix flake check
 
       - name: Build Nix package
         run: nix build .#rvc2api
