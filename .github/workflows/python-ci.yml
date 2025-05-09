@@ -1,35 +1,44 @@
-name: Nix CI
+# GitHub Actions workflow for Nix-based continuous integration
+name: "Nix-based CI"
 
 on:
   push:
-    branches: [main, master]
+    branches:
+      - main
   pull_request:
-    branches: [main, master]
+    branches:
+      - main
 
 jobs:
-  test:
+  nix-flake-check:
+    name: "Run Nix Flake Checks & Build"
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Set up Nix
+      - name: "Install Nix (with flakes enabled)"
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Cache Poetry virtualenv
+      - name: "Cache Poetry virtualenv"
         uses: actions/cache@v4
         with:
+          # Cache the .venv folder based on poetry.lock
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            venv-${{ runner.os }}-
+            poetry-venv-${{ runner.os }}-
 
-      - name: Run flake checks
-        run: nix flake check
+      - name: "Perform Nix flake checks"
+        run: |
+          # Validate all flake outputs, checks, and apps
+          nix flake check
 
-      - name: Build Nix package
-        run: nix build .#rvc2api
+      - name: "Build rvc2api Nix package"
+        run: |
+          # Build (and optionally link) the rvc2api package
+          nix build .#rvc2api --no-link
