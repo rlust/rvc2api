@@ -97,7 +97,7 @@
             pkgs.poetry
             pythonPackages.fastapi
             pythonPackages.uvicorn
-            pkgs.python-can
+            pythonPackages."python‑can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
             pythonPackages.prometheus_client
