@@ -132,13 +132,6 @@ else:
     templates = None
 
 
-# @app.on_event("startup")
-# async def ensure_static_dir_exists():
-#     static_dir_for_mount = os.path.join(web_ui_dir, "static")
-#     os.makedirs(static_dir_for_mount, exist_ok=True)
-#     logger.info(f"Ensured static directory for mount exists: {static_dir_for_mount}")
-
-
 # ── HTTP middleware for Prometheus ─────────────────────────────────────────
 @app.middleware("http")
 async def prometheus_middleware_handler(request, call_next):
