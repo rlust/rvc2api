@@ -187,7 +187,7 @@
 
         <section id="mapping-view" class="view-section hidden">
           <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
-          <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+          <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading device_mapping.yml...</pre>
         </section>
 
         <section id="spec-view" class="view-section hidden">
@@ -195,7 +195,7 @@
           <div id="spec-metadata" class="mb-4 text-sm text-gray-400">
             Loading spec metadata...
           </div>
-          <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"></pre>
+          <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading rvc.json...</pre>
         </section>
 
         <!-- Unmapped Entries View -->
@@ -307,6 +307,46 @@
       let resizeRafId = null; // For requestAnimationFrame
       let pendingResizeHeightPx = 0; // To store height for RAF update
       let originalContainerTransition = ''; // To store original transition style
+
+      // --- START: Add showToast function ---
+      function showToast(message, type = 'info', duration = 3000) {
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-md shadow-lg text-white`;
+
+        if (type === 'error') {
+          toast.classList.add('bg-red-600');
+        } else if (type === 'success') {
+          toast.classList.add('bg-green-600');
+        } else {
+          toast.classList.add('bg-blue-600'); // Default to info
+        }
+
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+          setTimeout(() => {
+            toast.remove();
+            if (toastContainer.childElementCount === 0) {
+              toastContainer.remove(); // Remove container if no toasts are left
+            }
+          }, 500);
+        }, duration);
+      }
+
+      function createToastContainer() {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'toast-container';
+          container.className = 'fixed bottom-5 right-5 space-y-2 z-50';
+          document.body.appendChild(container);
+        }
+        return container;
+      }
+      // --- END: Add showToast function ---
 
       // Constants for sidebar widths
       const SIDEBAR_EXPANDED_WIDTH_DESKTOP = '16rem'; // Corresponds to md:w-64
@@ -587,26 +627,24 @@
       // --- Fetch and Display API Server Status (NEW) ---
       async function fetchApiServerStatus() {
         if (!apiStatusContainer) return;
+        apiStatusLoadingMessage.classList.remove('hidden'); // Show loading message
         try {
-          // This is a placeholder. You'll need an API endpoint that provides this info.
-          // For example, an endpoint like /api/status/server
-          // const response = await fetch(`${apiBasePath}/status/server`);
-          // if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-          // const statusData = await response.json();
-          // updateApiServerView(statusData);
-
-          // Simulate loading for now
-          setTimeout(() => {
-            updateApiServerView({ version: "1.0.0", uptime: "12h 30m", requests_processed: 10234, error_rate: "0.1%" });
-            apiStatusLoadingMessage.classList.add('hidden');
-          }, 1000);
+          const response = await fetch(`${apiBasePath}/status/server`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+          }
+          const statusData = await response.json();
+          updateApiServerView(statusData);
         } catch (error) {
           console.error("Failed to fetch API server status:", error);
-          if (apiStatusLoadingMessage) {
+          if (apiStatusLoadingMessage) { // Check if it wasn't cleared by a successful load
             apiStatusLoadingMessage.textContent = 'Failed to load API server status.';
-          } else {
-            apiStatusContainer.innerHTML = '<p class="text-red-400">Failed to load API server status.</p>';
           }
+          // Display error in the container itself if loading message is already gone or not primary
+          apiStatusContainer.innerHTML = `<p class="text-red-400">Failed to load API server status: ${error.message}</p>`;
+        } finally {
+            if (apiStatusLoadingMessage) apiStatusLoadingMessage.classList.add('hidden'); // Hide loading message
         }
       }
 
@@ -625,26 +663,23 @@
       // --- Fetch and Display Application Health (NEW) ---
       async function fetchApplicationHealth() {
         if (!appHealthContainer) return;
+        appHealthLoadingMessage.classList.remove('hidden'); // Show loading message
         try {
-          // Placeholder for fetching application health data (e.g., config status, client count)
-          // Example endpoint: /api/status/application
-          // const response = await fetch(`${apiBasePath}/status/application`);
-          // if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-          // const healthData = await response.json();
-          // updateApplicationHealthView(healthData);
-
-          // Simulate loading for now
-          setTimeout(() => {
-            updateApplicationHealthView({ config_files_loaded: true, websocket_clients: 5, last_error: "None" });
-            appHealthLoadingMessage.classList.add('hidden');
-          }, 1200);
+          const response = await fetch(`${apiBasePath}/status/application`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+          }
+          const healthData = await response.json();
+          updateApplicationHealthView(healthData);
         } catch (error) {
           console.error("Failed to fetch application health:", error);
-          if (appHealthLoadingMessage) {
+          if (appHealthLoadingMessage) { // Check if it wasn't cleared
             appHealthLoadingMessage.textContent = 'Failed to load application health.';
-          } else {
-            appHealthContainer.innerHTML = '<p class="text-red-400">Failed to load application health.</p>';
           }
+          appHealthContainer.innerHTML = `<p class="text-red-400">Failed to load application health: ${error.message}</p>`;
+        } finally {
+            if (appHealthLoadingMessage) appHealthLoadingMessage.classList.add('hidden'); // Hide loading message
         }
       }
 
@@ -664,26 +699,34 @@
       function callLightService(entityId, command, data = {}) {
         let path;
         let body;
-        const groupLightEntityIds = ['all_lights', 'exterior_lights', 'interior_lights'];
+        const groupLightEntityIds = ['all_lights', 'exterior_lights', 'interior_lights']; // Add other group IDs if any
 
         if (groupLightEntityIds.includes(entityId)) {
           // This is a group control command
-          if (command === 'set' && data.state) { // Ensure command is 'set' and data.state exists
-            const groupName = entityId.replace('_lights', ''); // e.g. all_lights -> all
-            path = `${apiBasePath}/lights/control?group=${groupName}`;
-            body = { command: command, state: data.state }; // Body for group control, now includes 'command'
-          } else {
-            console.error(`Invalid command '${command}' or data for group light control '${entityId}'. Must be 'set' with a state.`);
+          const groupName = entityId.replace('_lights', ''); // e.g. all_lights -> all
+          path = `${apiBasePath}/lights/control?group=${groupName}`;
+          body = { command: command, ...data }; // Pass command and any relevant data (state, brightness)
+
+          // Validate group commands (optional, but good practice for clarity)
+          const validGroupCommands = ['set', 'toggle', 'brightness_up', 'brightness_down'];
+          if (!validGroupCommands.includes(command)) {
+            console.error(`Invalid command '${command}' for group light control '${entityId}'.`);
             showToast(`Invalid command for group ${entityId}`, 'error');
             return Promise.reject(`Invalid command for group ${entityId}`);
           }
+          if (command === 'set' && data.state === undefined && data.brightness === undefined) {
+            console.warn(`'set' command for group ${entityId} called without state or brightness.`);
+            // Allow it, backend might handle it or have defaults, but it's unusual.
+          }
+
         } else {
           // This is an individual entity control command
           path = `${apiBasePath}/entities/${entityId}/control`;
           body = { command: command, ...data }; // Standard body for entity control
 
-          // Validate individual commands (optional, but good practice)
-          if (command !== 'set' && command !== 'toggle' && command !== 'brightness_up' && command !== 'brightness_down') {
+          // Validate individual commands
+          const validIndividualCommands = ['set', 'toggle', 'brightness_up', 'brightness_down'];
+          if (!validIndividualCommands.includes(command)) {
             console.error('Unknown light command for individual entity:', command);
             showToast(`Unknown command: ${command} for ${entityId}`, 'error');
             return Promise.reject(`Unknown command: ${command} for ${entityId}`);
@@ -974,114 +1017,6 @@
         }
       }
 
-      // NEW Helper function for Quick Light Controls (based on original working logic)
-      function executeQuickLightCommand(buttonElement, commandName, fullApiPath, httpMethod) { // Renamed apiPath to fullApiPath
-        const originalText = buttonElement.innerHTML;
-        buttonElement.disabled = true;
-        buttonElement.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
-
-        const url = new URL(fullApiPath, window.location.origin);
-        const params = new URLSearchParams(url.search);
-
-        const bodyPayload = {};
-        let actualApiPath = url.pathname; // e.g., /api/lights/control
-        const queryParamsForFetch = new URLSearchParams();
-
-        params.forEach((value, key) => {
-            if (key === 'command' || key === 'state' || key === 'brightness') {
-                bodyPayload[key] = value;
-                if (key === 'brightness' && value !== null) {
-                    const parsedBrightness = parseInt(value, 10);
-                    bodyPayload[key] = isNaN(parsedBrightness) ? null : parsedBrightness;
-                }
-                // Ensure state is 'on' or 'off', or null if not applicable
-                if (key === 'state' && value !== 'on' && value !== 'off') {
-                    // This case should ideally not happen with current buttons
-                    // but good for robustness if 'state' could be other things or absent
-                    // For now, quick controls only send 'on' or 'off'
-                }
-            } else {
-                queryParamsForFetch.set(key, value);
-            }
-        });
-
-        if (queryParamsForFetch.toString()) {
-            actualApiPath += '?' + queryParamsForFetch.toString();
-        }
-
-        const fetchOptions = {
-            method: httpMethod,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            // Only add body for relevant methods
-        };
-
-        if (httpMethod === 'POST' || httpMethod === 'PUT' || httpMethod === 'PATCH') {
-            fetchOptions.body = JSON.stringify(bodyPayload);
-        }
-
-
-        fetch(actualApiPath, fetchOptions)
-          .then(response => {
-            if (!response.ok) {
-              const contentType = response.headers.get("content-type");
-              if (contentType && contentType.indexOf("application/json") !== -1) {
-                  return response.json().then(err => {
-                      const detail = err.detail || (typeof err === 'string' ? err : 'Unknown server error from JSON response');
-                      throw new Error(`HTTP error ${response.status}: ${detail}`);
-                  });
-              } else {
-                  return response.text().then(text => {
-                      let errorText = text;
-                      const titleMatch = text.match(/<title>(.*?)<\/title>/i);
-                      if (titleMatch && titleMatch[1]) {
-                          errorText = titleMatch[1];
-                      } else if (text.length > 150) {
-                          errorText = "Server returned non-JSON error (see console for details)";
-                          console.error("Full non-JSON error response from server:", text);
-                      }
-                      throw new Error(`HTTP error ${response.status}: ${errorText}`);
-                  });
-              }
-            }
-            return response.json();
-          })
-          .then(data => {
-            console.log(`Command ${commandName} successful:`, data);
-            let toastType = 'success';
-            let toastMessage;
-
-            if (data.errors && data.errors.length > 0) {
-              toastMessage = `${commandName}: ${data.lights_commanded || 0} commanded with ${data.errors.length} errors. Check console.`;
-              toastType = 'warning';
-              console.warn(`Bulk action '${commandName}' errors:`, data.errors);
-            } else if (data.status === "no_match" && data.message) {
-              toastMessage = `${commandName}: ${data.message}`;
-              toastType = 'info';
-            } else if (data.lights_commanded !== undefined) {
-               toastMessage = `${commandName}: ${data.lights_commanded} lights commanded.`;
-            } else if (data.message) { // General message from API on success
-                toastMessage = data.message;
-            } else { // Fallback success
-                toastMessage = `${commandName}: Command sent successfully.`;
-            }
-            showToast(toastMessage, toastType);
-
-            if (data.action !== undefined && data.status !== undefined) {
-              console.info(`Bulk Action Details - ${commandName}:\nAction: ${data.action}\nStatus: ${data.status}\nProcessed: ${data.lights_processed || 0}\nCommanded: ${data.lights_commanded || 0}`);
-            }
-          })
-          .catch(error => {
-            console.error(`Command ${commandName} failed:`, error);
-            showToast(`Failed to execute ${commandName}. Error: ${error.message}`, 'error');
-          })
-          .finally(() => {
-            buttonElement.disabled = false;
-            buttonElement.innerHTML = originalText;
-          });
-      }
-
       fetch(`${apiBasePath}/lights`)
         .then(res => {
           if (!res.ok) {
@@ -1220,65 +1155,73 @@
 
                   let decodedSignalsHtml = 'N/A';
                   if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-                    decodedSignalsHtml = '<ul class="list-disc list-inside pl-4 text-sm">';
-                    for (const [sigKey, sigValue] of Object.entries(entry.decoded_signals)) {
-                      decodedSignalsHtml += `<li><strong>${sigKey}:</strong> ${sigValue}</li>`;
+                    decodedSignalsHtml = '<ul>'; // Initialize list
+                    for (const [sigName, sigValue] of Object.entries(entry.decoded_signals)) {
+                      decodedSignalsHtml += `<li class="text-xs"><span class="font-semibold">${sigName}:</span> ${sigValue}</li>`;
                     }
                     decodedSignalsHtml += '</ul>';
-                  } else if (entry.decoded_signals) {
-                    decodedSignalsHtml = '<span class="text-gray-500">No signals decoded (PGN might be complex or data invalid).</span>';
+                  } else if (entry.decoded_signals) { // If exists but empty
+                    decodedSignalsHtml = '<span class="text-xs text-gray-500">No signals decoded for this PGN.</span>';
                   }
 
                   let suggestionsHtml = '';
                   if (entry.suggestions && entry.suggestions.length > 0) {
-                    suggestionsHtml = '<div class="mt-3"><p class="font-semibold mb-1 text-blue-300">Mapping Suggestions (other instances of this DGN):</p><ul class="list-disc list-inside pl-4 text-sm">';
+                    suggestionsHtml = '<h4 class="text-sm font-semibold mt-2 mb-1">Mapping Suggestions:</h4><ul>';
                     entry.suggestions.forEach(sugg => {
-                      suggestionsHtml += `<li>Instance <strong>${sugg.instance}</strong> mapped to: <strong>${sugg.name}</strong> (Area: ${sugg.suggested_area || 'N/A'})</li>`;
+                      suggestionsHtml += `<li class="text-xs">${sugg.message} (Priority: ${sugg.priority})</li>`;
                     });
-                    suggestionsHtml += '</ul></div>';
+                    suggestionsHtml += '</ul>';
                   }
 
                   const yamlSuggestion = generateYamlSuggestion(entry);
 
                   entryDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
-                      <p><strong>PGN (from ArbID):</strong> ${entry.pgn_hex} ${entry.pgn_name ? `(${entry.pgn_name})` : ''}</p>
-                      <p><strong>DGN (for mapping):</strong> ${entry.dgn_hex} ${entry.dgn_name ? `(${entry.dgn_name})` : ''}</p>
-                      <p><strong>Instance:</strong> ${entry.instance}</p>
-                      <p><strong>Count:</strong> ${entry.count}</p>
-                      <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
-                      <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
-                      <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${entry.last_data_hex}</code></p>
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <h3 class="text-lg font-semibold text-blue-300">DGN: ${entry.dgn_hex} (Instance: ${entry.instance})</h3>
+                        ${entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex ? `<p class="text-xs text-gray-400">PGN (from ArbID): ${entry.pgn_hex}</p>` : ''}
+                        ${entry.dgn_name ? `<p class="text-sm text-gray-300">DGN Name: ${entry.dgn_name}</p>` : ''}
+                        ${entry.pgn_name && entry.pgn_name !== entry.dgn_name ? `<p class="text-sm text-gray-300">PGN Name: ${entry.pgn_name}</p>` : ''}
+                      </div>
+                      <button class="copy-yaml-btn text-xs bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded" title="Copy YAML to clipboard">
+                        <i class="mdi mdi-content-copy"></i> Copy YAML
+                      </button>
                     </div>
-                    <div class="mb-3">
-                      <p class="font-semibold mb-1">Decoded Signals (from PGN ${entry.pgn_hex}):</p>
-                      ${decodedSignalsHtml}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                      <div>
+                        <p><strong>Last Data:</strong> ${entry.last_data_hex}</p>
+                        <p><strong>Count:</strong> ${entry.count}</p>
+                      </div>
+                      <div>
+                        <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
+                        <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <h4 class="text-sm font-semibold mb-1">Decoded Signals (PGN: ${entry.pgn_hex || 'N/A'}):</h4>
+                      <div class="text-gray-400">${decodedSignalsHtml}</div>
                     </div>
                     ${suggestionsHtml}
-                    <div>
-                      <p class="font-semibold mt-3 mb-1">Suggested device_mapping.yml entry:</p>
-                      <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
-                      <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
+                    <div class="mt-3">
+                      <h4 class="text-sm font-semibold">Suggested device_mapping.yml entry:</h4>
+                      <pre class="bg-gray-900 text-green-300 p-2 rounded-md overflow-x-auto text-xs whitespace-pre-wrap">${yamlSuggestion}</pre>
                     </div>
                   `;
                   container.appendChild(entryDiv);
                 }
                 // Add event listeners to new copy buttons
                 container.querySelectorAll('.copy-yaml-btn').forEach(button => {
-                    button.addEventListener('click', (event) => {
-                        const yamlText = event.target.previousElementSibling.querySelector('code').innerText;
-                        navigator.clipboard.writeText(yamlText).then(() => {
-                            event.target.textContent = 'Copied!';
-                            showToast('YAML copied to clipboard!', 'success');
-                            setTimeout(() => { event.target.textContent = 'Copy YAML'; }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy YAML: ', err);
-                            showToast('Failed to copy YAML.', 'error');
-                            event.target.textContent = 'Failed to copy';
-                            setTimeout(() => { event.target.textContent = 'Copy YAML'; }, 2000);
+                  button.addEventListener('click', (e) => {
+                    const preElement = e.target.closest('.bg-gray-800').querySelector('pre');
+                    if (preElement) {
+                      navigator.clipboard.writeText(preElement.textContent)
+                        .then(() => showToast('YAML copied to clipboard!', 'success'))
+                        .catch(err => {
+                          console.error('Failed to copy YAML: ', err);
+                          showToast('Failed to copy YAML.', 'error');
                         });
-                    });
+                    }
+                  });
                 });
               })
               .catch(error => {
@@ -1297,7 +1240,7 @@
 
             fetch(`${apiBasePath}/unknown_pgns`)
               .then(response => {
-                if (!response.ok) {
+                if (!response.ok) { // Check if response is ok
                   throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
                 }
                 return response.json();
@@ -1305,42 +1248,26 @@
               .then(data => {
                 loadingMsg.classList.add('hidden');
                 if (Object.keys(data).length === 0) {
-                  container.innerHTML = '<p class="text-gray-500">No unknown PGNs found. All received PGNs are in rvc.json.</p>';
+                  container.innerHTML = '<p class="text-gray-500">No unknown PGNs found. All observed PGNs are in rvc.json.</p>';
                   return;
                 }
 
                 for (const [arbIdHex, entry] of Object.entries(data)) {
                   const entryDiv = document.createElement('div');
                   entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
-
-                  // Attempt to extract PGN from Arb ID for display, even if not in spec
-                  // Standard PGN extraction: (arb_id >> 8) & 0x1FFFF (if PDU Format < 240)
-                  // Or (arb_id >> 8) & 0x3FFFF (if PDU Format >= 240, for PDU2)
-                  // For simplicity, let's assume PDU2 for now as it covers more ground, or just display arb ID.
-                  // A more sophisticated approach might try to guess PDU1/PDU2 based on PF value.
-                  const arbIdDecimal = parseInt(arbIdHex, 16);
-                  const pf = (arbIdDecimal >> 16) & 0xFF; // PDU Format
-                  let extractedPgnHex = "N/A";
-                  if (pf < 240) { // PDU1
-                      extractedPgnHex = ((arbIdDecimal >> 8) & 0x1FFFF).toString(16).toUpperCase();
-                  } else { // PDU2
-                      extractedPgnHex = ((arbIdDecimal >> 8) & 0x0FFFF).toString(16).toUpperCase(); // Corrected for PDU2 PGN (DA is in lowest 8 bits)
-                  }
-                  // The API returns arbitration_id_hex which is the full ID. We can show that primarily.
-
                   entryDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold text-orange-400 mb-2">Arbitration ID: ${entry.arbitration_id_hex}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
-                      <p><strong>Derived PGN (for reference):</strong> ${extractedPgnHex}</p>
-                      <p><strong>Count:</strong> ${entry.count}</p>
-                      <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
-                      <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
-                      <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${entry.last_data_hex}</code></p>
+                    <h3 class="text-lg font-semibold text-orange-300">Arbitration ID: ${arbIdHex}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                      <div>
+                        <p><strong>Last Data:</strong> ${entry.last_data_hex}</p>
+                        <p><strong>Count:</strong> ${entry.count}</p>
+                      </div>
+                      <div>
+                        <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
+                        <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
+                      </div>
                     </div>
-                    <p class="text-xs text-gray-500">
-                      This arbitration ID (and its derived PGN) was not found in your <code>rvc.json</code> file.
-                      You may need to add a definition for PGN ${extractedPgnHex} to the spec file if this is valid RV-C traffic you wish to decode.
-                    </p>
+                    <p class="text-xs mt-2 text-gray-400">This PGN (extracted from the arbitration ID) was not found in the rvc.json specification file.</p>
                   `;
                   container.appendChild(entryDiv);
                 }
@@ -1350,7 +1277,7 @@
                 loadingMsg.classList.add('hidden');
                 container.innerHTML = `<p class="text-red-500">Error loading unknown PGNs: ${error.message}</p>`;
               });
-          }
+            }
           // --- END: Add logic for Unknown PGNs view ---
         });
       });
@@ -1511,36 +1438,12 @@
           if (lightsNavLink) lightsNavLink.classList.add('active-nav');
         }
 
-        // Setup Quick Light Control Buttons
-        const quickControls = [
-          { id: 'btn-all-on', name: 'All Lights On', path: `${apiBasePath}/lights/all/on`, method: 'POST' },
-          { id: 'btn-all-off', name: 'All Lights Off', path: `${apiBasePath}/lights/all/off`, method: 'POST' },
-          { id: 'btn-exterior-on', name: 'Exterior Lights On', path: `${apiBasePath}/lights/group/exterior/on`, method: 'POST' },
-          { id: 'btn-exterior-off', name: 'Exterior Lights Off', path: `${apiBasePath}/lights/group/exterior/off`, method: 'POST' },
-          { id: 'btn-interior-on', name: 'Interior Lights On', path: `${apiBasePath}/lights/group/interior/on`, method: 'POST' },
-          { id: 'btn-interior-off', name: 'Interior Lights Off', path: `${apiBasePath}/lights/group/interior/off`, method: 'POST' },
-        ];
-
-        quickControls.forEach(qc => {
-          const button = document.getElementById(qc.id);
-          if (button) {
-            button.addEventListener('click', () => executeQuickLightCommand(button, qc.name, qc.path, qc.method));
-          } else {
-            console.warn(`Quick control button with ID ${qc.id} not found.`);
-          }
-        });
-
         // Any other initializations that need to happen after DOM is ready
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews();
 
         // Fetch initial CAN status when home view is active or becomes active
         // And setup listener for view changes if you have one, or just fetch if it's always on home.
-        if (document.getElementById('home-view') && !document.getElementById('home-view').classList.contains('hidden')) {
-          fetchCanStatus();
-        }
-
-        // If you have a navigation system that changes views, hook into it:
         document.querySelectorAll('.nav-link').forEach(link => {
           link.addEventListener('click', () => {
             const viewId = link.getAttribute('data-view');
@@ -1635,10 +1538,6 @@
 
       window.addEventListener('resize', adjustPinnedLogsLayout);
 
-      function updateSystemStatus() {
-        // ...existing code...
-      }
-
       // --- Add Event Listeners for Quick Light Controls ---
       document.addEventListener('DOMContentLoaded', () => {
         const quickControlButtons = [
@@ -1657,28 +1556,40 @@
               // Temporarily disable button and show loading state
               const originalHtml = button.innerHTML;
               button.disabled = true;
+              // Ensure the loading icon is an <i> tag if using MDI
               button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
 
               callLightService(control.entityId, control.command, control.data)
+                .then(response => {
+                  // Assuming callLightService resolves with response data on success
+                  // And responseData might have a message or status to show
+                  let toastMessage = `${control.id.replace('btn-', '').replace('-', ' ')} command sent.`;
+                  if (response && response.message) {
+                    toastMessage = response.message;
+                  } else if (response && response.status) {
+                     toastMessage = `Status: ${response.status}`;
+                  }
+                  showToast(toastMessage, 'success');
+                })
                 .catch(error => {
-                  // Error is already shown by showToast in callLightService or fetch promise chain
-                  console.error(`Error during quick control for ${control.entityId}:`, error);
+                  // Error is already shown by showToast in callLightService,
+                  // but we log it here for button-specific context if needed.
+                  console.error(`Quick control for ${control.entityId} (button ${control.id}) failed:`, error);
+                  // showToast is already called by callLightService on error.
                 })
                 .finally(() => {
-                  // Restore button state
                   button.disabled = false;
                   button.innerHTML = originalHtml;
                 });
             });
           } else {
-            console.warn(`Quick control button with id '${control.id}' not found.`);
+            console.warn(`Quick control button with ID ${control.id} not found.`);
           }
         });
       });
       // --- End of Added Event Listeners for Quick Light Controls ---
 
       // Initial data fetches
-      fetchEntitiesAndPopulateAreas();
       fetchCanStatus(); // Existing
       fetchApiServerStatus(); // New
       fetchApplicationHealth(); // New
