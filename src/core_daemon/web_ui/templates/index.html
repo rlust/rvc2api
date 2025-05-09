@@ -1,263 +1,297 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>rvc2api UI</title>
-    <!-- <script src="https://cdn.tailwindcss.com"></script> --> <!-- Moved to end of body -->
-    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/custom.css') }}">
-  </head>
-  <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
-    <div id="toast-container"></div> <!-- Toast messages will appear here -->
-
-    <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
-      <div class="flex items-center">
-        <button id="mobileMenuButton" class="md:hidden text-gray-300 hover:text-white mr-4">
-          <i class="mdi mdi-menu text-2xl"></i>
-        </button>
-        <span>rvc2api Dashboard</span>
-      </div>
-      <div class="relative">
-        <select id="themeSwitcher" class="bg-gray-700 text-gray-200 text-sm rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-          <option value="default">Default Theme</option>
-          <option value="dark">Dark Theme</option>
-          <option value="light">Light Theme</option>
-          <option value="catppuccin-mocha">Catppuccin Mocha</option>
-          <option value="catppuccin-latte">Catppuccin Latte</option>
-          <!-- Add more themes here -->
-        </select>
-      </div>
-    </header>
-
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar Navigation -->
-      <aside id="sidebar"
-             class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between">
-        <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
-          <div class="flex justify-between items-center mb-4">
-            <span class="text-lg font-semibold">Navigation</span>
-            <button id="closeSidebarButton" class="md:hidden text-gray-400 hover:text-white">
-              <i class="mdi mdi-close text-2xl"></i>
-            </button>
-          </div>
-          <nav class="space-y-2">
-            <button data-view="home" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">Home</button>
-            <button data-view="lights" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">Lights</button>
-            <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
-
-            <!-- Configuration Section -->
-            <div class="pt-2">
-              <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                Configuration Files
-              </h3>
-              <div class="space-y-1">
-                <button data-view="mapping" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                  device_mapping.yml
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>rvc2api UI</title>
+        <!-- <script src="https://cdn.tailwindcss.com"></script> --> <!-- Moved to end of body -->
+        <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
+              rel="stylesheet">
+        <link rel="stylesheet"
+              href="{{ url_for('static', path='css/custom.css') }}">
+    </head>
+    <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
+        <div id="toast-container"></div>
+        <!-- Toast messages will appear here -->
+        <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
+            <div class="flex items-center">
+                <button id="mobileMenuButton"
+                        class="md:hidden text-gray-300 hover:text-white mr-4">
+                    <i class="mdi mdi-menu text-2xl"></i>
                 </button>
-                <button data-view="spec" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                  rvc.json
-                </button>
-              </div>
+                <span>rvc2api Dashboard</span>
             </div>
-            <!-- Unmapped Entries Link -->
-            <div class="pt-2">
-              <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                Troubleshooting
-              </h3>
-              <div class="space-y-1">
-                <button data-view="unmapped" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                  Unmapped Entries
-                </button>
-                <button data-view="unknown-pgns" class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                  Unknown PGNs
-                </button>
-              </div>
+            <div class="relative">
+                <select id="themeSwitcher"
+                        class="bg-gray-700 text-gray-200 text-sm rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="default">Default Theme</option>
+                    <option value="dark">Dark Theme</option>
+                    <option value="light">Light Theme</option>
+                    <option value="catppuccin-mocha">Catppuccin Mocha</option>
+                    <option value="catppuccin-latte">Catppuccin Latte</option>
+                    <!-- Add more themes here -->
+                </select>
             </div>
-          </nav>
+        </header>
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar Navigation -->
+            <aside id="sidebar"
+                   class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between">
+                <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-lg font-semibold">Navigation</span>
+                        <button id="closeSidebarButton"
+                                class="md:hidden text-gray-400 hover:text-white">
+                            <i class="mdi mdi-close text-2xl"></i>
+                        </button>
+                    </div>
+                    <nav class="space-y-2">
+                        <button data-view="home"
+                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
+                            Home
+                        </button>
+                        <button data-view="lights"
+                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                            Lights
+                        </button>
+                        <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
+                        <!-- Configuration Section -->
+                        <div class="pt-2">
+                            <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Configuration Files</h3>
+                            <div class="space-y-1">
+                                <button data-view="mapping"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                    device_mapping.yml
+                                </button>
+                                <button data-view="spec"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                    rvc.json
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Unmapped Entries Link -->
+                        <div class="pt-2">
+                            <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Troubleshooting</h3>
+                            <div class="space-y-1">
+                                <button data-view="unmapped"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                    Unmapped Entries
+                                </button>
+                                <button data-view="unknown-pgns"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                    Unknown PGNs
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                <div class="border-t border-gray-700 pt-4 text-center">
+                    <button id="toggleSidebarDesktop"
+                            class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
+                        <i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>
+                    </button>
+                </div>
+            </aside>
+            <!-- Main content area -->
+            <main id="mainContent"
+                  class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-0 mt-16 md:mt-0">
+                <!-- Removed md:h-[calc(100vh-4rem)] -->
+                <!-- Home View / Dashboard -->
+                <section id="home-view" class="view-section">
+                    <h1 class="text-3xl font-bold mb-8 text-gray-100">Dashboard</h1>
+                    <div class="mb-10">
+                        <h2 class="text-2xl font-semibold mb-4 text-gray-300">Quick Light Controls</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                            <!-- Column 1: All Lights -->
+                            <div class="space-y-4">
+                                <button id="btn-all-on"
+                                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
+                                </button>
+                                <button id="btn-all-off"
+                                        class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
+                                </button>
+                            </div>
+                            <!-- Column 2: Exterior Lights -->
+                            <div class="space-y-4">
+                                <button id="btn-exterior-on"
+                                        class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
+                                </button>
+                                <button id="btn-exterior-off"
+                                        class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-dome-light mr-2"></i>Exterior Off
+                                </button>
+                            </div>
+                            <!-- Column 3: Interior Lights -->
+                            <div class="space-y-4">
+                                <button id="btn-interior-on"
+                                        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
+                                </button>
+                                <button id="btn-interior-off"
+                                        class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
+                                    <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-semibold mb-4 text-gray-300">Scenes</h2>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow">
+                            <p class="text-gray-400 mb-4">Scene management and definition coming soon.</p>
+                            <p class="text-gray-500 text-sm mt-2 mb-4">
+                                This section will allow you to define and trigger custom scenes involving multiple devices (lights, locks, etc.).
+                            </p>
+                            <button id="btn-create-scene"
+                                    class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600"
+                                    onclick="alert('Create New Scene button clicked!')">
+                                <i class="mdi mdi-plus-circle-outline mr-2"></i>Create New Scene
+                            </button>
+                        </div>
+                    </div>
+                    <!-- CAN Bus Status Section -->
+                    <div class="mt-10">
+                        <h2 class="text-2xl font-semibold mb-6 text-gray-300">System Status</h2>
+                        <!-- API Server Status -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-200">API Server</h3>
+                            <div id="api-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                                <p id="api-status-loading-message" class="text-gray-400">Loading API server status...</p>
+                                <!-- API server status will be loaded here by JavaScript -->
+                            </div>
+                        </div>
+                        <!-- Application Health -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-200">Application Health</h3>
+                            <div id="app-health-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                                <p id="app-health-loading-message" class="text-gray-400">Loading application health...</p>
+                                <!-- Application health details (e.g., config load status, connected clients) will be loaded here -->
+                            </div>
+                        </div>
+                        <!-- CAN Bus Status Sub-section -->
+                        <div>
+                            <h3 class="text-xl font-semibold mb-3 text-gray-200">CAN Bus Interfaces</h3>
+                            <div id="can-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                                <p id="can-status-loading-message" class="text-gray-400">Loading CAN status...</p>
+                                <!-- CAN status will be loaded here by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section id="lights-view" class="view-section hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-3xl font-bold">RV-C Lights</h1>
+                        <div>
+                            <label class="block mb-1 text-sm text-gray-300">
+                                <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
+                            </label>
+                            <select id="area-filter"
+                                    class="bg-gray-900 text-gray-100 border border-gray-700 rounded p-2">
+                                <option value="All">All</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="light-grid" class="space-y-8">
+                        <p id="lights-loading-message">Loading lights...</p>
+                    </div>
+                </section>
+                <section id="mapping-view" class="view-section hidden">
+                    <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
+                    <pre id="mapping-content"
+                         class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading device_mapping.yml...</pre>
+                </section>
+                <section id="spec-view" class="view-section hidden">
+                    <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
+                    <div id="spec-metadata" class="mb-4 text-sm text-gray-400">Loading spec metadata...</div>
+                    <pre id="spec-content"
+                         class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading rvc.json...</pre>
+                </section>
+                <!-- Unmapped Entries View -->
+                <section id="unmapped-view" class="view-section hidden">
+                    <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
+                    <p class="mb-4 text-gray-400">
+                        These are CAN messages received by the system that could not be mapped to a known device based on your
+                        <code>device_mapping.yml</code>. Use this information to help build out your configuration.
+                    </p>
+                    <div id="unmapped-entries-container" class="space-y-6">
+                        <p id="unmapped-loading-message">Loading unmapped entries...</p>
+                        <!-- Unmapped entries will be loaded here -->
+                    </div>
+                </section>
+                <!-- Unknown PGNs View -->
+                <section id="unknown-pgns-view" class="view-section hidden">
+                    <h1 class="text-3xl font-bold mb-6">Unknown PGNs (Not in rvc.json)</h1>
+                    <p class="mb-4 text-gray-400">
+                        These are CAN messages received by the system where the PGN (extracted from the arbitration ID)
+                        was <strong>not found</strong> in your <code>rvc.json</code> specification file. This means the system
+                        does not know how to interpret these messages at a fundamental PGN level.
+                    </p>
+                    <div id="unknown-pgns-container" class="space-y-6">
+                        <p id="unknown-pgns-loading-message">Loading unknown PGNs...</p>
+                        <!-- Unknown PGNs will be loaded here -->
+                    </div>
+                </section>
+            </main>
         </div>
-        <div class="border-t border-gray-700 pt-4 text-center">
-          <button id="toggleSidebarDesktop" class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
-            <i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>
-          </button>
+        <!-- Pinned Logs Container -->
+        <div id="pinnedLogsContainer"
+             class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out"
+             style="height: 3rem">
+            <!-- Initial height for collapsed header -->
+            <div id="pinnedLogsResizeHandle"
+                 class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize"
+                 style="z-index: 61"></div>
+            <!-- Draggable Resize Handle -->
+            <div id="pinnedLogsHeader"
+                 class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
+                <span class="font-semibold text-gray-300 ml-2">Logs</span>
+                <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
+                    <i class="mdi mdi-chevron-up text-2xl"></i>
+                </button>
+            </div>
+            <div id="pinnedLogsContent"
+                 class="hidden bg-gray-800 px-4 pb-4 pt-2 flex flex-col"
+                 style="height: calc(30vh - 3rem)">
+                <!-- Removed max-height: 400px -->
+                <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
+                    <select id="log-level"
+                            class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO" selected>INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                    <input id="log-search"
+                           type="text"
+                           placeholder="Search logs..."
+                           class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500" />
+                    <div class="flex gap-2">
+                        <button id="log-pause"
+                                class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm">
+                            Pause
+                        </button>
+                        <button id="log-resume"
+                                class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm"
+                                disabled>Resume</button>
+                        <button id="log-clear"
+                                class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm">
+                            Clear
+                        </button>
+                        <!-- Added Clear button -->
+                    </div>
+                </div>
+                <pre id="log-stream"
+                     class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre> <!-- Removed h-full, added flex-1 min-h-0 -->
+                <p id="logs-waiting-message"
+                   class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    Waiting for logs...
+                </p>
+            </div>
         </div>
-      </aside>
-
-      <!-- Main content area -->
-      <main id="mainContent" class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-0 mt-16 md:mt-0"> <!-- Removed md:h-[calc(100vh-4rem)] -->
-        <!-- Home View / Dashboard -->
-        <section id="home-view" class="view-section">
-          <h1 class="text-3xl font-bold mb-8 text-gray-100">Dashboard</h1>
-
-          <div class="mb-10">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Quick Light Controls</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-              <!-- Column 1: All Lights -->
-              <div class="space-y-4">
-                <button id="btn-all-on" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
-                </button>
-                <button id="btn-all-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
-                </button>
-              </div>
-
-              <!-- Column 2: Exterior Lights -->
-              <div class="space-y-4">
-                <button id="btn-exterior-on" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
-                </button>
-                <button id="btn-exterior-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-dome-light mr-2"></i>Exterior Off
-                </button>
-              </div>
-
-              <!-- Column 3: Interior Lights -->
-              <div class="space-y-4">
-                <button id="btn-interior-on" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
-                </button>
-                <button id="btn-interior-off" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                  <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Scenes</h2>
-            <div class="bg-gray-800 p-6 rounded-lg shadow">
-              <p class="text-gray-400 mb-4">Scene management and definition coming soon.</p>
-              <p class="text-gray-500 text-sm mt-2 mb-4">This section will allow you to define and trigger custom scenes involving multiple devices (lights, locks, etc.).</p>
-              <button id="btn-create-scene" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600" onclick="alert('Create New Scene button clicked!')">
-                <i class="mdi mdi-plus-circle-outline mr-2"></i>Create New Scene
-              </button>
-            </div>
-          </div>
-
-          <!-- CAN Bus Status Section -->
-          <div class="mt-10">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-300">System Status</h2>
-
-            <!-- API Server Status -->
-            <div class="mb-6">
-              <h3 class="text-xl font-semibold mb-3 text-gray-200">API Server</h3>
-              <div id="api-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
-                <p id="api-status-loading-message" class="text-gray-400">Loading API server status...</p>
-                <!-- API server status will be loaded here by JavaScript -->
-              </div>
-            </div>
-
-            <!-- Application Health -->
-            <div class="mb-6">
-              <h3 class="text-xl font-semibold mb-3 text-gray-200">Application Health</h3>
-              <div id="app-health-container" class="bg-gray-800 p-6 rounded-lg shadow">
-                <p id="app-health-loading-message" class="text-gray-400">Loading application health...</p>
-                <!-- Application health details (e.g., config load status, connected clients) will be loaded here -->
-              </div>
-            </div>
-
-            <!-- CAN Bus Status Sub-section -->
-            <div>
-              <h3 class="text-xl font-semibold mb-3 text-gray-200">CAN Bus Interfaces</h3>
-              <div id="can-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
-                <p id="can-status-loading-message" class="text-gray-400">Loading CAN status...</p>
-                <!-- CAN status will be loaded here by JavaScript -->
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="lights-view" class="view-section hidden">
-          <div class="flex items-center justify-between mb-4">
-            <h1 class="text-3xl font-bold">RV-C Lights</h1>
-            <div>
-              <label class="block mb-1 text-sm text-gray-300">
-                <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
-              </label>
-              <select id="area-filter" class="bg-gray-900 text-gray-100 border border-gray-700 rounded p-2">
-                <option value="All">All</option>
-              </select>
-            </div>
-          </div>
-          <div id="light-grid" class="space-y-8">
-            <p id="lights-loading-message">Loading lights...</p>
-          </div>
-        </section>
-
-        <section id="mapping-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
-          <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading device_mapping.yml...</pre>
-        </section>
-
-        <section id="spec-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
-          <div id="spec-metadata" class="mb-4 text-sm text-gray-400">
-            Loading spec metadata...
-          </div>
-          <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading rvc.json...</pre>
-        </section>
-
-        <!-- Unmapped Entries View -->
-        <section id="unmapped-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
-          <p class="mb-4 text-gray-400">
-            These are CAN messages received by the system that could not be mapped to a known device based on your
-            <code>device_mapping.yml</code>. Use this information to help build out your configuration.
-          </p>
-          <div id="unmapped-entries-container" class="space-y-6">
-            <p id="unmapped-loading-message">Loading unmapped entries...</p>
-            <!-- Unmapped entries will be loaded here -->
-          </div>
-        </section>
-
-        <!-- Unknown PGNs View -->
-        <section id="unknown-pgns-view" class="view-section hidden">
-          <h1 class="text-3xl font-bold mb-6">Unknown PGNs (Not in rvc.json)</h1>
-          <p class="mb-4 text-gray-400">
-            These are CAN messages received by the system where the PGN (extracted from the arbitration ID)
-            was <strong>not found</strong> in your <code>rvc.json</code> specification file. This means the system
-            does not know how to interpret these messages at a fundamental PGN level.
-          </p>
-          <div id="unknown-pgns-container" class="space-y-6">
-            <p id="unknown-pgns-loading-message">Loading unknown PGNs...</p>
-            <!-- Unknown PGNs will be loaded here -->
-          </div>
-        </section>
-      </main>
-    </div>
-
-    <!-- Pinned Logs Container -->
-    <div id="pinnedLogsContainer" class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out" style="height: 3rem;"> <!-- Initial height for collapsed header -->
-      <div id="pinnedLogsResizeHandle" class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize" style="z-index: 61;"></div> <!-- Draggable Resize Handle -->
-      <div id="pinnedLogsHeader" class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
-        <span class="font-semibold text-gray-300 ml-2">Logs</span>
-        <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
-          <i class="mdi mdi-chevron-up text-2xl"></i>
-        </button>
-      </div>
-      <div id="pinnedLogsContent" class="hidden bg-gray-800 px-4 pb-4 pt-2 flex flex-col" style="height: calc(30vh - 3rem);"> <!-- Removed max-height: 400px -->
-        <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
-          <select id="log-level" class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-            <option value="DEBUG">DEBUG</option>
-            <option value="INFO" selected>INFO</option>
-            <option value="WARNING">WARNING</option>
-            <option value="ERROR">ERROR</option>
-            <option value="CRITICAL">CRITICAL</option>
-          </select>
-          <input id="log-search" type="text" placeholder="Search logs..." class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500" />
-          <div class="flex gap-2">
-            <button id="log-pause" class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm">Pause</button>
-            <button id="log-resume" class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm" disabled>Resume</button>
-            <button id="log-clear" class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm">Clear</button> <!-- Added Clear button -->
-          </div>
-        </div>
-        <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre> <!-- Removed h-full, added flex-1 min-h-0 -->
-        <p id="logs-waiting-message" class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">Waiting for logs...</p>
-      </div>
-    </div>
-
-    <script>
+        <script>
       // const socket = new WebSocket(`ws://${location.host}/ws`); // This line will be removed
       const grid = document.getElementById('light-grid');
       const filter = document.getElementById('area-filter');
@@ -801,9 +835,7 @@
           cardContent += `
             <div class="brightness-control space-y-1 pt-2">
               <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
-              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}"
-                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider"
-                     min="0" max="100" value="${currentBrightnessPercent}">
+              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider" min="0" max="100" value="${currentBrightnessPercent}">
             </div>
           `;
         }
@@ -1600,7 +1632,7 @@
       setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
 
       // Theme switcher
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
-  </body>
+        </script>
+        <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
+    </body>
 </html>
