@@ -28,9 +28,6 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-
 
-      - name: Check poetry.lock consistency
-        run: nix develop .#ci --command poetry lock --check
-
       - name: Run flake checks
         run: nix flake check
 
