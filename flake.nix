@@ -67,7 +67,7 @@
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
           propagatedBuildInputs = with pythonPackages; [
             fastapi
-            uvicorn
+            uvicorn.withExtras ["standard"] # Ensure uvicorn has WebSocket support
             python-can
             pydantic
             pyyaml
@@ -96,7 +96,7 @@
             python
             pkgs.poetry
             pythonPackages.fastapi
-            pythonPackages.uvicorn
+            pythonPackages.uvicorn.withExtras ["standard"] # Also for dev shell
             pythonPackages."python-can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
@@ -108,6 +108,7 @@
             pythonPackages.flake8
             pythonPackages.types-pyyaml
             pkgs.fish
+            pkgs.iproute2 # Add iproute2 to devShell for local testing of CAN status
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
