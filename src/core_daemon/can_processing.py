@@ -104,49 +104,6 @@ def process_can_message(
                 current_unknown.last_data_hex = msg.data.hex().upper()
             # --- MODIFICATION END ---
 
-            # Original unmapped_entries logic for PGN_UNKNOWN
-            # (which implies PGN was in spec but DGN/Inst not mapped)
-            # This part might need review: if entry is None, it means PGN is not in spec.
-            # The existing unmapped_key_str = f"PGN_UNKNOWN-{msg.arbitration_id:X}"
-            # was for when PGN *was* known
-            # but the specific DGN/Instance wasn't in device_mapping.yml.
-            # For truly unknown PGNs (not in rvc.json), we've now handled them above.
-            # The below block for unmapped_entries with PGN_UNKNOWN might be
-            # redundant if entry is None.
-            # However, keeping it for now to ensure no existing behavior
-            # is broken without deeper analysis.
-            # Consider if this block should only run if `entry` is not None
-            # but DGN/Inst is missing later.
-
-            unmapped_key_str = f"PGN_NOT_IN_SPEC-{arb_id_hex}"  # Clarify key for this case
-            # model_pgn_hex = f"{(msg.arbitration_id >> 8) & 0x3FFFF:X}".upper()
-            # model_pgn_name = pgn_hex_to_name_map.get(model_pgn_hex)
-            # This will be None if PGN not in spec
-            # model_dgn_hex = f"{msg.arbitration_id:X}"
-            # This is just the arb ID again
-            # model_dgn_name = pgn_hex_to_name_map.get(model_dgn_hex)
-            # Also likely None
-
-            # if unmapped_key_str not in unmapped_entries:
-            #     unmapped_entries[unmapped_key_str] = UnmappedEntryModel(
-            # pgn_hex=model_pgn_hex, # Will be derived from arb_id,
-            # might not be meaningful if spec unknown
-            #         pgn_name=None, # Explicitly None as PGN is not in spec
-            # dgn_hex=model_dgn_hex, # This is the full arb_id as DGN, potentially confusing
-            #         dgn_name=None, # Explicitly None
-            #         instance="N/A",
-            #         last_data_hex=msg.data.hex().upper(),
-            #         decoded_signals=None,
-            #         first_seen_timestamp=now_ts,
-            #         last_seen_timestamp=now_ts,
-            #         count=1,
-            # spec_entry=None, # No spec entry if PGN is unknown
-            #     )
-            # else:
-            #     current_unmapped = unmapped_entries[unmapped_key_str]
-            #     current_unmapped.last_data_hex = msg.data.hex().upper()
-            #     current_unmapped.last_seen_timestamp = now_ts
-            #     current_unmapped.count += 1
             return  # Return after handling unknown PGN
 
         decoded, raw = decode_payload(entry, msg.data)

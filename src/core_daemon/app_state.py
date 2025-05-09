@@ -9,7 +9,7 @@ It provides functions to initialize, update, and access this shared state.
 import logging
 import time
 from collections import deque
-from typing import Any, Callable, Dict, List  # Added List
+from typing import Any, Callable, Dict, List
 
 # Import metrics that are directly related to the state managed here
 from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE

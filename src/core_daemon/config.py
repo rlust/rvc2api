@@ -135,7 +135,7 @@ def get_actual_paths():
             )
         else:
             module_logger.warning(  # Changed from logger to module_logger
-                f"Override Device Mapping Path '{mapping_override_env}'  "
+                f"Override Device Mapping Path '{mapping_override_env}' "  # Corrected double space
                 f"(from CAN_MAP_PATH) is missing or unreadable."
                 f"Core logic will attempt to use bundled default: "
                 f"'{_decoder_default_map_path}'"
