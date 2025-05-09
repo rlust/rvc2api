@@ -54,6 +54,7 @@ black = "^25.0.0" # Added Black
 pre-commit = "^4.0.0" # Added pre-commit
 types-PyYAML = "^6.0.12.12" # Added type stubs for PyYAML
 httpx = "^0.28.0"
+djlint = "^1.34.0"
 
 [tool.poetry.urls]
 Homepage   = "https://github.com/carpenike/rvc2api"
