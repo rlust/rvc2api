@@ -1,45 +1,52 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
-
-# Default arguments for all hooks
-# default_language_version:
-#   python: python3.12 # Or match your project's version
+# See https://pre-commit.com for full documentation
 
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0 # Use the latest tag
+  # Core file + YAML + merge conflict + whitespace checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-json # Added for JSON files
-    -   id: check-toml
-    -   id: check-merge-conflict
-    -   id: debug-statements
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: debug-statements
 
--   repo: https://github.com/psf/black
-    rev: 24.4.2 # Use the version you have in pyproject.toml
+  # Code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
     hooks:
-    -   id: black
-        # args: [--line-length=100] # Removed to test pyproject.toml usage
+      - id: black
 
--   repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0 # Use a recent version compatible with your flake8 plugins if any
+  # Linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0
     hooks:
-    -   id: flake8
-        args: [--max-line-length=100] # Explicitly set for flake8
-        # additional_dependencies: [flake8-docstrings, ...] # If you use flake8 plugins
+      - id: flake8
+        args: [--max-line-length=100]
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.1 # Use the version you have in pyproject.toml or a compatible one
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.1
     hooks:
-    -   id: mypy
+      - id: mypy
         args: [--ignore-missing-imports, --scripts-are-modules, --explicit-package-bases]
-        # You might need to adjust MyPy args based on your project structure and needs
-        additional_dependencies: [types-PyYAML] # Add types-PyYAML here
+        additional_dependencies: [types-PyYAML]
 
--   repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+  # HTML linting
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
     rev: v1.1.2
     hooks:
-    - id: htmlhint
-      args: [--config, .htmlhintrc]
+      - id: htmlhint
+        args: [--config, .htmlhintrc]
+
+  # Custom hook to ensure poetry.lock is updated
+  - repo: local
+    hooks:
+      - id: check-poetry-lock
+        name: Ensure poetry.lock is in sync with pyproject.toml
+        entry: poetry lock --check
+        language: system
+        types: [toml]
+        files: ^pyproject\.toml$
