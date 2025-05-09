@@ -67,13 +67,12 @@
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
           propagatedBuildInputs = with pythonPackages; [
             fastapi
-            (uvicorn.override { # Ensure uvicorn has necessary features for "standard"
-              withWebsockets = true;
-              withWatchfiles = true;
-              withHTTPTools = true;
-              withUvloop = true; # uvloop is part of "standard" on Linux/macOS
-            })
-            python-dotenv # python-dotenv is part of "standard"
+            (uvicorn.withExtras (ps: [
+              ps.websockets
+              ps.httptools
+              ps.python-dotenv
+              ps.watchfiles
+            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
             python-can
             pydantic
             pyyaml
@@ -103,13 +102,12 @@
             python
             pkgs.poetry
             pythonPackages.fastapi
-            (pythonPackages.uvicorn.override { # Also for dev shell
-              withWebsockets = true;
-              withWatchfiles = true;
-              withHTTPTools = true;
-              withUvloop = true;
-            })
-            pythonPackages.python-dotenv # Add for "standard"
+            (pythonPackages.uvicorn.withExtras (ps: [
+              ps.websockets
+              ps.httptools
+              ps.python-dotenv
+              ps.watchfiles
+            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
             pythonPackages."python-can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
@@ -141,12 +139,12 @@
             pythonPackages.pyyaml
             pkgs.can-utils
             pkgs.iproute2
-            (pythonPackages.uvicorn.override { # Also for CI shell if running services
-              withWebsockets = true;
-              withWatchfiles = true;
-              withHTTPTools = true;
-              withUvloop = true;
-            })
+            (pythonPackages.uvicorn.withExtras (ps: [
+              ps.websockets
+              ps.httptools
+              ps.python-dotenv
+              ps.watchfiles
+            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
             pythonPackages.python-dotenv # Add for "standard"
             pythonPackages.pyroute2 # Added pyroute2 for CI if needed for tests
           ];
