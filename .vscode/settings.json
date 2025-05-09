@@ -1,71 +1,55 @@
 {
-    // Set the Python interpreter path. Assumes Poetry creates a .venv in the project root.
-    // You might need to adjust this if your virtual environment is named differently or located elsewhere.
-    // VS Code's Python extension should ideally auto-detect this.
-    "python.pythonPath": "${workspaceFolder}/.venv/bin/python",
-
-    // ----- Linting -----
-    // Enable Flake8 for linting
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.linting.flake8Enabled": true,
-    "python.linting.pylintEnabled": false, // Disable Pylint to avoid duplicate messages if Flake8 is primary
-
-    // Arguments for Flake8 (uses pyproject.toml by default if not specified here)
-    // "python.linting.flake8Args": [
-    //     "--max-line-length=100",
-    //     "--ignore=E203,W503"
-    // ],
-
-    // ----- Formatting -----
-    // Set Black as the default formatter for Python files
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit" // Optional: if you use an import sorter like isort via an extension
-        }
-    },
-    // Black Formatter specific settings (uses pyproject.toml by default)
-    // "black-formatter.args": [
-    //     "--line-length=100"
-    // ],
-
-    // ----- Type Checking -----
-    // Enable MyPy for type checking.
-    // The Python extension's Pylance language server provides type checking by default.
-    // If you prefer to use MyPy directly for linting:
+    "python.linting.pylintEnabled": false,
     "python.linting.mypyEnabled": true,
-    // "python.analysis.typeCheckingMode": "basic", // Or "strict" if using Pylance's built-in checking
-
-    // ----- Testing -----
-    // Configure VS Code to discover and run Pytest tests
-    "python.testing.pytestArgs": [
-        "tests" // Directory where your tests are located
-    ],
-    "python.testing.unittestEnabled": false, // Disable unittest discovery
-    "python.testing.pytestEnabled": true,   // Enable Pytest discovery
-
-    // ----- General Settings -----
-    // Exclude files and folders from the explorer (optional, but good practice)
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": true,
+        "source.fixAll": true
+      }
+    },
+    "[json]": {
+      "editor.defaultFormatter": "vscode.json-language-features",
+      "editor.formatOnSave": true
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml",
+      "editor.formatOnSave": true
+    },
+    "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[nix]": {
+      "editor.defaultFormatter": "serayuzgur.crates"
+    },
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["tests"],
+    "python.testing.unittestEnabled": false,
     "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true,
-        "**/Thumbs.db": true,
-        "**/.venv": true, // Exclude virtual environment folder
-        "**/__pycache__": true,
-        "**/*.egg-info": true,
-        "dist/": true,
-        "build/": true
+      "**/.git": true,
+      "**/.venv": true,
+      "**/__pycache__": true,
+      "dist/": true,
+      "build/": true
     },
     "files.watcherExclude": {
-        "**/.git/objects/**": true,
-        "**/.git/subtree-cache/**": true,
-        "**/node_modules/*/**": true,
-        "${workspaceFolder}/.venv/**": true
+      "${workspaceFolder}/.venv/**": true
     },
-
-    // Ensure terminal uses the project's activated environment
     "python.terminal.activateEnvironment": true
-}
+  }
