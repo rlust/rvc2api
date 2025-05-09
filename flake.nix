@@ -208,6 +208,8 @@
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
+            export POETRY_VIRTUALENVS_IN_PROJECT=false
+            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             poetry install --no-root
             poetry run pytest
@@ -219,6 +221,8 @@
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
+            export POETRY_VIRTUALENVS_IN_PROJECT=false
+            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             poetry install --no-root
             poetry run flake8
             touch $out
@@ -229,6 +233,8 @@
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
+            export POETRY_VIRTUALENVS_IN_PROJECT=false
+            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             poetry install --no-root
             poetry run mypy src
             touch $out
@@ -239,6 +245,8 @@
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
+            export POETRY_VIRTUALENVS_IN_PROJECT=false
+            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             poetry install --no-root
             poetry run djlint src/core_daemon/web_ui/templates --check
             touch $out
@@ -249,6 +257,8 @@
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
+            export POETRY_VIRTUALENVS_IN_PROJECT=false
+            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             poetry lock --check
             touch $out
           '';
