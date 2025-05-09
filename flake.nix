@@ -42,10 +42,10 @@
 #   nix run inputs.rvc2api#check
 
 {
-  description = "rvc2api Python package and DevShell";
+  description = "rvc2api Python package and devShells";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url     = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -61,8 +61,8 @@
         rvc2apiPackage = pythonPackages.buildPythonPackage {
           pname = "rvc2api";
           inherit version;
-          src = self;
-          format = "pyproject";
+          src      = self;
+          format   = "pyproject";
 
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
           propagatedBuildInputs = with pythonPackages; [
@@ -76,16 +76,16 @@
             jinja2
           ];
 
-          doCheck = true;
-          checkInputs = with pythonPackages; [ pytest ];
+          doCheck    = true;
+          checkInputs = [ pythonPackages.pytest ];
 
           meta = with pkgs.lib; {
             description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket";
-            homepage = "https://github.com/carpenike/rvc2api";
-            license = licenses.asl20;
+            homepage    = "https://github.com/carpenike/rvc2api";
+            license     = licenses.asl20;
             maintainers = [{
-              name = "Ryan Holt";
-              email = "ryan@ryanholt.net";
+              name   = "Ryan Holt";
+              email  = "ryan@ryanholt.net";
               github = "carpenike";
             }];
           };
@@ -126,21 +126,17 @@
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
-            echo "🧪 Entered CI shell for rvc2api with vcan support"
-
-            if [ "$(uname)" = "Linux" ] && command -v sudo >/dev/null; then
-              echo "⚙️  Setting up virtual CAN interface (vcan0)..."
-              sudo modprobe vcan || true
-              sudo ip link add dev vcan0 type vcan || true
-              sudo ip link set up vcan0 || true
-            fi
+            echo "🧪 Entered CI shell with vcan support"
+            sudo modprobe vcan  || true
+            sudo ip link add dev vcan0 type vcan  || true
+            sudo ip link set up vcan0  || true
           '';
         };
 
         apps = {
           precommit = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
-              name = "precommit";
+              name          = "precommit";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
@@ -151,7 +147,7 @@
 
           test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
-              name = "test";
+              name          = "test";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
@@ -162,7 +158,7 @@
 
           lint = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
-              name = "lint";
+              name          = "lint";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
@@ -175,7 +171,7 @@
 
           format = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
-              name = "format";
+              name          = "format";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
@@ -185,9 +181,10 @@
             };
           };
 
-          check = flake-utils.lib.mkApp {
+          # single “nix run .#ci entrypoint for CI
+          ci = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
-              name = "check";
+              name          = "ci";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
@@ -203,53 +200,10 @@
         };
 
         checks = {
-          # run pytest directly, no poetry needed
-          pytest = pkgs.runCommand "pytest" {
-            src = ./.;
-            buildInputs = [ python pythonPackages.pytest pythonPackages.fastapi ];
-          } ''
-            cd $src
-            export PYTHONPATH=$PWD/src:$PYTHONPATH
-            pytest
-            touch $out
-          '';
-
-          # flake8 + types
-          flake8 = pkgs.runCommand "flake8" {
-            src = ./.;
-            buildInputs = [ python pythonPackages.flake8 pythonPackages."types-pyyaml" ];
-          } ''
-            cd $src
-            export PYTHONPATH=$PWD/src:$PYTHONPATH
-            flake8
-            touch $out
-          '';
-
-          # mypy
-          mypy = pkgs.runCommand "mypy" {
-            src = ./.;
-            buildInputs = [ python pythonPackages.mypy ];
-          } ''
-            cd $src
-            export PYTHONPATH=$PWD/src:$PYTHONPATH
-            mypy src
-            touch $out
-          '';
-
-          # djlint from Nixpkgs
-          djlint = pkgs.runCommand "djlint" {
-            src = ./.;
-            buildInputs = [ pkgs.djlint ];
-          } ''
-            cd $src
-            djlint src/core_daemon/web_ui/templates --check
-            touch $out
-          '';
-
-          # keep lock‑check (this one never hits PyPI)
+          # only lock‑file validation in `nix flake check`
           poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
-            src = ./.;
-            buildInputs = [ pkgs.poetry python ];
+            src         = ./.;
+            buildInputs = [ pkgs.poetry ];
           } ''
             cd $src
             poetry check --lock --no-interaction
@@ -258,10 +212,12 @@
         };
       in {
         packages.rvc2api = rvc2apiPackage;
-        defaultPackage = self.packages.${system}.rvc2api;
+        defaultPackage   = self.packages.${system}.rvc2api;
 
-        devShells.default = devShell;
-        devShells.ci = ciShell;
+        devShells = {
+          default = devShell;
+          ci      = ciShell;
+        };
 
         inherit apps checks;
       }
