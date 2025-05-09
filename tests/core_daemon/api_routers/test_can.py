@@ -16,11 +16,9 @@ import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
-from core_daemon.api_routers.can import api_router_can, get_can_interfaces, parse_ip_link_show
-from core_daemon.can_manager import can_tx_queue  # Assuming this is an asyncio.Queue
+from core_daemon.api_routers.can import get_can_interfaces, parse_ip_link_show
+from core_daemon.can_manager import can_tx_queue
 from core_daemon.models import CANInterfaceStats
 
 # Sample outputs from 'ip -details -statistics link show <interface>'
@@ -348,10 +346,10 @@ async def test_get_can_interfaces_exception(mock_shutil_which, mock_subprocess_s
 
 
 # --- FastAPI TestClient Setup ---
-app = FastAPI()
-app.include_router(api_router_can)
+# app = FastAPI() # Replaced by conftest.py app for client fixture
+# app.include_router(api_router_can) # Ensure api_router_can is on the main app
 
-client = TestClient(app)
+# client = TestClient(app) # Replaced by client fixture from conftest.py
 
 
 @patch("core_daemon.api_routers.can.get_can_interfaces")
@@ -359,7 +357,11 @@ client = TestClient(app)
 @patch("asyncio.create_subprocess_shell")  # Mock shell call in endpoint
 @patch("shutil.which")  # Add patch for shutil.which
 def test_get_can_status_success(
-    mock_shutil_which_ip_status, mock_subprocess_shell_ip, mock_parse_ip, mock_get_interfaces
+    client,  # Added client fixture
+    mock_shutil_which_ip_status,
+    mock_subprocess_shell_ip,
+    mock_parse_ip,
+    mock_get_interfaces,
 ):
     """Tests the /can/status endpoint for successful retrieval of multiple interface statuses."""
     mock_get_interfaces.return_value = ["can0", "can1"]
@@ -404,7 +406,7 @@ def test_get_can_status_success(
 
     mock_subprocess_shell_ip.side_effect = mock_shell_side_effect
 
-    response = client.get("/can/status")
+    response = client.get("/api/can/status")  # Ensure prefix is correct if main app uses it
     assert response.status_code == 200
     data = response.json()
     assert "interfaces" in data
@@ -422,7 +424,10 @@ def test_get_can_status_success(
 @patch("asyncio.create_subprocess_shell")
 @patch("shutil.which")  # Add patch for shutil.which
 def test_get_can_status_interface_error(
-    mock_shutil_which_ip_status, mock_subprocess_shell, mock_get_interfaces
+    client,  # Added client fixture
+    mock_shutil_which_ip_status,
+    mock_subprocess_shell,
+    mock_get_interfaces,
 ):
     """Tests the /can/status endpoint when fetching details for an interface fails."""
     mock_shutil_which_ip_status.return_value = "/mock/path/to/ip"  # ip found
@@ -433,7 +438,7 @@ def test_get_can_status_interface_error(
     process_mock_error.returncode = 1
     mock_subprocess_shell.return_value = process_mock_error
 
-    response = client.get("/can/status")
+    response = client.get("/api/can/status")  # Ensure prefix
     assert (
         response.status_code == 200
     )  # Endpoint still returns 200 but with error state for interface
@@ -456,12 +461,15 @@ def test_get_can_status_interface_error(
 @patch("asyncio.create_subprocess_shell")
 @patch("shutil.which")
 def test_get_can_status_ip_not_found_in_status_call(
-    mock_shutil_which_ip_status, mock_subprocess_shell, mock_get_interfaces
+    client,  # Added client fixture
+    mock_shutil_which_ip_status,
+    mock_subprocess_shell,
+    mock_get_interfaces,
 ):
     """Tests /can/status when shutil.which('ip') returns None in the endpoint itself."""
     mock_shutil_which_ip_status.return_value = None  # Simulate ip not found by get_can_status
 
-    response = client.get("/can/status")
+    response = client.get("/api/can/status")  # Ensure prefix
     assert response.status_code == 200
     data = response.json()
     assert "interfaces" in data
@@ -473,25 +481,23 @@ def test_get_can_status_ip_not_found_in_status_call(
 
 
 @patch("core_daemon.api_routers.can.get_can_interfaces", return_value=[])
-def test_get_can_status_no_interfaces(mock_get_interfaces):
+def test_get_can_status_no_interfaces(client, mock_get_interfaces):  # Added client fixture
     """Tests the /can/status endpoint when no CAN interfaces are available."""
-    response = client.get("/can/status")
+    response = client.get("/api/can/status")  # Ensure prefix
     assert response.status_code == 200
     data = response.json()
     assert "interfaces" in data
     assert data["interfaces"] == {}
 
 
-def test_get_queue_status():
+def test_get_queue_status(client):  # Added client fixture
     """Tests the /queue endpoint for an empty CAN transmit queue."""
     # Test with an empty queue
     # To properly test this, we might need to mock can_tx_queue if it's not easily resettable
-    # For now, assume it's an asyncio.Queue and we can check its current state
-    # If can_tx_queue is imported directly, we can patch it or its methods.
 
     initial_qsize = can_tx_queue.qsize()
 
-    response = client.get("/queue")
+    response = client.get("/api/can/queue")  # Ensure prefix
     assert response.status_code == 200
     data = response.json()
     assert data["length"] == initial_qsize  # Check against actual qsize
@@ -501,14 +507,14 @@ def test_get_queue_status():
 
 
 @pytest.mark.asyncio
-async def test_get_queue_status_with_items():
+async def test_get_queue_status_with_items(client):  # Added client fixture
     """Tests the /queue endpoint when the CAN transmit queue has items."""
     # Temporarily put items in the queue if possible, or mock qsize
     # This is tricky as the queue is global. A better approach might be to
     # patch can_tx_queue for the duration of this test.
 
     with patch.object(can_tx_queue, "qsize", return_value=5):
-        response = client.get("/queue")
+        response = client.get("/api/can/queue")  # Ensure prefix
         assert response.status_code == 200
         data = response.json()
         assert data["length"] == 5
