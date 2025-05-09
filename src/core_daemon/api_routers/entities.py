@@ -200,7 +200,24 @@ async def list_lights(
             val = ent.get("state")
             if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
-        results.append(Entity(**ent))  # Append to list
+
+        # Ensure the entity data includes necessary fields from cfg
+        # Create a mutable copy of ent to avoid modifying the global state directly
+        enriched_ent_data = ent.copy() if isinstance(ent, dict) else ent.model_dump()
+
+        # Explicitly set device_type and other relevant fields from cfg
+        # This ensures they are present in the final Entity object
+        enriched_ent_data["device_type"] = cfg.get(
+            "device_type", "light"
+        )  # Default to 'light' if somehow missing in cfg but passed filter
+        if "suggested_area" not in enriched_ent_data and cfg.get("suggested_area"):
+            enriched_ent_data["suggested_area"] = cfg.get("suggested_area")
+        if "capabilities" not in enriched_ent_data and cfg.get("capabilities"):
+            enriched_ent_data["capabilities"] = cfg.get("capabilities")
+        if "friendly_name" not in enriched_ent_data and cfg.get("friendly_name"):
+            enriched_ent_data["friendly_name"] = cfg.get("friendly_name")
+
+        results.append(Entity(**enriched_ent_data))  # Append to list
     return results
 
 
