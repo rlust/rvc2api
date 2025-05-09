@@ -94,10 +94,10 @@
         devShell = pkgs.mkShell {
           buildInputs = [
             python
-            pythonPackages.poetry
+            pkgs.poetry
             pythonPackages.fastapi
             pythonPackages.uvicorn
-            pythonPackages.python-can
+            pkgs.python-can
             pythonPackages.pydantic
             pythonPackages.pyyaml
             pythonPackages.prometheus_client
@@ -118,7 +118,7 @@
         ciShell = pkgs.mkShell {
           buildInputs = [
             python
-            pythonPackages.poetry
+            pkgs.poetry
             pythonPackages.pytest
             pythonPackages.pyyaml
             pkgs.can-utils
@@ -141,7 +141,7 @@
           precommit = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "precommit";
-              runtimeInputs = [ pythonPackages.poetry ];
+              runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
                 poetry run pre-commit run --all-files
@@ -152,7 +152,7 @@
           test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "test";
-              runtimeInputs = [ pythonPackages.poetry ];
+              runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
                 poetry run pytest
@@ -163,7 +163,7 @@
           lint = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "lint";
-              runtimeInputs = [ pythonPackages.poetry ];
+              runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
                 poetry run flake8
@@ -176,7 +176,7 @@
           format = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "format";
-              runtimeInputs = [ pythonPackages.poetry ];
+              runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
                 poetry run black src
@@ -188,7 +188,7 @@
           check = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "check";
-              runtimeInputs = [ pythonPackages.poetry ];
+              runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
                 poetry lock --check
@@ -205,7 +205,7 @@
         checks = {
           pytest = pkgs.runCommand "pytest" {
             src = ./.;
-            buildInputs = [ pythonPackages.poetry pythonPackages.python ];
+            buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
@@ -218,7 +218,7 @@
 
           flake8 = pkgs.runCommand "flake8" {
             src = ./.;
-            buildInputs = [ pythonPackages.poetry pythonPackages.python ];
+            buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
@@ -230,7 +230,7 @@
 
           mypy = pkgs.runCommand "mypy" {
             src = ./.;
-            buildInputs = [ pythonPackages.poetry pythonPackages.python ];
+            buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
@@ -242,7 +242,7 @@
 
           djlint = pkgs.runCommand "djlint" {
             src = ./.;
-            buildInputs = [ pythonPackages.poetry pythonPackages.python ];
+            buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
@@ -254,7 +254,7 @@
 
           poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
             src = ./.;
-            buildInputs = [ pythonPackages.poetry pythonPackages.python ];
+            buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
