@@ -23,7 +23,6 @@ from unittest.mock import MagicMock, patch
 from fastapi import Response  # Removed unused Request import
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.testclient import TestClient
 
 
 # For testing the main() function that calls uvicorn.run
@@ -202,6 +201,7 @@ def test_api_routers_included(
 @patch("core_daemon.main.setup_websocket_logging")
 @patch("core_daemon.main.templates")  # Mock the template engine
 def test_root_endpoint(
+    client,  # Added client fixture
     mock_templates,
     mock_setup_ws_logging,
     mock_init_can_writer,
@@ -216,9 +216,8 @@ def test_root_endpoint(
     and the expected HTML content by successfully calling the template engine
     with 'index.html'.
     """
-    from core_daemon.main import app
-
-    client = TestClient(app)
+    # from core_daemon.main import app # No longer needed directly for client
+    # client = TestClient(app) # Replaced by fixture
 
     # Mock the TemplateResponse
     mock_templates.TemplateResponse = MagicMock(
@@ -242,6 +241,7 @@ def test_root_endpoint(
 @patch("core_daemon.main.initialize_can_writer_task")
 @patch("core_daemon.main.setup_websocket_logging")
 def test_validation_exception_handler(
+    client,  # Added client fixture
     mock_setup_ws_logging,
     mock_init_can_writer,
     mock_init_can_listeners,
@@ -257,7 +257,7 @@ def test_validation_exception_handler(
     """
     from pydantic import BaseModel
 
-    from core_daemon.main import app
+    from core_daemon.main import app  # app is still needed here to add a route
 
     # Define a dummy route that can cause a ResponseValidationError
     # This is tricky because ResponseValidationError is usually raised by FastAPI internally
@@ -273,7 +273,7 @@ def test_validation_exception_handler(
     async def route_with_validation_error():
         return {"message": "hello"}  # Missing 'count', will cause ResponseValidationError
 
-    client = TestClient(app)
+    # client = TestClient(app) # Replaced by fixture
     if not any(
         route.path == "/test_validation_error" for route in app.routes if hasattr(route, "path")
     ):
@@ -301,6 +301,7 @@ def test_validation_exception_handler(
 @patch("core_daemon.main.load_config_data")
 @patch("core_daemon.main.initialize_app_from_config")
 def test_startup_events_called(
+    client,  # Added client fixture
     mock_initialize_app,
     mock_load_config,
     mock_get_paths,
@@ -315,12 +316,11 @@ def test_startup_events_called(
     are called when the application starts.
     """
     # Import app here to ensure startup events are registered under patched conditions
-    from core_daemon.main import app
-
+    # from core_daemon.main import app # No longer needed for client
     # Use TestClient to trigger startup events
-    with TestClient(app):  # Removed unused _client variable (F841)
-        # Startup events are called when the TestClient is initialized
-        pass
+    # with TestClient(app): # Replaced by using the client fixture
+    # Startup events are called when the TestClient (via fixture) is initialized/used
+    _ = client.get("/")  # Make a request to ensure startup events are triggered
 
     mock_init_can_writer.assert_called_once()
     mock_setup_ws_logging.assert_called_once()
@@ -338,6 +338,7 @@ def test_startup_events_called(
 @patch("core_daemon.main.initialize_can_writer_task")
 @patch("core_daemon.main.setup_websocket_logging")
 async def test_prometheus_middleware_called(
+    async_client,  # Changed to async_client for async test
     mock_setup_ws_logging,
     mock_init_can_writer,
     mock_init_can_listeners,
@@ -352,7 +353,6 @@ async def test_prometheus_middleware_called(
     FastAPI application and is called for incoming requests.
     It mocks the underlying `prometheus_http_middleware` to verify the call.
     """
-    from core_daemon.main import app
 
     # Define a simple async function for call_next
     async def dummy_call_next(request):
@@ -374,8 +374,8 @@ async def test_prometheus_middleware_called(
     # assert response.body == b"MiddlewareProcessed"
 
     # Using TestClient to ensure it's wired up:
-    client = TestClient(app)
-    client.get("/")  # Hit any endpoint to trigger middleware
+    # client = TestClient(app) # Replaced by async_client fixture
+    await async_client.get("/")  # Hit any endpoint to trigger middleware
 
     # Check that our mocked prometheus_http_middleware was called
     # The call_next argument will be an internal FastAPI function, so use ANY
