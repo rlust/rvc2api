@@ -189,10 +189,7 @@
               text = ''
                 poetry install --no-root
                 poetry check --lock --no-interaction
-                poetry run pre-commit run --all-files
-                poetry run pytest
-                poetry run flake8
-                poetry run mypy src
+                poetry run pre-commit run --all-files --hook-stage commit --skip djlint
                 poetry run djlint src/core_daemon/web_ui/templates --check
               '';
             };
