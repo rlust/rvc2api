@@ -74,6 +74,7 @@
             prometheus_client
             coloredlogs
             jinja2
+            pyroute2 # Added pyroute2
           ];
 
           doCheck    = true;
@@ -103,6 +104,7 @@
             pythonPackages.prometheus_client
             pythonPackages.coloredlogs
             pythonPackages.jinja2
+            pythonPackages.pyroute2 # Added pyroute2
             pythonPackages.pytest
             pythonPackages.mypy
             pythonPackages.flake8
@@ -127,6 +129,7 @@
             pythonPackages.pyyaml
             pkgs.can-utils
             pkgs.iproute2
+            pythonPackages.pyroute2 # Added pyroute2 for CI if needed for tests
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
