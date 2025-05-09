@@ -44,7 +44,8 @@ repos:
     rev: v1.34.0
     hooks:
       - id: djlint
-        args: [--check]
+        args: [--reformat]
+        stages: [pre-commit]
         files: ^src/core_daemon/web_ui/templates/
 
   - repo: local
