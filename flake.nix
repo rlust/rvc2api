@@ -93,41 +93,6 @@
           '';
         };
 
-        apps = {
-          ${system}.precommit = flake-utils.lib.mkApp {
-            drv = pkgs.writeShellApplication {
-              name = "precommit";
-              runtimeInputs = [ pkgs.poetry ];
-              text = ''
-                poetry install --no-root
-                poetry run pre-commit run --all-files
-              '';
-            };
-          };
-
-          ${system}.test = flake-utils.lib.mkApp {
-            drv = pkgs.writeShellApplication {
-              name = "test";
-              runtimeInputs = [ pkgs.poetry ];
-              text = ''
-                poetry install --no-root
-                poetry run pytest
-              '';
-            };
-          };
-
-          ${system}.lint = flake-utils.lib.mkApp {
-            drv = pkgs.writeShellApplication {
-              name = "lint";
-              runtimeInputs = [ pkgs.poetry ];
-              text = ''
-                poetry install --no-root
-                poetry run flake8
-                poetry run mypy src
-              '';
-            };
-          };
-        };
       in {
         packages.rvc2api = rvc2apiPackage;
         defaultPackage = self.packages.${system}.rvc2api;
@@ -135,7 +100,52 @@
         devShells.default = devShell;
         devShells.ci = ciShell;
 
-        inherit apps;
+        apps.${system}.precommit = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "precommit";
+            runtimeInputs = [ pkgs.poetry ];
+            text = ''
+              poetry install --no-root
+              poetry run pre-commit run --all-files
+            '';
+          };
+        };
+
+        apps.${system}.test = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "test";
+            runtimeInputs = [ pkgs.poetry ];
+            text = ''
+              poetry install --no-root
+              poetry run pytest
+            '';
+          };
+        };
+
+        apps.${system}.lint = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "lint";
+            runtimeInputs = [ pkgs.poetry ];
+            text = ''
+              poetry install --no-root
+              poetry run flake8
+              poetry run mypy src
+              poetry run djlint src/core_daemon/web_ui/templates --check
+            '';
+          };
+        };
+
+        apps.${system}.format = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "format";
+            runtimeInputs = [ pkgs.poetry ];
+            text = ''
+              poetry install --no-root
+              poetry run black src
+              poetry run djlint src/core_daemon/web_ui/templates --reformat
+            '';
+          };
+        };
       }
     );
 }
