@@ -175,6 +175,13 @@
             poetry run djlint src/core_daemon/web_ui/templates --check
             touch $out
           '';
+
+          ${system}.poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
+            buildInputs = [ pkgs.poetry python ];
+          } ''
+            poetry lock --check
+            touch $out
+          '';
         };
       in {
         packages.rvc2api = rvc2apiPackage;
