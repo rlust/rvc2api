@@ -47,7 +47,6 @@
           };
         };
 
-        # Local development shell with full tooling
         devShell = pkgs.mkShell {
           buildInputs = [
             python
@@ -72,7 +71,6 @@
           '';
         };
 
-        # CI/CD shell: minimal but includes vcan0 setup
         ciShell = pkgs.mkShell {
           buildInputs = [
             python
@@ -95,12 +93,49 @@
           '';
         };
 
+        apps = {
+          ${system}.precommit = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "precommit";
+              runtimeInputs = [ pkgs.poetry ];
+              text = ''
+                poetry install --no-root
+                poetry run pre-commit run --all-files
+              '';
+            };
+          };
+
+          ${system}.test = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "test";
+              runtimeInputs = [ pkgs.poetry ];
+              text = ''
+                poetry install --no-root
+                poetry run pytest
+              '';
+            };
+          };
+
+          ${system}.lint = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "lint";
+              runtimeInputs = [ pkgs.poetry ];
+              text = ''
+                poetry install --no-root
+                poetry run flake8
+                poetry run mypy src
+              '';
+            };
+          };
+        };
       in {
         packages.rvc2api = rvc2apiPackage;
         defaultPackage = self.packages.${system}.rvc2api;
 
         devShells.default = devShell;
         devShells.ci = ciShell;
+
+        inherit apps;
       }
     );
 }
