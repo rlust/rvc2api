@@ -23,12 +23,23 @@
 # - Release automation is handled via `release-please`, which updates `VERSION` and `flake.nix`
 # - Runtime version is available in the app via `core_daemon._version.VERSION`
 #
-# Usage:
+# Usage (in this repo):
 #   nix develop             # Enter the default dev environment
 #   nix run .#test          # Run tests
 #   nix run .#lint          # Run linter suite
 #   nix flake check         # Run CI-grade validation
 #   nix build .#rvc2api     # Build the package
+#
+# Usage (in a system flake or NixOS configuration):
+#
+#   # In your flake inputs:
+#   inputs.rvc2api.url = "github:carpenike/rvc2api";
+#
+#   # In your systemPackages or services:
+#   environment.systemPackages = [ inputs.rvc2api.packages.${system}.rvc2api ];
+#
+#   # Or to reference CLI apps:
+#   nix run inputs.rvc2api#check
 
 {
   description = "rvc2api Python package and DevShell";
