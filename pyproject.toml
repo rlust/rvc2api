@@ -31,7 +31,8 @@ include = [
     "src/core_daemon/web_ui/static/**/*",
     "src/core_daemon/web_ui/templates/**/*",
     # Ensuring rvc_decoder config is also explicitly included, though it seemed to work by default.
-    "src/rvc_decoder/config/*"
+    "src/rvc_decoder/config/*",
+    "src/core_daemon/VERSION"
 ]
 
 [tool.poetry.dependencies]
