@@ -35,11 +35,12 @@ repos:
         additional_dependencies: [types-PyYAML]
 
   # HTML linting
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
-    rev: v1.1.2
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.34.0
     hooks:
-      - id: htmlhint
-        args: [--config, .htmlhintrc]
+      - id: djlint
+        args: [--check]
+        files: ^src/core_daemon/web_ui/templates/
 
   # Custom hook to ensure poetry.lock is updated
   - repo: local
