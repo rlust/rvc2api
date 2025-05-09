@@ -162,7 +162,9 @@ async def get_unknown_pgns_api():
     return unknown_pgns
 
 
-@api_router_entities.get("/lights", response_model=Dict[str, Entity])
+@api_router_entities.get(
+    "/lights", response_model=List[Entity]
+)  # Changed Dict[str, Entity] to List[Entity]
 async def list_lights(
     state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
     capability: Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
@@ -180,9 +182,9 @@ async def list_lights(
         area: Optional filter by light suggested_area.
 
     Returns:
-        A dictionary of lights matching the filter criteria.
+        A list of lights matching the filter criteria.
     """
-    results: Dict[str, Entity] = {}
+    results: List[Entity] = []  # Changed to List
     for eid, ent in state.items():
         if eid not in light_entity_ids:
             continue
@@ -198,7 +200,7 @@ async def list_lights(
             val = ent.get("state")
             if not val or val.strip().lower() != state_filter.strip().lower():
                 continue
-        results[eid] = Entity(**ent)
+        results.append(Entity(**ent))  # Append to list
     return results
 
 
