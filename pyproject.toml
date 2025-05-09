@@ -53,6 +53,7 @@ flake8 = "^7.0" # Updated version
 black = "^24.4.2" # Added Black
 pre-commit = "^3.7.1" # Added pre-commit
 types-PyYAML = "^6.0.12.12" # Added type stubs for PyYAML
+httpx = "^0.24"
 
 [tool.poetry.urls]
 Homepage   = "https://github.com/carpenike/rvc2api"
