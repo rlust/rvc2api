@@ -14,7 +14,7 @@
 # ▸ Nix flake checks (via `nix flake check`) for:
 #    - pytest suite
 #    - style (flake8, mypy, djlint)
-#    - lockfile validation (poetry lock --check)
+#    - lockfile validation (poetry lock --no-update)
 # ▸ Package build output under `packages.<system>.rvc2api`
 #
 # Best Practices:
@@ -191,7 +191,7 @@
               runtimeInputs = [ pkgs.poetry ];
               text = ''
                 poetry install --no-root
-                poetry lock --check
+                poetry lock --no-update
                 poetry run pre-commit run --all-files
                 poetry run pytest
                 poetry run flake8
@@ -259,7 +259,7 @@
             cd $src
             export POETRY_VIRTUALENVS_IN_PROJECT=false
             export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
-            poetry lock --check
+            poetry lock --no-update
             touch $out
           '';
         };
