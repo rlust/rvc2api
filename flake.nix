@@ -203,62 +203,55 @@
         };
 
         checks = {
+          # run pytest directly, no poetry needed
           pytest = pkgs.runCommand "pytest" {
             src = ./.;
-            buildInputs = [ pkgs.poetry python ];
+            buildInputs = [ python pythonPackages.pytest ];
           } ''
             cd $src
-            export POETRY_VIRTUALENVS_IN_PROJECT=false
-            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             export PYTHONPATH=$PWD/src:$PYTHONPATH
-            poetry install --no-root
-            poetry run pytest
+            pytest
             touch $out
           '';
 
+          # flake8 + types
           flake8 = pkgs.runCommand "flake8" {
             src = ./.;
-            buildInputs = [ pkgs.poetry python ];
+            buildInputs = [ python pythonPackages.flake8 pythonPackages."types-pyyaml" ];
           } ''
             cd $src
-            export POETRY_VIRTUALENVS_IN_PROJECT=false
-            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
-            poetry install --no-root
-            poetry run flake8
+            export PYTHONPATH=$PWD/src:$PYTHONPATH
+            flake8
             touch $out
           '';
 
+          # mypy
           mypy = pkgs.runCommand "mypy" {
             src = ./.;
-            buildInputs = [ pkgs.poetry python ];
+            buildInputs = [ python pythonPackages.mypy ];
           } ''
             cd $src
-            export POETRY_VIRTUALENVS_IN_PROJECT=false
-            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
-            poetry install --no-root
-            poetry run mypy src
+            export PYTHONPATH=$PWD/src:$PYTHONPATH
+            mypy src
             touch $out
           '';
 
+          # djlint from Nixpkgs
           djlint = pkgs.runCommand "djlint" {
             src = ./.;
-            buildInputs = [ pkgs.poetry python ];
+            buildInputs = [ pkgs.djlint ];
           } ''
             cd $src
-            export POETRY_VIRTUALENVS_IN_PROJECT=false
-            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
-            poetry install --no-root
-            poetry run djlint src/core_daemon/web_ui/templates --check
+            djlint src/core_daemon/web_ui/templates --check
             touch $out
           '';
 
+          # keep lock‑check (this one never hits PyPI)
           poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
             src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
             cd $src
-            export POETRY_VIRTUALENVS_IN_PROJECT=false
-            export POETRY_VIRTUALENVS_PATH="$TMPDIR/venvs"
             poetry check --lock --no-interaction
             touch $out
           '';
