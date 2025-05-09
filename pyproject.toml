@@ -86,4 +86,9 @@ exclude = [
 line-length = 100
 
 [tool.pytest.ini_options]
-python_paths = ["src"]
+# 1) Add “src” (or “.” if your code lives at project root) onto sys.path:
+pythonpath = ["src"]
+# 2) (Optional but recommended) Use importlib mode in a src‑layout project:
+addopts     = ["--import-mode=importlib"]
+# 3) Tell pytest where your tests live (defaults to “tests” if omitted):
+testpaths   = ["tests"]
