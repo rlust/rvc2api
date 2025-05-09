@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name        = "rvc2api"
 version     = "0.0.0"
-description = "CAN‑bus web service exposing RV‑C network data via HTTP & WebSocket"
+description = "CAN-bus web service exposing RV-C network data via HTTP & WebSocket"
 readme      = "README.md"
 license     = "MIT"
 authors     = ["Ryan Holt <ryan@ryanholt.net>"]
@@ -48,12 +48,12 @@ coloredlogs = "^15.0"
 jinja2 = "^3.1.4"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0" # Updated version
-mypy   = "^1.10" # Updated version
-flake8 = "^7.0" # Updated version
-black = "^25.0.0" # Added Black
-pre-commit = "^4.0.0" # Added pre-commit
-types-PyYAML = "^6.0.12.12" # Added type stubs for PyYAML
+pytest = "^8.0"
+mypy   = "^1.10"
+flake8 = "^7.0"
+black = "^25.0.0"
+pre-commit = "^4.0.0"
+types-PyYAML = "^6.0.12.12"
 httpx = "^0.28.0"
 djlint = "^1.34.0"
 fastapi = "^0.115"
@@ -91,7 +91,7 @@ line-length = 100
 [tool.pytest.ini_options]
 # 1) Add “src” (or “.” if your code lives at project root) onto sys.path:
 pythonpath = ["src"]
-# 2) (Optional but recommended) Use importlib mode in a src‑layout project:
+# 2) (Optional but recommended) Use importlib mode in a src-layout project:
 addopts     = ["--import-mode=importlib"]
 # 3) Tell pytest where your tests live (defaults to “tests” if omitted):
 testpaths   = ["tests"]
