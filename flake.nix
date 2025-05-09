@@ -1,3 +1,35 @@
+# flake.nix — Nix flake definition for rvc2api
+#
+# This flake provides:
+#
+# ▸ A Python-based CANbus FastAPI web service built with Poetry
+# ▸ Unified versioning via the root-level `VERSION` file
+# ▸ Reproducible developer environments with `devShells.default` and `devShells.ci`
+# ▸ CLI apps (run with `nix run .#<name>`) for:
+#    - `test`     → run unit tests
+#    - `lint`     → run flake8, mypy, djlint
+#    - `format`   → run black and djlint in reformat mode
+#    - `check`    → run full gate: pre-commit, tests, lints, poetry lock
+#    - `precommit`→ run pre-commit checks across the repo
+# ▸ Nix flake checks (via `nix flake check`) for:
+#    - pytest suite
+#    - style (flake8, mypy, djlint)
+#    - lockfile validation (poetry lock --check)
+# ▸ Package build output under `packages.<system>.rvc2api`
+#
+# Best Practices:
+# - Canonical version is managed in `VERSION`
+# - `pyproject.toml` is pinned to version "0.0.0"
+# - Release automation is handled via `release-please`, which updates `VERSION` and `flake.nix`
+# - Runtime version is available in the app via `core_daemon._version.VERSION`
+#
+# Usage:
+#   nix develop             # Enter the default dev environment
+#   nix run .#test          # Run tests
+#   nix run .#lint          # Run linter suite
+#   nix flake check         # Run CI-grade validation
+#   nix build .#rvc2api     # Build the package
+
 {
   description = "rvc2api Python package and DevShell";
 
