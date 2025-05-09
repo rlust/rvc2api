@@ -67,12 +67,14 @@
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
           propagatedBuildInputs = with pythonPackages; [
             fastapi
-            (uvicorn.withExtras (ps: [
-              ps.websockets
-              ps.httptools
-              ps.python-dotenv
-              ps.watchfiles
-            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
+            uvicorn  # Base uvicorn
+            websockets # Uvicorn standard extra
+            httptools  # Uvicorn standard extra
+            python-dotenv # Uvicorn standard extra
+            watchfiles # Uvicorn standard extra
+          ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
+            uvloop   # Uvicorn standard extra (conditional)
+          ] ++ (with pythonPackages; [
             python-can
             pydantic
             pyyaml
@@ -80,7 +82,7 @@
             coloredlogs
             jinja2
             pyroute2
-          ];
+          ]);
 
           doCheck    = true;
           checkInputs = [ pythonPackages.pytest ];
@@ -102,12 +104,14 @@
             python
             pkgs.poetry
             pythonPackages.fastapi
-            (pythonPackages.uvicorn.withExtras (ps: [
-              ps.websockets
-              ps.httptools
-              ps.python-dotenv
-              ps.watchfiles
-            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
+            pythonPackages.uvicorn # Base uvicorn
+            pythonPackages.websockets # Uvicorn standard extra
+            pythonPackages.httptools  # Uvicorn standard extra
+            pythonPackages.python-dotenv # Uvicorn standard extra
+            pythonPackages.watchfiles # Uvicorn standard extra
+          ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
+            pythonPackages.uvloop   # Uvicorn standard extra (conditional)
+          ] ++ (with pythonPackages; [
             pythonPackages."python-can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
@@ -121,7 +125,7 @@
             pythonPackages.types-pyyaml
             pkgs.fish
             pkgs.iproute2 # Add iproute2 to devShell for local testing of CAN status
-          ];
+          ]);
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🐚 Entered rvc2api devShell on ${pkgs.system} with Python ${python.version}"
@@ -139,15 +143,16 @@
             pythonPackages.pyyaml
             pkgs.can-utils
             pkgs.iproute2
-            (pythonPackages.uvicorn.withExtras (ps: [
-              ps.websockets
-              ps.httptools
-              ps.python-dotenv
-              ps.watchfiles
-            ] + pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [ ps.uvloop ]))
-            pythonPackages.python-dotenv # Add for "standard"
+            pythonPackages.uvicorn # Base uvicorn
+            pythonPackages.websockets # Uvicorn standard extra
+            pythonPackages.httptools  # Uvicorn standard extra
+            pythonPackages.python-dotenv # Uvicorn standard extra
+            pythonPackages.watchfiles # Uvicorn standard extra
+          ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
+            pythonPackages.uvloop   # Uvicorn standard extra (conditional)
+          ] ++ (with pythonPackages; [
             pythonPackages.pyroute2 # Added pyroute2 for CI if needed for tests
-          ];
+          ]);
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🧪 Entered CI shell with vcan support"
