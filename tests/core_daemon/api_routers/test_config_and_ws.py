@@ -130,39 +130,9 @@ def test_get_device_mapping_config_content_api_read_error(mock_file_open, mock_e
     assert response.json() == {"detail": "Error reading device mapping file: Read error"}
 
 
-@patch("os.path.exists")
-@patch("builtins.open", new_callable=mock_open)
-def test_get_rvc_spec_details_success(mock_file_open, mock_exists):
-    """Tests successful retrieval of RVC spec details."""
-    mock_exists.return_value = True
-    mock_file_open.return_value.read.return_value = '{"version": "1.0", "spec_document": "url"}'
-    response = client.get("/config/rvc_spec_details")
-    assert response.status_code == 200
-    assert response.json() == {"version": "1.0", "spec_document": "url"}
-    mock_exists.assert_called_once_with("/mock/spec_for_ui.json")
-    mock_file_open.assert_called_once_with("/mock/spec_for_ui.json", "r")
-
-
-@patch("os.path.exists")
-def test_get_rvc_spec_details_not_found(mock_exists):
-    """Tests API behavior when RVC spec file is not found for details endpoint."""
-    mock_exists.return_value = False
-    response = client.get("/config/rvc_spec_details")
-    assert response.status_code == 404
-    # Shortened line E501
-    expected_detail = {"detail": "RVC spec file not found at /mock/spec_for_ui.json"}
-    assert response.json() == expected_detail
-
-
-@patch("os.path.exists")
-@patch("builtins.open", new_callable=mock_open)
-def test_get_rvc_spec_details_decode_error(mock_file_open, mock_exists):
-    """Tests API behavior when RVC spec file decoding fails for details endpoint."""
-    mock_exists.return_value = True
-    mock_file_open.return_value.read.return_value = "invalid_json"
-    response = client.get("/config/rvc_spec_details")
-    assert response.status_code == 500
-    assert response.json() == {"detail": "Error decoding RVC spec file."}
+# Removed test_get_rvc_spec_details_success
+# Removed test_get_rvc_spec_details_not_found
+# Removed test_get_rvc_spec_details_decode_error
 
 
 @patch("os.path.exists")

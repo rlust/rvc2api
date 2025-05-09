@@ -73,31 +73,6 @@ async def get_device_mapping_config_content_api():
         raise HTTPException(status_code=404, detail="Device mapping file not found.")
 
 
-@api_router_config_ws.get("/config/rvc_spec_details")
-async def get_rvc_spec_details():
-    """Returns metadata from the rvc.json spec file."""
-    if not os.path.exists(actual_spec_path_for_ui):
-        logger.error(
-            f"RVC spec file not found at {actual_spec_path_for_ui} " f"for spec details endpoint"
-        )
-        raise HTTPException(
-            status_code=404, detail=f"RVC spec file not found at {actual_spec_path_for_ui}"
-        )
-    try:
-        with open(actual_spec_path_for_ui, "r") as f:
-            spec_data = json.load(f)
-        return {
-            "version": spec_data.get("version"),
-            "spec_document": spec_data.get("spec_document"),
-        }
-    except json.JSONDecodeError:
-        logger.error(f"Error decoding RVC spec from {actual_spec_path_for_ui}")
-        raise HTTPException(status_code=500, detail="Error decoding RVC spec file.")
-    except Exception as e:
-        logger.error(f"Error reading RVC spec from {actual_spec_path_for_ui}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error reading RVC spec file: {str(e)}")
-
-
 @api_router_config_ws.get("/config/rvc_spec_metadata")
 async def get_rvc_spec_metadata():
     """Returns metadata (version and spec_document URL) from the rvc.json spec file."""
