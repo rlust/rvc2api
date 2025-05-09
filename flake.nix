@@ -49,21 +49,22 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }@inputs:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
         python = pkgs.python312;
         pythonPackages = pkgs.python312Packages;
 
+        version = builtins.replaceStrings ["\n"] [""] (builtins.readFile ./VERSION);
+
         rvc2apiPackage = pythonPackages.buildPythonPackage {
           pname = "rvc2api";
-          version = builtins.replaceStrings ["\n"] [""] (builtins.readFile ./VERSION);
+          inherit version;
           src = self;
           format = "pyproject";
 
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
-
           propagatedBuildInputs = with pythonPackages; [
             fastapi
             uvicorn
@@ -137,7 +138,7 @@
         };
 
         apps = {
-          ${system}.precommit = flake-utils.lib.mkApp {
+          precommit = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "precommit";
               runtimeInputs = [ pkgs.poetry ];
@@ -148,7 +149,7 @@
             };
           };
 
-          ${system}.test = flake-utils.lib.mkApp {
+          test = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "test";
               runtimeInputs = [ pkgs.poetry ];
@@ -159,7 +160,7 @@
             };
           };
 
-          ${system}.lint = flake-utils.lib.mkApp {
+          lint = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "lint";
               runtimeInputs = [ pkgs.poetry ];
@@ -172,7 +173,7 @@
             };
           };
 
-          ${system}.format = flake-utils.lib.mkApp {
+          format = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "format";
               runtimeInputs = [ pkgs.poetry ];
@@ -184,7 +185,7 @@
             };
           };
 
-          ${system}.check = flake-utils.lib.mkApp {
+          check = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
               name = "check";
               runtimeInputs = [ pkgs.poetry ];
@@ -202,7 +203,7 @@
         };
 
         checks = {
-          ${system}.pytest = pkgs.runCommand "pytest" {
+          pytest = pkgs.runCommand "pytest" {
             buildInputs = [ pkgs.poetry python ];
           } ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
@@ -211,7 +212,7 @@
             touch $out
           '';
 
-          ${system}.flake8 = pkgs.runCommand "flake8" {
+          flake8 = pkgs.runCommand "flake8" {
             buildInputs = [ pkgs.poetry python ];
           } ''
             poetry install --no-root
@@ -219,7 +220,7 @@
             touch $out
           '';
 
-          ${system}.mypy = pkgs.runCommand "mypy" {
+          mypy = pkgs.runCommand "mypy" {
             buildInputs = [ pkgs.poetry python ];
           } ''
             poetry install --no-root
@@ -227,7 +228,7 @@
             touch $out
           '';
 
-          ${system}.djlint = pkgs.runCommand "djlint" {
+          djlint = pkgs.runCommand "djlint" {
             buildInputs = [ pkgs.poetry python ];
           } ''
             poetry install --no-root
@@ -235,7 +236,7 @@
             touch $out
           '';
 
-          ${system}.poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
+          poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
             buildInputs = [ pkgs.poetry python ];
           } ''
             poetry lock --check
