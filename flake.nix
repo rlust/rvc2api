@@ -67,14 +67,20 @@
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
           propagatedBuildInputs = with pythonPackages; [
             fastapi
-            uvicorn.withExtras ["standard"] # Ensure uvicorn has WebSocket support
+            (uvicorn.override { # Ensure uvicorn has necessary features for "standard"
+              withWebsockets = true;
+              withWatchfiles = true;
+              withHTTPTools = true;
+              withUvloop = true; # uvloop is part of "standard" on Linux/macOS
+            })
+            python-dotenv # python-dotenv is part of "standard"
             python-can
             pydantic
             pyyaml
             prometheus_client
             coloredlogs
             jinja2
-            pyroute2 # Added pyroute2
+            pyroute2
           ];
 
           doCheck    = true;
@@ -97,14 +103,20 @@
             python
             pkgs.poetry
             pythonPackages.fastapi
-            pythonPackages.uvicorn.withExtras ["standard"] # Also for dev shell
+            (pythonPackages.uvicorn.override { # Also for dev shell
+              withWebsockets = true;
+              withWatchfiles = true;
+              withHTTPTools = true;
+              withUvloop = true;
+            })
+            pythonPackages.python-dotenv # Add for "standard"
             pythonPackages."python-can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
             pythonPackages.prometheus_client
             pythonPackages.coloredlogs
             pythonPackages.jinja2
-            pythonPackages.pyroute2 # Added pyroute2
+            pythonPackages.pyroute2
             pythonPackages.pytest
             pythonPackages.mypy
             pythonPackages.flake8
@@ -129,6 +141,13 @@
             pythonPackages.pyyaml
             pkgs.can-utils
             pkgs.iproute2
+            (pythonPackages.uvicorn.override { # Also for CI shell if running services
+              withWebsockets = true;
+              withWatchfiles = true;
+              withHTTPTools = true;
+              withUvloop = true;
+            })
+            pythonPackages.python-dotenv # Add for "standard"
             pythonPackages.pyroute2 # Added pyroute2 for CI if needed for tests
           ];
           shellHook = ''
