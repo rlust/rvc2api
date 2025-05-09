@@ -1,0 +1,9 @@
+{
+  "packages": {
+    ".": {
+      "package-name": "rvc2api",
+      "release-type": "simple",
+      "version-file": "VERSION"
+    }
+  }
+}

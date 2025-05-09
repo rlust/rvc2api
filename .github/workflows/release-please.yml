@@ -10,14 +10,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  release:
+  bump-and-draft:
     runs-on: ubuntu-latest
     steps:
-      - name: Release Please
+      - uses: actions/checkout@v4
+
+      - name: Bump & draft release
         uses: google-github-actions/release-please-action@v4
         with:
-          release-type: simple
-          package-name: rvc2api
-          extra-files: |
-            VERSION
-            flake.nix
+          # this is automatically provided by GitHub; no need to create your own PAT
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          # point at your new manifest
+          manifest-file: .release-please-manifest.json
