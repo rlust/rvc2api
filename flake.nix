@@ -187,7 +187,7 @@
               name          = "ci";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
-                SKIP=djlint
+                export SKIP=djlint
                 poetry install --no-root
                 poetry check --lock --no-interaction
                 poetry run pre-commit run --all-files --hook-stage commit
