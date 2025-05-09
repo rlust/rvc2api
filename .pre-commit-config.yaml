@@ -31,7 +31,12 @@ repos:
     rev: v1.10.1
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports, --scripts-are-modules, --explicit-package-bases]
+        args:
+          [
+            --ignore-missing-imports,
+            --scripts-are-modules,
+            --explicit-package-bases,
+          ]
         additional_dependencies: [types-PyYAML]
 
   # HTML linting
@@ -42,12 +47,11 @@ repos:
         args: [--check]
         files: ^src/core_daemon/web_ui/templates/
 
-  # Custom hook to ensure poetry.lock is updated
   - repo: local
     hooks:
       - id: check-poetry-lock
         name: Ensure poetry.lock is in sync with pyproject.toml
         entry: poetry lock --check
         language: system
-        types: [toml]
-        files: ^pyproject\.toml$
+        pass_filenames: false
+        always_run: true

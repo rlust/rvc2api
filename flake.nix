@@ -206,7 +206,7 @@
           # run pytest directly, no poetry needed
           pytest = pkgs.runCommand "pytest" {
             src = ./.;
-            buildInputs = [ python pythonPackages.pytest ];
+            buildInputs = [ python pythonPackages.pytest pythonPackages.fastapi ];
           } ''
             cd $src
             export PYTHONPATH=$PWD/src:$PYTHONPATH
