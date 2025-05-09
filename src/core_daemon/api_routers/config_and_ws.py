@@ -4,17 +4,20 @@ Manages API routes for configuration and WebSocket interactions.
 This module provides FastAPI endpoints for:
 - Retrieving the current application configuration.
 - Managing WebSocket connections for real-time updates (e.g., CAN messages).
+- Providing server and application status.
 """
 
 import json
 import logging
 import os
+import time  # Added for uptime
 
 from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from core_daemon import app_state
+from core_daemon._version import VERSION  # Import VERSION
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
 from core_daemon.websocket import websocket_endpoint, websocket_logs_endpoint
 
@@ -24,6 +27,9 @@ api_router_config_ws = APIRouter()  # Router for configuration, status, and WebS
 
 # Get actual paths once for this module
 actual_spec_path_for_ui, actual_map_path_for_ui = get_actual_paths()
+
+# Store startup time
+SERVER_START_TIME = time.time()
 
 
 @api_router_config_ws.get("/healthz")
@@ -113,6 +119,58 @@ async def get_rvc_spec_config_content_api():
             f"API Error: RVC spec file not found for UI display at " f"'{actual_spec_path_for_ui}'"
         )
         raise HTTPException(status_code=404, detail="RVC spec file not found.")
+
+
+# --- New Status Endpoints ---
+@api_router_config_ws.get("/status/server")
+async def get_server_status():
+    """Returns basic server status information."""
+    uptime_seconds = time.time() - SERVER_START_TIME
+    return {
+        "status": "ok",
+        "version": VERSION,
+        "server_start_time_unix": SERVER_START_TIME,
+        "uptime_seconds": uptime_seconds,
+        "message": "rvc2api server is running.",
+    }
+
+
+@api_router_config_ws.get("/status/application")
+async def get_application_status():
+    """Returns application-specific status information."""
+    # Check if config files were loaded (using the global ACTUAL_SPEC_PATH and ACTUAL_MAP_PATH)
+    spec_loaded = ACTUAL_SPEC_PATH is not None and os.path.exists(ACTUAL_SPEC_PATH)
+    map_loaded = ACTUAL_MAP_PATH is not None and os.path.exists(ACTUAL_MAP_PATH)
+
+    # Basic check for CAN listeners (more detailed status could be added)
+    # This is a placeholder; actual CAN listener status might need more complex state tracking.
+    can_listeners_active = (
+        len(app_state.state) > 0
+    )  # Simple proxy: if entities exist, listeners likely ran
+
+    return {
+        "status": "ok",
+        "rvc_spec_file_loaded": spec_loaded,
+        "rvc_spec_file_path": ACTUAL_SPEC_PATH if spec_loaded else None,
+        "device_mapping_file_loaded": map_loaded,
+        "device_mapping_file_path": ACTUAL_MAP_PATH if map_loaded else None,
+        "known_entity_count": len(app_state.entity_id_lookup),
+        "active_entity_state_count": len(app_state.state),
+        "unmapped_entry_count": len(app_state.unmapped_entries),
+        "unknown_pgn_count": len(app_state.unknown_pgns),
+        "can_listeners_status": "likely_active" if can_listeners_active else "unknown_or_inactive",
+        "websocket_clients": {
+            "data_clients": len(
+                app_state.clients
+            ),  # Assuming 'clients' is accessible or moved to app_state
+            "log_clients": len(
+                app_state.log_ws_clients
+            ),  # Assuming 'log_ws_clients' is accessible or moved to app_state
+        },
+    }
+
+
+# --- End New Status Endpoints ---
 
 
 @api_router_config_ws.websocket("/ws")

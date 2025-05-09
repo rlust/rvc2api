@@ -9,7 +9,9 @@ It provides functions to initialize, update, and access this shared state.
 import logging
 import time
 from collections import deque
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Set  # Added Set
+
+from fastapi import WebSocket  # Added WebSocket for type hinting
 
 # Import metrics that are directly related to the state managed here
 from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
@@ -48,6 +50,10 @@ raw_device_mapping: Dict[str, Any] = {}
 device_lookup: Dict[tuple, Any] = {}
 status_lookup: Dict[tuple, Any] = {}
 pgn_hex_to_name_map: Dict[str, str] = {}
+
+# WebSocket client sets - moved here from websocket.py for central state management
+clients: Set[WebSocket] = set()
+log_ws_clients: Set[WebSocket] = set()
 
 
 def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function: Callable) -> None:

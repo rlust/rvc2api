@@ -7,18 +7,16 @@ This module provides:
 - Functionality to broadcast data (typically entity updates) to another set of
   WebSocket clients.
 - FastAPI WebSocket endpoint handlers for both data and log streaming.
-- Management of active WebSocket client connections.
+- Management of active WebSocket client connections (now delegated to app_state).
 """
 
 import asyncio
 import logging
-from typing import Set
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-# Globals to hold active WebSocket clients.
-clients: Set[WebSocket] = set()  # Stores active WebSocket connections for general data updates.
-log_ws_clients: Set[WebSocket] = set()  # Stores active WebSocket connections for log streaming.
+# Import client sets from app_state
+from core_daemon.app_state import clients, log_ws_clients
 
 logger = logging.getLogger(__name__)
 
