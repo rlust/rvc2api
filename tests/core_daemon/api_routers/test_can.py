@@ -165,8 +165,20 @@ def test_parse_ip_link_show_minimal_output():
 
 @pytest.mark.asyncio
 @patch("asyncio.create_subprocess_shell")
-async def test_get_can_interfaces_success_multiple(mock_subprocess_shell):
+@patch("shutil.which")  # Add patch for shutil.which
+async def test_get_can_interfaces_success_multiple(mock_shutil_which, mock_subprocess_shell):
     """Tests successful retrieval of multiple CAN interfaces."""
+
+    # Configure shutil.which mocks
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
     # Mock the subprocess call
     process_mock = MagicMock()
     process_mock.communicate.return_value = (b"can0\ncan1\n", b"")
@@ -175,21 +187,35 @@ async def test_get_can_interfaces_success_multiple(mock_subprocess_shell):
 
     interfaces = await get_can_interfaces()
     assert interfaces == ["can0", "can1"]
+    # Command should now use the paths from shutil.which
     expected_command = (
-        "/run/current-system/sw/bin/ip -o link show type can "
-        "| /run/current-system/sw/bin/awk -F': ' '{print $2}'"
+        "/mock/path/to/ip -o link show type can " "| /mock/path/to/awk -F': ' '{print $2}'"
     )
     mock_subprocess_shell.assert_called_once_with(
         expected_command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+    # Verify shutil.which was called for ip and awk
+    mock_shutil_which.assert_any_call("ip")
+    mock_shutil_which.assert_any_call("awk")
 
 
 @pytest.mark.asyncio
 @patch("asyncio.create_subprocess_shell")
-async def test_get_can_interfaces_success_single(mock_subprocess_shell):
+@patch("shutil.which")
+async def test_get_can_interfaces_success_single(mock_shutil_which, mock_subprocess_shell):
     """Tests successful retrieval of a single CAN interface."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
     process_mock = MagicMock()
     process_mock.communicate.return_value = (b"can0\n", b"")  # Note the trailing newline
     process_mock.returncode = 0
@@ -198,8 +224,7 @@ async def test_get_can_interfaces_success_single(mock_subprocess_shell):
     interfaces = await get_can_interfaces()
     assert interfaces == ["can0"]
     expected_command = (
-        "/run/current-system/sw/bin/ip -o link show type can "
-        "| /run/current-system/sw/bin/awk -F': ' '{print $2}'"
+        "/mock/path/to/ip -o link show type can " "| /mock/path/to/awk -F': ' '{print $2}'"
     )
     mock_subprocess_shell.assert_called_once_with(
         expected_command,
@@ -210,8 +235,19 @@ async def test_get_can_interfaces_success_single(mock_subprocess_shell):
 
 @pytest.mark.asyncio
 @patch("asyncio.create_subprocess_shell")
-async def test_get_can_interfaces_no_interfaces(mock_subprocess_shell):
+@patch("shutil.which")
+async def test_get_can_interfaces_no_interfaces(mock_shutil_which, mock_subprocess_shell):
     """Tests retrieval when no CAN interfaces are found."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
     process_mock = MagicMock()
     process_mock.communicate.return_value = (b"", b"")  # Empty output
     process_mock.returncode = 0
@@ -220,8 +256,7 @@ async def test_get_can_interfaces_no_interfaces(mock_subprocess_shell):
     interfaces = await get_can_interfaces()
     assert interfaces == []
     expected_command = (
-        "/run/current-system/sw/bin/ip -o link show type can "
-        "| /run/current-system/sw/bin/awk -F': ' '{print $2}'"
+        "/mock/path/to/ip -o link show type can " "| /mock/path/to/awk -F': ' '{print $2}'"
     )
     mock_subprocess_shell.assert_called_once_with(
         expected_command,
@@ -232,8 +267,59 @@ async def test_get_can_interfaces_no_interfaces(mock_subprocess_shell):
 
 @pytest.mark.asyncio
 @patch("asyncio.create_subprocess_shell")
-async def test_get_can_interfaces_command_error(mock_subprocess_shell):
+@patch("shutil.which")
+async def test_get_can_interfaces_ip_not_found(mock_shutil_which, mock_subprocess_shell):
+    """Tests behavior when 'ip' command is not found by shutil.which."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return None  # ip not found
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
+    interfaces = await get_can_interfaces()
+    assert interfaces == []
+    mock_subprocess_shell.assert_not_called()  # Subprocess should not be called if ip is missing
+
+
+@pytest.mark.asyncio
+@patch("asyncio.create_subprocess_shell")
+@patch("shutil.which")
+async def test_get_can_interfaces_awk_not_found(mock_shutil_which, mock_subprocess_shell):
+    """Tests behavior when 'awk' command is not found by shutil.which."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return None  # awk not found
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
+    interfaces = await get_can_interfaces()
+    assert interfaces == []
+    mock_subprocess_shell.assert_not_called()  # Subprocess should not be called if awk is missing
+
+
+@pytest.mark.asyncio
+@patch("asyncio.create_subprocess_shell")
+@patch("shutil.which")  # Already patched, but good for clarity
+async def test_get_can_interfaces_command_error(mock_shutil_which, mock_subprocess_shell):
     """Tests behavior when the 'ip link show' command returns an error."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
+
     process_mock = MagicMock()
     process_mock.communicate.return_value = (b"", b"Error executing command")
     process_mock.returncode = 1
@@ -245,8 +331,18 @@ async def test_get_can_interfaces_command_error(mock_subprocess_shell):
 
 @pytest.mark.asyncio
 @patch("asyncio.create_subprocess_shell", side_effect=Exception("Subprocess failed"))
-async def test_get_can_interfaces_exception(mock_subprocess_shell):
+@patch("shutil.which")  # shutil.which might be called before the exception
+async def test_get_can_interfaces_exception(mock_shutil_which, mock_subprocess_shell):
     """Tests behavior when an exception occurs during subprocess execution."""
+
+    def shutil_which_side_effect(cmd):
+        if cmd == "ip":
+            return "/mock/path/to/ip"
+        if cmd == "awk":
+            return "/mock/path/to/awk"
+        return None
+
+    mock_shutil_which.side_effect = shutil_which_side_effect
     interfaces = await get_can_interfaces()
     assert interfaces == []
 
@@ -261,9 +357,13 @@ client = TestClient(app)
 @patch("core_daemon.api_routers.can.get_can_interfaces")
 @patch("core_daemon.api_routers.can.parse_ip_link_show")
 @patch("asyncio.create_subprocess_shell")  # Mock shell call in endpoint
-def test_get_can_status_success(mock_subprocess_shell_ip, mock_parse_ip, mock_get_interfaces):
+@patch("shutil.which")  # Add patch for shutil.which
+def test_get_can_status_success(
+    mock_shutil_which_ip_status, mock_subprocess_shell_ip, mock_parse_ip, mock_get_interfaces
+):
     """Tests the /can/status endpoint for successful retrieval of multiple interface statuses."""
     mock_get_interfaces.return_value = ["can0", "can1"]
+    mock_shutil_which_ip_status.return_value = "/mock/path/to/ip"  # ip found
 
     # Mock behavior for parse_ip_link_show or the subprocess call it makes
     # Option 1: Mock parse_ip_link_show directly
@@ -295,11 +395,12 @@ def test_get_can_status_success(mock_subprocess_shell_ip, mock_parse_ip, mock_ge
     process_mock_can1.returncode = 0
 
     def mock_shell_side_effect(command, stdout, stderr):
-        if "can0" in command:
+        # Command now includes full path to ip
+        if "/mock/path/to/ip -details -statistics link show can0" in command:
             return process_mock_can0
-        elif "can1" in command:
+        elif "/mock/path/to/ip -details -statistics link show can1" in command:
             return process_mock_can1
-        raise ValueError("Unexpected command in mock_shell_side_effect")
+        raise ValueError(f"Unexpected command in mock_shell_side_effect: {command}")
 
     mock_subprocess_shell_ip.side_effect = mock_shell_side_effect
 
@@ -314,12 +415,18 @@ def test_get_can_status_success(mock_subprocess_shell_ip, mock_parse_ip, mock_ge
     assert data["interfaces"]["can0"]["bitrate"] == 250000
     assert data["interfaces"]["can1"]["name"] == "can1"
     assert data["interfaces"]["can1"]["state"] == "DOWN"
+    mock_shutil_which_ip_status.assert_called_with("ip")  # Verify shutil.which was called for ip
 
 
 @patch("core_daemon.api_routers.can.get_can_interfaces", return_value=["can0"])
 @patch("asyncio.create_subprocess_shell")
-def test_get_can_status_interface_error(mock_subprocess_shell, mock_get_interfaces):
+@patch("shutil.which")  # Add patch for shutil.which
+def test_get_can_status_interface_error(
+    mock_shutil_which_ip_status, mock_subprocess_shell, mock_get_interfaces
+):
     """Tests the /can/status endpoint when fetching details for an interface fails."""
+    mock_shutil_which_ip_status.return_value = "/mock/path/to/ip"  # ip found
+
     # Simulate error when getting details for can0
     process_mock_error = MagicMock()
     process_mock_error.communicate.return_value = (b"", b"ip command failed for can0")
@@ -335,6 +442,34 @@ def test_get_can_status_interface_error(mock_subprocess_shell, mock_get_interfac
     assert "can0" in data["interfaces"]
     assert data["interfaces"]["can0"]["name"] == "can0"
     assert data["interfaces"]["can0"]["state"] == "Error/NotAvailable"
+    # Verify shutil.which was called for ip
+    mock_shutil_which_ip_status.assert_called_with("ip")
+    # Verify the command passed to subprocess shell used the found ip path
+    mock_subprocess_shell.assert_called_once_with(
+        "/mock/path/to/ip -details -statistics link show can0",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+
+@patch("core_daemon.api_routers.can.get_can_interfaces", return_value=["can0"])
+@patch("asyncio.create_subprocess_shell")
+@patch("shutil.which")
+def test_get_can_status_ip_not_found_in_status_call(
+    mock_shutil_which_ip_status, mock_subprocess_shell, mock_get_interfaces
+):
+    """Tests /can/status when shutil.which('ip') returns None in the endpoint itself."""
+    mock_shutil_which_ip_status.return_value = None  # Simulate ip not found by get_can_status
+
+    response = client.get("/can/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "interfaces" in data
+    assert "can0" in data["interfaces"]
+    assert data["interfaces"]["can0"]["name"] == "can0"
+    assert data["interfaces"]["can0"]["state"] == "Error/IPCommandNotFound"
+    mock_shutil_which_ip_status.assert_called_with("ip")
+    mock_subprocess_shell.assert_not_called()  # Subprocess for details should not be called
 
 
 @patch("core_daemon.api_routers.can.get_can_interfaces", return_value=[])
