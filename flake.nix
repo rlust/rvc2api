@@ -9,7 +9,7 @@
 #    - `test`     → run unit tests
 #    - `lint`     → run flake8, mypy, djlint
 #    - `format`   → run black and djlint in reformat mode
-#    - `check`    → run full gate: pre-commit, tests, lints, poetry lock
+#    - `ci`    → run full gate: pre-commit, tests, lints, poetry lock
 #    - `precommit`→ run pre-commit checks across the repo
 # ▸ Nix flake checks (via `nix flake check`) for:
 #    - pytest suite
@@ -139,6 +139,7 @@
               name          = "precommit";
               runtimeInputs = [ pkgs.poetry ];
               text = ''
+                export SKIP=djlint
                 poetry install --no-root
                 poetry run pre-commit run --all-files
               '';
