@@ -204,8 +204,10 @@
 
         checks = {
           pytest = pkgs.runCommand "pytest" {
+            src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
+            cd $src
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             poetry install --no-root
             poetry run pytest
@@ -213,32 +215,40 @@
           '';
 
           flake8 = pkgs.runCommand "flake8" {
+            src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
+            cd $src
             poetry install --no-root
             poetry run flake8
             touch $out
           '';
 
           mypy = pkgs.runCommand "mypy" {
+            src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
+            cd $src
             poetry install --no-root
             poetry run mypy src
             touch $out
           '';
 
           djlint = pkgs.runCommand "djlint" {
+            src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
+            cd $src
             poetry install --no-root
             poetry run djlint src/core_daemon/web_ui/templates --check
             touch $out
           '';
 
           poetry-lock-check = pkgs.runCommand "poetry-lock-check" {
+            src = ./.;
             buildInputs = [ pkgs.poetry python ];
           } ''
+            cd $src
             poetry lock --check
             touch $out
           '';
