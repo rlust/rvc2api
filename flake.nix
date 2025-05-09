@@ -107,11 +107,14 @@
             pythonPackages.mypy
             pythonPackages.flake8
             pythonPackages.types-pyyaml
+            pkgs.fish
           ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🐚 Entered rvc2api devShell on ${pkgs.system} with Python ${python.version}"
             echo "💡 Run 'poetry install' or 'nix build .#rvc2api' to get started."
+            # Optionally, set fish as the default shell when entering nix develop
+            exec fish
           '';
         };
 
