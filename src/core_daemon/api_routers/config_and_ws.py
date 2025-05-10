@@ -199,7 +199,18 @@ async def get_rvc_spec_file_contents():
 async def get_device_mapping_file_contents():
     print("ACTUAL_MAP_PATH:", ACTUAL_MAP_PATH)
     print("Exists:", os.path.exists(ACTUAL_MAP_PATH) if ACTUAL_MAP_PATH else None)
-    # ACTUAL_MAP_PATH is now imported from config.py
+    # Try ACTUAL_MAP_PATH first
     if ACTUAL_MAP_PATH and os.path.exists(ACTUAL_MAP_PATH):
         return FileResponse(ACTUAL_MAP_PATH, media_type="text/plain")
+
+    # Fallback: try the bundled default from rvc_decoder.decode._default_paths
+    try:
+        from rvc_decoder.decode import _default_paths
+
+        _spec_path, default_mapping_path = _default_paths()
+        if os.path.exists(default_mapping_path):
+            return FileResponse(default_mapping_path, media_type="text/plain")
+    except Exception as e:
+        logger.error(f"Error loading fallback device mapping: {e}")
+
     raise HTTPException(status_code=404, detail="Device mapping file not found.")
