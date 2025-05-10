@@ -1174,6 +1174,177 @@
   }
 
   /**
+   * Enables drag-to-resize for the pinned logs panel, with persistent height in localStorage.
+   * Restores height and open/closed state on load, and clamps to min/max values.
+   * Adds comprehensive comments and JSDoc.
+   */
+  function setupPinnedLogsResizablePanel() {
+    const PINNED_LOGS_OPEN_KEY = "pinnedLogsOpen";
+    const PINNED_LOGS_HEIGHT_KEY = "pinnedLogsHeight";
+    const COLLAPSED_LOGS_HEIGHT = "3rem";
+    const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30;
+    const MIN_LOGS_PANEL_HEIGHT_PX = 80;
+    const MAX_LOGS_PANEL_HEIGHT_VH_PERCENT = 80;
+    let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+    let isResizingLogs = false;
+    let resizeRafId = null;
+    let pendingResizeHeightPx = 0;
+    let originalContainerTransition = "";
+
+    if (!pinnedLogsContainer || !pinnedLogsResizeHandle || !pinnedLogsContent || !mainContent) return;
+
+    // Restore state from localStorage
+    const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === "true";
+    const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
+    if (savedHeight) {
+      let heightNum = parseFloat(savedHeight);
+      const unit = savedHeight.replace(/[\d.-]/g, "");
+      if (unit === "px") {
+        heightNum = Math.max(
+          MIN_LOGS_PANEL_HEIGHT_PX,
+          Math.min(
+            heightNum,
+            window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100)
+          )
+        );
+        currentExpandedLogsHeight = `${heightNum}px`;
+      } else if (unit === "vh") {
+        heightNum = Math.max(
+          (MIN_LOGS_PANEL_HEIGHT_PX / window.innerHeight) * 100,
+          Math.min(heightNum, MAX_LOGS_PANEL_HEIGHT_VH_PERCENT)
+        );
+        currentExpandedLogsHeight = `${heightNum}vh`;
+      } else {
+        currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+      }
+    }
+
+    function setPinnedLogsState(isOpen, height) {
+      localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
+      if (isOpen && height) {
+        localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
+        currentExpandedLogsHeight = height;
+      }
+      if (isOpen) {
+        pinnedLogsContent.classList.remove(CLASS_HIDDEN);
+        pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+        pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+        mainContent.style.paddingBottom = currentExpandedLogsHeight;
+        const chevron = togglePinnedLogsButton.querySelector("i");
+        if (chevron) {
+          chevron.className = "mdi mdi-chevron-down text-2xl";
+        }
+        connectLogSocket();
+      } else {
+        pinnedLogsContent.classList.add(CLASS_HIDDEN);
+        pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
+        mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT;
+        const chevron = togglePinnedLogsButton.querySelector("i");
+        if (chevron) {
+          chevron.className = "mdi mdi-chevron-up text-2xl";
+        }
+        disconnectLogSocket();
+      }
+    }
+
+    // Initial state (no animation)
+    const originalTransition = pinnedLogsContainer.style.transition;
+    pinnedLogsContainer.style.transition = "none";
+    setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
+    setTimeout(() => {
+      pinnedLogsContainer.style.transition = originalTransition || "height 0.3s ease-in-out";
+    }, 50);
+
+    // Drag-to-resize logic
+    pinnedLogsResizeHandle.addEventListener("mousedown", (e) => {
+      if (pinnedLogsContent.classList.contains(CLASS_HIDDEN)) return;
+      e.preventDefault();
+      isResizingLogs = true;
+      const startY = e.clientY;
+      const startHeight = pinnedLogsContainer.offsetHeight;
+      originalContainerTransition = pinnedLogsContainer.style.transition;
+      pinnedLogsContainer.style.transition = "none";
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "ns-resize";
+      const onMouseMove = (moveEvent) => {
+        if (!isResizingLogs) return;
+        const dy = startY - moveEvent.clientY;
+        let newHeightPx = startHeight + dy;
+        const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+        newHeightPx = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(newHeightPx, maxHeightPx));
+        pendingResizeHeightPx = newHeightPx;
+        if (resizeRafId === null) {
+          resizeRafId = requestAnimationFrame(() => {
+            currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
+            pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+            pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+            mainContent.style.paddingBottom = currentExpandedLogsHeight;
+            resizeRafId = null;
+          });
+        }
+      };
+      const onMouseUp = () => {
+        if (isResizingLogs) {
+          isResizingLogs = false;
+          document.removeEventListener("mousemove", onMouseMove);
+          document.removeEventListener("mouseup", onMouseUp);
+          if (resizeRafId !== null) {
+            cancelAnimationFrame(resizeRafId);
+            resizeRafId = null;
+          }
+          currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
+          pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+          pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+          mainContent.style.paddingBottom = currentExpandedLogsHeight;
+          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, currentExpandedLogsHeight);
+          document.body.style.userSelect = "";
+          document.body.style.cursor = "";
+          pinnedLogsContainer.style.transition = originalContainerTransition || "height 0.3s ease-in-out";
+        }
+      };
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    });
+
+    // Toggle logic (reuse setPinnedLogsState)
+    if (togglePinnedLogsButton && pinnedLogsHeader) {
+      togglePinnedLogsButton.addEventListener("click", () => {
+        const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
+        setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+      });
+      pinnedLogsHeader.addEventListener("click", (e) => {
+        if (
+          e.target === pinnedLogsHeader ||
+          (pinnedLogsHeader.contains(e.target) && e.target.tagName !== "BUTTON")
+        ) {
+          const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
+          setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+        }
+      });
+    }
+    // Responsive: clamp height on window resize
+    window.addEventListener("resize", () => {
+      const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+      let heightNum = parseFloat(currentExpandedLogsHeight);
+      if (currentExpandedLogsHeight.endsWith("px")) {
+        heightNum = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(heightNum, maxHeightPx));
+        currentExpandedLogsHeight = `${heightNum}px`;
+      } else if (currentExpandedLogsHeight.endsWith("vh")) {
+        heightNum = Math.max(
+          (MIN_LOGS_PANEL_HEIGHT_PX / window.innerHeight) * 100,
+          Math.min(heightNum, MAX_LOGS_PANEL_HEIGHT_VH_PERCENT)
+        );
+        currentExpandedLogsHeight = `${heightNum}vh`;
+      }
+      if (!pinnedLogsContent.classList.contains(CLASS_HIDDEN)) {
+        pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+        pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+        mainContent.style.paddingBottom = currentExpandedLogsHeight;
+      }
+    });
+  }
+
+  /**
    * Initializes the application.
    * Sets up event listeners, loads initial state, and fetches data for the default view.
    */
@@ -1325,6 +1496,7 @@
     // setInterval(fetchAppHealth, APP_HEALTH_REFRESH_INTERVAL);
 
     setupBulkLightControlButtons();
+    setupPinnedLogsResizablePanel();
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
   }
