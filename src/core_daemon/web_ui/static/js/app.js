@@ -142,6 +142,7 @@
   // =====================
   // UTILITY FUNCTIONS
   // =====================
+
   /**
    * Creates a DOM element with specified options.
    * @param {string} tag - The HTML tag for the element.
@@ -149,12 +150,33 @@
    * @param {string} [options.className] - CSS class name(s).
    * @param {string} [options.id] - Element ID.
    * @param {string} [options.textContent] - Text content.
+   * @param {string} [options.innerHTML] - Inner HTML.
    * @param {object} [options.dataset] - Data attributes.
    * @param {object} [options.attributes] - Other HTML attributes.
    * @param {HTMLElement[]} [options.children] - Child elements to append.
    * @returns {HTMLElement} The created DOM element.
    */
-  // ... existing createDomElement ...
+  function createDomElement(tag, options = {}) {
+    const el = document.createElement(tag);
+    if (options.className) el.className = options.className;
+    if (options.id) el.id = options.id;
+    if (options.textContent) el.textContent = options.textContent;
+    if (options.innerHTML) el.innerHTML = options.innerHTML;
+    if (options.dataset) {
+      for (const [k, v] of Object.entries(options.dataset)) {
+        el.dataset[k] = v;
+      }
+    }
+    if (options.attributes) {
+      for (const [k, v] of Object.entries(options.attributes)) {
+        el.setAttribute(k, v);
+      }
+    }
+    if (options.children) {
+      options.children.forEach((child) => el.appendChild(child));
+    }
+    return el;
+  }
 
   /**
    * Universal fetch utility for API calls with flexible options and error handling.
