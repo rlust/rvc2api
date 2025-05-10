@@ -4,11 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>rvc2api UI</title>
-        <script src="https://cdn.tailwindcss.com" defer></script> <!-- Moved here and deferred -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Moved here and deferred -->
         <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
-              rel="stylesheet">
+              rel="stylesheet" />
         <link rel="stylesheet"
-              href="{{ url_for('static', path='css/custom.css') }}">
+              href="{{ url_for('static', path='css/custom.css') }}" />
     </head>
     <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
         <div id="toast-container" role="status" aria-live="polite"></div>
@@ -47,41 +48,47 @@
                         </button>
                     </div>
                     <nav class="space-y-2">
-                        <button data-view="home"
-                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
+                        <a href="#"
+                           data-view="home"
+                           class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
                             <i class="mdi mdi-home-outline mr-2" aria-hidden="true"></i>Home
-                        </button>
-                        <button data-view="lights"
-                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                        </a>
+                        <a href="#"
+                           data-view="lights"
+                           class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                             <i class="mdi mdi-lightbulb-outline mr-2" aria-hidden="true"></i>Lights
-                        </button>
+                        </a>
                         <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
                         <!-- Configuration Section -->
                         <div class="pt-2">
                             <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Configuration Files</h3>
                             <div class="space-y-1">
-                                <button data-view="mapping"
-                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                <a href="#"
+                                   data-view="mapping"
+                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-file-settings-outline mr-2" aria-hidden="true"></i>device_mapping.yml
-                                </button>
-                                <button data-view="spec"
-                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                </a>
+                                <a href="#"
+                                   data-view="spec"
+                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-code-json mr-2" aria-hidden="true"></i>rvc.json
-                                </button>
+                                </a>
                             </div>
                         </div>
                         <!-- Unmapped Entries Link -->
                         <div class="pt-2">
                             <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Troubleshooting</h3>
                             <div class="space-y-1">
-                                <button data-view="unmapped"
-                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                <a href="#"
+                                   data-view="unmapped"
+                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-alert-circle-outline mr-2" aria-hidden="true"></i>Unmapped Entries
-                                </button>
-                                <button data-view="unknown-pgns"
-                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                </a>
+                                <a href="#"
+                                   data-view="unknown-pgns"
+                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-help-rhombus-outline mr-2" aria-hidden="true"></i>Unknown PGNs
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </nav>
@@ -89,7 +96,8 @@
                 <div class="border-t border-gray-700 pt-4 text-center">
                     <button id="toggleSidebarDesktop"
                             class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
-                        <i class="mdi mdi-chevron-left text-xl" aria-hidden="true"></i> <span class="ml-2">Collapse</span>
+                        <i class="mdi mdi-chevron-left text-xl" aria-hidden="true"></i>
+                        <span class="ml-2">Collapse</span>
                     </button>
                 </div>
             </aside>
@@ -143,7 +151,8 @@
                         <div class="bg-gray-800 p-6 rounded-lg shadow">
                             <p class="text-gray-400 mb-4">Scene management and definition coming soon.</p>
                             <p class="text-gray-500 text-sm mt-2 mb-4">
-                                This section will allow you to define and trigger custom scenes involving multiple devices (lights, locks, etc.).
+                                This section will allow you to define and trigger custom scenes
+                                involving multiple devices (lights, locks, etc.).
                             </p>
                             <button id="btn-create-scene"
                                     class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600">
@@ -199,21 +208,23 @@
                 </section>
                 <section id="mapping-view" class="view-section hidden">
                     <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
-                    <pre id="mapping-content"
-                         class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading device_mapping.yml...</pre>
+                    <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">
+Loading device_mapping.yml...</pre>
                 </section>
                 <section id="spec-view" class="view-section hidden">
                     <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
                     <div id="spec-metadata" class="mb-4 text-sm text-gray-400">Loading spec metadata...</div>
-                    <pre id="spec-content"
-                         class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">Loading rvc.json...</pre>
+                    <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">
+Loading rvc.json...</pre>
                 </section>
                 <!-- Unmapped Entries View -->
                 <section id="unmapped-view" class="view-section hidden">
                     <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
                     <p class="mb-4 text-gray-400">
-                        These are CAN messages received by the system that could not be mapped to a known device based on your
-                        <code>device_mapping.yml</code>. Use this information to help build out your configuration.
+                        These are CAN messages received by the system that could not be
+                        mapped to a known device based on your
+                        <code>device_mapping.yml</code>. Use this information to help build
+                        out your configuration.
                     </p>
                     <div id="unmapped-entries-container" class="space-y-6">
                         <p id="unmapped-loading-message">Loading unmapped entries...</p>
@@ -224,9 +235,11 @@
                 <section id="unknown-pgns-view" class="view-section hidden">
                     <h1 class="text-3xl font-bold mb-6">Unknown PGNs (Not in rvc.json)</h1>
                     <p class="mb-4 text-gray-400">
-                        These are CAN messages received by the system where the PGN (extracted from the arbitration ID)
-                        was <strong>not found</strong> in your <code>rvc.json</code> specification file. This means the system
-                        does not know how to interpret these messages at a fundamental PGN level.
+                        These are CAN messages received by the system where the PGN
+                        (extracted from the arbitration ID) was
+                        <strong>not found</strong> in your
+                        <code>rvc.json</code> specification file. This means the system does
+                        not know how to interpret these messages at a fundamental PGN level.
                     </p>
                     <div id="unknown-pgns-container" class="space-y-6">
                         <p id="unknown-pgns-loading-message">Loading unknown PGNs...</p>
@@ -284,7 +297,10 @@
                     </div>
                 </div>
                 <pre id="log-stream"
-                     class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre> <!-- Removed h-full, added flex-1 min-h-0 -->
+                     role="log"
+                     aria-live="polite"
+                     class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre>
+                <!-- Removed h-full, added flex-1 min-h-0 -->
                 <p id="logs-waiting-message"
                    class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                     Waiting for logs...
@@ -292,1596 +308,1249 @@
             </div>
         </div>
         <script>
-    (function() { // START IIFE
-      // const socket = new WebSocket(`ws://${location.host}/ws`); // This line will be removed
-      const grid = document.getElementById('light-grid');
-      const filter = document.getElementById('area-filter');
-      const lightStates = {};
-      const lightsLoadingMessage = document.getElementById('lights-loading-message');
-      const apiBasePath = '/api'; // Define base path for API calls
-
-      // CAN Status Elements
-      const canStatusContainer = document.getElementById('can-status-container');
-      const canStatusLoadingMessage = document.getElementById('can-status-loading-message');
-
-      // API Server Status Elements (New)
-      const apiStatusContainer = document.getElementById('api-status-container');
-      const apiStatusLoadingMessage = document.getElementById('api-status-loading-message');
-
-      // Application Health Elements (New)
-      const appHealthContainer = document.getElementById('app-health-container');
-      const appHealthLoadingMessage = document.getElementById('app-health-loading-message');
-
-      // Pinned Logs Elements
-      const pinnedLogsContainer = document.getElementById('pinnedLogsContainer');
-      const pinnedLogsHeader = document.getElementById('pinnedLogsHeader');
-      const togglePinnedLogsBtn = document.getElementById('togglePinnedLogsBtn');
-      const pinnedLogsChevronIcon = togglePinnedLogsBtn.querySelector('i');
-      const pinnedLogsContent = document.getElementById('pinnedLogsContent');
-      const mainContent = document.getElementById('mainContent'); // Already defined, ensure it is
-
-      // Log stream elements (now part of pinnedLogsContent)
-      let logSocket = null;
-      let isLogPaused = false;
-      const logStream = document.getElementById('log-stream');
-      const logLevelFilter = document.getElementById('log-level');
-      const logSearchInput = document.getElementById('log-search');
-      const logsWaitingMessage = document.getElementById('logs-waiting-message');
-      const logPauseBtn = document.getElementById('log-pause');
-      const logResumeBtn = document.getElementById('log-resume');
-      const logClearBtn = document.getElementById('log-clear'); // Get clear button
-
-      const PINNED_LOGS_OPEN_KEY = 'pinnedLogsOpen';
-      const PINNED_LOGS_HEIGHT_KEY = 'pinnedLogsHeight';
-      const COLLAPSED_LOGS_HEIGHT = '3rem'; // Height of the header bar
-      const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
-      const MIN_LOGS_PANEL_HEIGHT_PX = 80; // Minimum height in pixels (e.g., header + a bit of content)
-      const MAX_LOGS_PANEL_HEIGHT_VH_PERCENT = 80; // Max height as % of viewport height
-      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
-      let isResizingLogs = false;
-      let resizeRafId = null; // For requestAnimationFrame
-      let pendingResizeHeightPx = 0; // To store height for RAF update
-      let originalContainerTransition = ''; // To store original transition style
-
-      // --- START: Log WebSocket Connection Functions ---
-      const LOG_LEVELS = {
-        DEBUG: 0,
-        INFO: 1,
-        WARNING: 2,
-        ERROR: 3,
-        CRITICAL: 4
-      };
-
-      function connectLogSocket() {
-        if (logSocket && (logSocket.readyState === WebSocket.OPEN || logSocket.readyState === WebSocket.CONNECTING)) {
-          console.log('[connectLogSocket] WebSocket already open or connecting.');
-          return;
-        }
-
-        const logWebSocketUrl = `ws://${location.host}${apiBasePath}/ws/logs`;
-        console.log(`[connectLogSocket] Connecting to log WebSocket: ${logWebSocketUrl}`);
-        logSocket = new WebSocket(logWebSocketUrl);
-
-        logSocket.onopen = () => {
-          console.log('[connectLogSocket] Log WebSocket connected.');
-          logsWaitingMessage.classList.add('hidden');
-          logPauseBtn.disabled = false;
-          logResumeBtn.disabled = true; // Resume is disabled when connected and not paused
-          isLogPaused = false; // Reset pause state on new connection
-        };
-
-        logSocket.onmessage = (event) => {
-          if (isLogPaused) return;
-
-          let logEntry;
-          try {
-            logEntry = JSON.parse(event.data);
-          } catch (e) {
-            console.warn('[connectLogSocket] Received non-JSON log message:', event.data);
-            // Fallback for plain text logs if necessary, though JSON is expected for filtering
-            logEntry = { level: 'INFO', message: event.data, timestamp: new Date().toISOString() };
-          }
-
-          const currentLogLevel = LOG_LEVELS[logLevelFilter.value.toUpperCase()] || 0;
-          const messageLogLevel = LOG_LEVELS[logEntry.level.toUpperCase()] === undefined ? LOG_LEVELS.INFO : LOG_LEVELS[logEntry.level.toUpperCase()];
-
-          if (messageLogLevel < currentLogLevel) {
-            return; // Skip if message level is below selected filter level
-          }
-
-          const searchTerm = logSearchInput.value.toLowerCase();
-          // Ensure logEntry.message is a string before calling toLowerCase()
-          const messageText = String(logEntry.message || '').toLowerCase();
-
-          if (searchTerm && !messageText.includes(searchTerm)) {
-            return; // Skip if search term is present and not found in message
-          }
-
-          const logLine = document.createElement('div');
-          // Basic styling, can be enhanced with colors per level
-          logLine.textContent = `[${logEntry.timestamp || new Date().toISOString()}] [${logEntry.level || 'INFO'}] ${logEntry.message}`;
-          logStream.appendChild(logLine);
-
-          // Auto-scroll to bottom
-          logStream.scrollTop = logStream.scrollHeight;
-        };
-
-        logSocket.onerror = (error) => {
-          console.error('[connectLogSocket] Log WebSocket error:', error);
-          showToast('Log connection error.', 'error');
-          logsWaitingMessage.textContent = 'Log connection error. Retrying...';
-          logsWaitingMessage.classList.remove('hidden');
-        };
-
-        logSocket.onclose = () => {
-          console.log('[connectLogSocket] Log WebSocket disconnected.');
-          logSocket = null;
-          if (!pinnedLogsContent.classList.contains('hidden')) { // Only show if panel is open
-            logsWaitingMessage.textContent = 'Log connection closed. Will attempt to reconnect if panel is open.';
-            logsWaitingMessage.classList.remove('hidden');
-            // Optional: implement a retry mechanism with backoff
-            setTimeout(connectLogSocket, 5000); // Retry connection after 5 seconds
-          }
-          logPauseBtn.disabled = true;
-          logResumeBtn.disabled = true;
-        };
-      }
-
-      function disconnectLogSocket() {
-        if (logSocket) {
-          console.log('[disconnectLogSocket] Closing Log WebSocket.');
-          logSocket.close();
-          logSocket = null;
-        }
-        logsWaitingMessage.classList.add('hidden'); // Hide message when explicitly disconnecting
-        logPauseBtn.disabled = true;
-        logResumeBtn.disabled = true;
-      }
-      // --- END: Log WebSocket Connection Functions ---
-
-      // --- START: Toast Notification System ---
-      function createToastContainer() { // Defined before showToast
-        let container = document.getElementById('toast-container');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'toast-container';
-          // Ensure it has ARIA roles if created dynamically, though it's in HTML now
-          container.setAttribute('role', 'status');
-          container.setAttribute('aria-live', 'polite');
-          container.className = 'fixed bottom-5 right-5 space-y-2 z-[100]'; // Ensure high z-index
-          document.body.appendChild(container);
-        }
-        return container;
-      }
-
-      function showToast(message, type = 'info', duration = 3000) { // Single definition
-        const toastContainer = document.getElementById('toast-container') || createToastContainer();
-        const toast = document.createElement('div');
-        toast.className = `p-4 rounded-md shadow-lg text-white max-w-sm`; // Added max-w-sm
-
-        if (type === 'error') {
-          toast.classList.add('bg-red-600');
-        } else if (type === 'success') {
-          toast.classList.add('bg-green-600');
-        } else { // info or default
-          toast.classList.add('bg-blue-600');
-        }
-
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
-
-        // Fade out and remove
-        setTimeout(() => {
-          toast.style.opacity = '0';
-          toast.style.transition = 'opacity 0.5s ease-out';
-          setTimeout(() => {
-            toast.remove();
-            if (toastContainer.childElementCount === 0 && toastContainer.parentElement === document.body) {
-              // Optionally remove container if it was dynamically added and is now empty
-              // For now, keep it if it's defined in HTML.
-            }
-          }, 500);
-        }, duration);
-      }
-      // --- END: Toast Notification System ---
-
-      // Constants for sidebar widths
-      const SIDEBAR_EXPANDED_WIDTH_DESKTOP = '16rem'; // Corresponds to md:w-64
-      const SIDEBAR_COLLAPSED_WIDTH_DESKTOP = '4rem';  // Corresponds to md:w-16
-
-      function adjustPinnedLogsLayout() {
-        if (!pinnedLogsContainer || !sidebar) return;
-
-        if (window.innerWidth < 768) { // Tailwind 'md' breakpoint (768px)
-          // On mobile, sidebar is an overlay or hidden. Logs bar spans full width.
-          pinnedLogsContainer.style.left = '0px';
-        } else {
-          // Desktop view: sidebar is fixed on the left
-          const isSidebarCollapsedDesktop = sidebar.classList.contains('md:w-16');
-          if (isSidebarCollapsedDesktop) {
-            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_DESKTOP;
-          } else { // Sidebar is expanded (should have md:w-64)
-            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_DESKTOP;
-          }
-        }
-      }
-
-      function setPinnedLogsState(isOpen, height) {
-        console.log('[setPinnedLogsState] Called with isOpen:', isOpen, 'Height:', height);
-        localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
-        if (isOpen && height) {
-          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
-          currentExpandedLogsHeight = height;
-        }
-
-        if (isOpen) {
-          console.log('[setPinnedLogsState] Opening pinned logs.');
-          pinnedLogsContent.classList.remove('hidden');
-          pinnedLogsContainer.style.height = currentExpandedLogsHeight;
-          pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
-          mainContent.style.paddingBottom = currentExpandedLogsHeight;
-          pinnedLogsChevronIcon.classList.remove('mdi-chevron-up');
-          pinnedLogsChevronIcon.classList.add('mdi-chevron-down');
-          console.log('[setPinnedLogsState] Calling connectLogSocket.');
-          connectLogSocket();
-          if (logStream.childElementCount === 0 && logSocket && logSocket.readyState === WebSocket.OPEN) {
-            console.log('[setPinnedLogsState] Showing logsWaitingMessage.');
-            logsWaitingMessage.classList.remove('hidden');
-          } else {
-            // Ensure it's hidden if conditions aren't met or logs are present
-            console.log('[setPinnedLogsState] Hiding logsWaitingMessage (or keeping hidden).');
-            logsWaitingMessage.classList.add('hidden');
-          }
-        } else {
-          console.log('[setPinnedLogsState] Closing pinned logs.');
-          pinnedLogsContent.classList.add('hidden');
-          pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
-          mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT; // Adjust padding for collapsed bar
-          pinnedLogsChevronIcon.classList.remove('mdi-chevron-down');
-          pinnedLogsChevronIcon.classList.add('mdi-chevron-up');
-          // Consider disconnecting log socket if not needed by any other view,
-          // but for a pinned pane, usually keep it connected if user might reopen.
-          // For now, let's keep it simple and not disconnect immediately on collapse.
-          // disconnectLogSocket(); // Optional: if you want to save resources
-          console.log('[setPinnedLogsState] Hiding logsWaitingMessage because panel is closing.');
-          logsWaitingMessage.classList.add('hidden');
-        }
-      }
-
-      togglePinnedLogsBtn.addEventListener('click', () => {
-        const isOpen = !pinnedLogsContent.classList.contains('hidden');
-        setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
-      });
-      pinnedLogsHeader.addEventListener('click', (e) => {
-        if (e.target === pinnedLogsHeader || e.target === pinnedLogsHeader.querySelector('span')) {
-            const isOpen = !pinnedLogsContent.classList.contains('hidden');
-            setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
-        }
-      });
-
-      // Initialize pinned logs state from localStorage
-      const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === 'true';
-      const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
-      if (savedHeight) {
-        // Validate saved height against min/max before applying
-        let heightNum = parseFloat(savedHeight);
-        const unit = savedHeight.replace(/[\d.-]/g, '');
-        if (unit === 'px') {
-            heightNum = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(heightNum, window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100)));
-            currentExpandedLogsHeight = `${heightNum}px`;
-        } else if (unit === 'vh') {
-            heightNum = Math.max((MIN_LOGS_PANEL_HEIGHT_PX / window.innerHeight) * 100, Math.min(heightNum, MAX_LOGS_PANEL_HEIGHT_VH_PERCENT));
-            currentExpandedLogsHeight = `${heightNum}vh`;
-        } else {
-            // default to vh if unit is unknown or invalid
-            currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
-        }
-      } else {
-        currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
-      }
-      // Set initial state without animation for page load
-      const originalTransition = pinnedLogsContainer.style.transition;
-      pinnedLogsContainer.style.transition = 'none';
-      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
-      // Restore transition after initial setup
-      // Use a timeout to ensure the no-transition style is applied before restoring it
-      setTimeout(() => {
-        pinnedLogsContainer.style.transition = originalTransition || 'height 0.3s ease-in-out';
-      }, 50);
-
-      // Pinned Logs Resizing Logic
-      const pinnedLogsResizeHandle = document.getElementById('pinnedLogsResizeHandle');
-
-      function applyResizeStyles() {
-        if (!isResizingLogs) return; // Check if still resizing
-
-        currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
-        pinnedLogsContainer.style.height = currentExpandedLogsHeight;
-        pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
-        mainContent.style.paddingBottom = currentExpandedLogsHeight;
-
-        resizeRafId = null; // Reset RAF ID
-      }
-
-      pinnedLogsResizeHandle.addEventListener('mousedown', (e) => {
-        if (!pinnedLogsContent.classList.contains('hidden')) { // Only allow resize if panel is open
-          e.preventDefault(); // Prevent text selection or other default actions
-          isResizingLogs = true;
-          const startY = e.clientY;
-          const startHeight = pinnedLogsContainer.offsetHeight; // Get height in pixels
-
-          originalContainerTransition = pinnedLogsContainer.style.transition;
-          pinnedLogsContainer.style.transition = 'none'; // Disable transitions during drag
-
-          document.body.style.userSelect = 'none';
-          document.body.style.cursor = 'ns-resize';
-
-          const onMouseMove = (moveEvent) => {
-            if (!isResizingLogs) return;
-            const dy = startY - moveEvent.clientY;
-            let newHeightPx = startHeight + dy;
-
-            const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
-            newHeightPx = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(newHeightPx, maxHeightPx));
-
-            pendingResizeHeightPx = newHeightPx;
-
-            if (resizeRafId === null) {
-              resizeRafId = requestAnimationFrame(applyResizeStyles);
-            }
-          };
-
-          const onMouseUp = () => {
-            if (isResizingLogs) {
-              isResizingLogs = false;
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-
-              if (resizeRafId !== null) {
-                cancelAnimationFrame(resizeRafId);
-                resizeRafId = null;
-              }
-
-              // Apply the final height directly to ensure it's set before saving
-              // This uses the last value of pendingResizeHeightPx calculated in onMouseMove
-              currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
-              pinnedLogsContainer.style.height = currentExpandedLogsHeight;
-              pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
-              mainContent.style.paddingBottom = currentExpandedLogsHeight;
-
-              localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, currentExpandedLogsHeight);
-
-              document.body.style.userSelect = '';
-              document.body.style.cursor = '';
-              pinnedLogsContainer.style.transition = originalContainerTransition || 'height 0.3s ease-in-out'; // Restore transitions
-            }
-          };
-
-          document.addEventListener('mousemove', onMouseMove);
-          document.addEventListener('mouseup', onMouseUp);
-        }
-      });
-
-      // WebSocket for entity updates
-      const entitySocket = new WebSocket(`ws://${location.host}${apiBasePath}/ws`);
-
-      // --- Fetch and Display CAN Status ---
-      async function fetchCanStatus() {
-        try {
-          const response = await fetch(`${apiBasePath}/can/status`);
-          if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-          }
-          const statusData = await response.json();
-          updateCanStatusView(statusData);
-        } catch (error) {
-          console.error("Failed to fetch CAN status:", error);
-          if (canStatusContainer && canStatusLoadingMessage) {
-            canStatusLoadingMessage.textContent = 'Failed to load CAN status.';
-            canStatusLoadingMessage.classList.remove('hidden');
-          } else if (canStatusContainer) {
-            canStatusContainer.innerHTML = '<p class="text-red-400">Failed to load CAN status.</p>';
-          }
-        }
-      }
-
-      function updateCanStatusView(statusData) {
-        if (!canStatusContainer) return;
-
-        canStatusLoadingMessage.classList.add('hidden'); // Hide loading message
-        canStatusContainer.innerHTML = ''; // Clear previous content or loading message
-
-        if (Object.keys(statusData).length === 0) {
-          const p = document.createElement('p');
-          p.className = 'text-gray-400';
-          p.textContent = 'No CAN interfaces found or status not available.';
-          canStatusContainer.appendChild(p);
-          return;
-        }
-
-        const ul = document.createElement('ul');
-        ul.className = 'space-y-6'; // Increased spacing between interface cards
-
-        for (const interfaceName in statusData) {
-          const iface = statusData[interfaceName];
-          const li = document.createElement('li');
-          li.className = 'p-5 bg-gray-700 rounded-lg shadow-md'; // Slightly more padding and shadow
-
-          // Interface Name Header
-          const h3 = document.createElement('h3');
-          h3.className = 'text-xl font-semibold text-blue-300 mb-4 border-b border-gray-600 pb-2';
-          h3.textContent = interfaceName;
-          li.appendChild(h3);
-
-          const mainGridDiv = document.createElement('div');
-          mainGridDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm';
-
-          // Left Column (State, Bitrate, etc.)
-          const leftColDiv = document.createElement('div');
-          let statusText = iface.state || 'N/A';
-          let statusColor = 'text-gray-400'; // Default/unknown
-          if (iface.state === 'ERROR-ACTIVE' || iface.state === 'UP' || iface.state === 'RUNNING') statusColor = 'text-green-400';
-          else if (iface.state === 'ERROR-WARNING') statusColor = 'text-yellow-400';
-          else if (iface.state === 'ERROR-PASSIVE') statusColor = 'text-orange-500';
-          else if (iface.state === 'BUS-OFF' || iface.state === 'DOWN' || iface.state === 'STOPPED') statusColor = 'text-red-500';
-
-          const bitrateDisplay = iface.bitrate ? `${(iface.bitrate / 1000).toFixed(0)} kbps` : 'N/A';
-          const samplePointDisplay = iface.sample_point ? `${(iface.sample_point * 100).toFixed(1)}%` : 'N/A';
-
-          leftColDiv.appendChild(createDetailParagraph('State:', statusText, `${statusColor} font-semibold`));
-          leftColDiv.appendChild(createDetailParagraph('Bitrate:', bitrateDisplay));
-          leftColDiv.appendChild(createDetailParagraph('Sample Point:', samplePointDisplay));
-          leftColDiv.appendChild(createDetailParagraph('Restart MS:', iface.restart_ms === undefined ? 'N/A' : String(iface.restart_ms)));
-          mainGridDiv.appendChild(leftColDiv);
-
-          // Right Column (TQ, BRP, etc.)
-          const rightColDiv = document.createElement('div');
-          const tqDisplay = iface.tq ? `${iface.tq} ns` : 'N/A';
-          rightColDiv.appendChild(createDetailParagraph('TQ:', tqDisplay));
-          rightColDiv.appendChild(createDetailParagraph('BRP:', iface.brp === undefined ? 'N/A' : String(iface.brp)));
-          rightColDiv.appendChild(createDetailParagraph('Prop Seg:', iface.prop_seg === undefined ? 'N/A' : String(iface.prop_seg)));
-          rightColDiv.appendChild(createDetailParagraph('Phase Seg1:', iface.phase_seg1 === undefined ? 'N/A' : String(iface.phase_seg1)));
-          rightColDiv.appendChild(createDetailParagraph('Phase Seg2:', iface.phase_seg2 === undefined ? 'N/A' : String(iface.phase_seg2)));
-          rightColDiv.appendChild(createDetailParagraph('SJW:', iface.sjw === undefined ? 'N/A' : String(iface.sjw)));
-          mainGridDiv.appendChild(rightColDiv);
-
-          // Counters & Errors Section (Conditional)
-          if (iface.tx_packets !== undefined || iface.rx_packets !== undefined || iface.tx_errors !== undefined || iface.restarts !== undefined) {
-            const countersDiv = document.createElement('div');
-            countersDiv.className = 'md:col-span-2 mt-3 pt-3 border-t border-gray-600';
-            const countersH4 = document.createElement('h4');
-            countersH4.className = 'text-md font-medium text-gray-300 mb-2';
-            countersH4.textContent = 'Counters & Errors';
-            countersDiv.appendChild(countersH4);
-            const countersGrid = document.createElement('div');
-            countersGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1';
-            countersGrid.appendChild(createDetailParagraph('TX Packets:', iface.tx_packets === undefined ? 'N/A' : String(iface.tx_packets)));
-            countersGrid.appendChild(createDetailParagraph('RX Packets:', iface.rx_packets === undefined ? 'N/A' : String(iface.rx_packets)));
-            countersGrid.appendChild(createDetailParagraph('TX Bytes:', iface.tx_bytes === undefined ? 'N/A' : String(iface.tx_bytes)));
-            countersGrid.appendChild(createDetailParagraph('RX Bytes:', iface.rx_bytes === undefined ? 'N/A' : String(iface.rx_bytes)));
-            countersGrid.appendChild(createDetailParagraph('TX Errors:', iface.tx_errors === undefined ? 'N/A' : String(iface.tx_errors)));
-            countersGrid.appendChild(createDetailParagraph('RX Errors:', iface.rx_errors === undefined ? 'N/A' : String(iface.rx_errors)));
-            countersGrid.appendChild(createDetailParagraph('Bus Errors:', iface.bus_errors === undefined ? 'N/A' : String(iface.bus_errors)));
-            countersGrid.appendChild(createDetailParagraph('Restarts:', iface.restarts === undefined ? 'N/A' : String(iface.restarts)));
-            countersDiv.appendChild(countersGrid);
-            mainGridDiv.appendChild(countersDiv);
-          }
-
-          // Device Info Section (Conditional)
-          if (iface.parentbus || iface.parentdev) {
-            const devInfoDiv = document.createElement('div');
-            devInfoDiv.className = 'md:col-span-2 mt-3 pt-3 border-t border-gray-600';
-            const devInfoH4 = document.createElement('h4');
-            devInfoH4.className = 'text-md font-medium text-gray-300 mb-2';
-            devInfoH4.textContent = 'Device Info';
-            devInfoDiv.appendChild(devInfoH4);
-            const devInfoGrid = document.createElement('div');
-            devInfoGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1';
-            devInfoGrid.appendChild(createDetailParagraph('Parent Bus:', iface.parentbus || 'N/A'));
-            devInfoGrid.appendChild(createDetailParagraph('Parent Dev:', iface.parentdev || 'N/A'));
-            devInfoDiv.appendChild(devInfoGrid);
-            mainGridDiv.appendChild(devInfoDiv);
-          }
-
-          li.appendChild(mainGridDiv);
-          ul.appendChild(li);
-        }
-        canStatusContainer.appendChild(ul);
-      }
-
-      // Helper function to create <p><strong>Label:</strong> Value</p> structure
-      function createDetailParagraph(label, value, valueClass = '') {
-        const p = document.createElement('p');
-        p.className = 'mb-1';
-        const strong = document.createElement('strong');
-        strong.textContent = `${label} `;
-        p.appendChild(strong);
-        if (valueClass) {
-          const span = document.createElement('span');
-          span.className = valueClass;
-          span.textContent = String(value);
-          p.appendChild(span);
-        } else {
-          p.appendChild(document.createTextNode(String(value)));
-        }
-        return p;
-      }
-
-      // --- Fetch and Display API Server Status (NEW) ---
-      async function fetchApiServerStatus() {
-        if (!apiStatusContainer) return;
-        apiStatusLoadingMessage.classList.remove('hidden'); // Show loading message
-        try {
-          const response = await fetch(`${apiBasePath}/status/server`);
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error ${response.status}: ${errorText}`);
-          }
-          const statusData = await response.json();
-          updateApiServerView(statusData);
-        } catch (error) {
-          console.error("Failed to fetch API server status:", error);
-          if (apiStatusLoadingMessage) { // Check if it wasn't cleared by a successful load
-            apiStatusLoadingMessage.textContent = 'Failed to load API server status.';
-          }
-          // Display error in the container itself if loading message is already gone or not primary
-          apiStatusContainer.innerHTML = `<p class="text-red-400">Failed to load API server status: ${error.message}</p>`;
-        } finally {
-            if (apiStatusLoadingMessage) apiStatusLoadingMessage.classList.add('hidden'); // Hide loading message
-        }
-      }
-
-      function updateApiServerView(statusData) {
-        if (!apiStatusContainer) return;
-        apiStatusContainer.innerHTML = ''; // Clear previous content
-
-        const ul = document.createElement('ul');
-        ul.className = 'space-y-2 text-sm';
-
-        const items = {
-          "Version": statusData.version,
-          "Uptime": statusData.uptime,
-          "Requests Processed": statusData.requests_processed,
-          "Error Rate": statusData.error_rate
-        };
-
-        for (const [key, value] of Object.entries(items)) {
-          const li = document.createElement('li');
-          const strong = document.createElement('strong');
-          strong.textContent = `${key}: `;
-          li.appendChild(strong);
-          li.appendChild(document.createTextNode(value || 'N/A'));
-          ul.appendChild(li);
-        }
-        apiStatusContainer.appendChild(ul);
-      }
-
-      // --- Fetch and Display Application Health (NEW) ---
-      async function fetchApplicationHealth() {
-        if (!appHealthContainer) return;
-        appHealthLoadingMessage.classList.remove('hidden'); // Show loading message
-        try {
-          const response = await fetch(`${apiBasePath}/status/application`);
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error ${response.status}: ${errorText}`);
-          }
-          const healthData = await response.json();
-          updateApplicationHealthView(healthData);
-        } catch (error) {
-          console.error("Failed to fetch application health:", error);
-          if (appHealthLoadingMessage) { // Check if it wasn't cleared
-            appHealthLoadingMessage.textContent = 'Failed to load application health.';
-          }
-          appHealthContainer.innerHTML = `<p class="text-red-400">Failed to load application health: ${error.message}</p>`;
-        } finally {
-            if (appHealthLoadingMessage) appHealthLoadingMessage.classList.add('hidden'); // Hide loading message
-        }
-      }
-
-      function updateApplicationHealthView(healthData) {
-        if (!appHealthContainer) return;
-        appHealthContainer.innerHTML = ''; // Clear previous content
-
-        const ul = document.createElement('ul');
-        ul.className = 'space-y-2 text-sm';
-
-        const healthItems = [
-          { label: "Configuration Files Loaded", value: healthData.config_files_loaded ? 'Yes' : 'No', isGood: healthData.config_files_loaded },
-          { label: "Active WebSocket Clients", value: healthData.websocket_clients === undefined ? 'N/A' : healthData.websocket_clients },
-          { label: "Last Critical Error", value: healthData.last_error || 'N/A' }
-          // Add more application-specific health indicators here by pushing to healthItems
+      (function () {
+        const APP_VERSION = "{{ app_version }}";
+        const VALID_THEMES = [
+          "default",
+          "dark",
+          "light",
+          "catppuccin-mocha",
+          "catppuccin-latte",
         ];
+        const DEFAULT_THEME = "catppuccin-mocha";
+        const LOG_WEBSOCKET_RECONNECT_INTERVAL = 5000;
+        const CAN_STATUS_REFRESH_INTERVAL = 10000;
+        const API_STATUS_REFRESH_INTERVAL = 30000;
+        const APP_HEALTH_REFRESH_INTERVAL = 30000;
+        const MD_BREAKPOINT_PX = 768; // Tailwind's 'md' breakpoint
+        const CLASS_HIDDEN = "hidden";
+        const CLASS_ACTIVE_NAV = "active-nav";
+        const CLASS_LIGHT_ON = "light-on";
+        const CLASS_LIGHT_OFF = "light-off";
+        const THEME_CLASSES = VALID_THEMES.map((t) => `theme-${t}`);
+        const ATTR_DATA_VIEW = "data-view";
+        const ARIA_HIDDEN = "aria-hidden";
+        const LOG_LEVELS = {
+          DEBUG: 0,
+          INFO: 1,
+          WARNING: 2,
+          ERROR: 3,
+          CRITICAL: 4,
+        };
+        const LOG_LEVEL_NAMES = Object.keys(LOG_LEVELS);
+        const ICON_COPY = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 inline-block mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 4.625a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>`;
+        const ICON_LOADING_SPINNER = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        const CLASS_TEXT_GREEN_400 = "text-green-400"; // Example, adjust if themes need specific versions
+        const CLASS_TEXT_RED_400 = "text-red-400";
+        const CLASS_TEXT_YELLOW_400 = "text-yellow-400";
 
-        healthItems.forEach(item => {
-          const li = document.createElement('li');
-          const strong = document.createElement('strong');
-          strong.textContent = `${item.label}: `;
-          li.appendChild(strong);
+        // DOM Element Cache
+        const sidebar = document.getElementById("sidebar");
+        const toggleSidebarDesktop = document.getElementById(
+          "toggleSidebarDesktop"
+        );
+        const toggleSidebarMobile = document.getElementById(
+          "toggleSidebarMobile"
+        );
+        const navLinks = document.querySelectorAll(".nav-link");
+        const views = document.querySelectorAll(".view-section");
+        const homeView = document.getElementById("home-view");
+        const lightsView = document.getElementById("lights-view");
+        const lightsContent = document.getElementById("lights-content");
+        const mappingView = document.getElementById("mapping-view");
+        const mappingContent = document.getElementById("mapping-content");
+        const specView = document.getElementById("spec-view");
+        const specContent = document.getElementById("spec-content");
+        const specMetadataDiv = document.getElementById("spec-metadata");
+        const unmappedEntriesView = document.getElementById(
+          "unmapped-entries-view"
+        );
+        const unmappedEntriesContent = document.getElementById(
+          "unmapped-entries-content"
+        );
+        const unknownPgnsView = document.getElementById("unknown-pgns-view");
+        const unknownPgnsContent = document.getElementById(
+          "unknown-pgns-content"
+        );
+        const apiStatusView = document.getElementById("api-status-view");
+        const apiStatusContent = document.getElementById("api-status-content");
+        const appHealthView = document.getElementById("app-health-view");
+        const appHealthContent = document.getElementById("app-health-content");
+        const canStatusView = document.getElementById("can-status-view");
+        const canStatusContent = document.getElementById("can-status-content");
+        const logStream = document.getElementById("log-stream");
+        const logFilterInput = document.getElementById("log-filter");
+        const logLevelSelect = document.getElementById("log-level");
+        const clearLogButton = document.getElementById("clear-log");
+        const logAutoScrollCheckbox =
+          document.getElementById("log-auto-scroll");
+        const pinnedLogsContainer = document.getElementById(
+          "pinnedLogsContainer"
+        );
+        const pinnedLogsContent = document.getElementById("pinnedLogsContent");
+        const pinnedLogsHeader = document.getElementById("pinnedLogsHeader");
+        const togglePinnedLogsButton =
+          document.getElementById("togglePinnedLogs");
+        const clearPinnedLogsButton = document.getElementById(
+          "clearPinnedLogsButton"
+        );
+        const appVersionSpan = document.getElementById("appVersion");
+        const toastContainer = document.getElementById("toast-container");
 
-          if (item.value !== undefined) {
-            const span = document.createElement('span');
-            span.textContent = String(item.value);
-            if (typeof item.isGood === 'boolean') {
-              span.className = item.isGood ? 'text-green-400' : 'text-red-400';
+        // const themeSelector = document.getElementById("theme-selector"); // Removed unused variable
+        let logSocket;
+        let currentView = "home";
+        let currentTheme = DEFAULT_THEME;
+        let pinnedLogMessages = [];
+        let isPinnedLogsVisible = false;
+        let isResizingPinnedLogs = false;
+        let originalContainerTransition;
+        let currentLogLevel = LOG_LEVELS.INFO;
+
+        // Helper Functions
+        const createDomElement = (tag, options = {}) => {
+          const element = document.createElement(tag);
+          if (options.className) element.className = options.className;
+          if (options.id) element.id = options.id;
+          if (options.textContent) element.textContent = options.textContent;
+          if (options.dataset) {
+            for (const key in options.dataset) {
+              element.dataset[key] = options.dataset[key];
             }
-            li.appendChild(span);
-          } else {
-            li.appendChild(document.createTextNode('N/A'));
           }
-          ul.appendChild(li);
-        });
-        appHealthContainer.appendChild(ul);
-      }
-
-      // Helper function to call light services (or any entity control)
-      function callLightService(entityId, command, data = {}) {
-        let path;
-        let body;
-        const groupLightEntityIds = ['all_lights', 'exterior_lights', 'interior_lights']; // Add other group IDs if any
-
-        if (groupLightEntityIds.includes(entityId)) {
-          // This is a group control command
-          const groupName = entityId.replace('_lights', ''); // e.g. all_lights -> all
-          path = `${apiBasePath}/lights/control?group=${groupName}`;
-          body = { command: command, ...data }; // Pass command and any relevant data (state, brightness)
-
-          // Validate group commands (optional, but good practice for clarity)
-          const validGroupCommands = ['set', 'toggle', 'brightness_up', 'brightness_down'];
-          if (!validGroupCommands.includes(command)) {
-            console.error(`Invalid command '${command}' for group light control '${entityId}'.`);
-            showToast(`Invalid command for group ${entityId}`, 'error');
-            return Promise.reject(`Invalid command for group ${entityId}`);
+          if (options.attributes) {
+            for (const key in options.attributes) {
+              element.setAttribute(key, options.attributes[key]);
+            }
           }
-          if (command === 'set' && data.state === undefined && data.brightness === undefined) {
-            console.warn(`'set' command for group ${entityId} called without state or brightness.`);
-            // Allow it, backend might handle it or have defaults, but it's unusual.
+          if (options.children && Array.isArray(options.children)) {
+            options.children.forEach((child) => element.appendChild(child));
+          }
+          return element;
+        };
+
+        const fetchData = async (url, options = {}) => {
+          const {
+            method = "GET",
+            headers = { "Content-Type": "application/json" },
+            body = null,
+            responseType = "json",
+            successCallback = () => {},
+            errorCallback = () => {},
+            loadingElement = null,
+          } = options;
+
+          if (loadingElement) {
+            loadingElement.innerHTML =
+              '<p class="text-gray-400">Loading...</p>';
           }
 
-        } else {
-          // This is an individual entity control command
-          path = `${apiBasePath}/entities/${entityId}/control`;
-          body = { command: command, ...data }; // Standard body for entity control
-
-          // Validate individual commands
-          const validIndividualCommands = ['set', 'toggle', 'brightness_up', 'brightness_down'];
-          if (!validIndividualCommands.includes(command)) {
-            console.error('Unknown light command for individual entity:', command);
-            showToast(`Unknown command: ${command} for ${entityId}`, 'error');
-            return Promise.reject(`Unknown command: ${command} for ${entityId}`);
+          try {
+            const response = await fetch(url, { method, headers, body });
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data =
+              responseType === "json"
+                ? await response.json()
+                : await response.text();
+            successCallback(data);
+          } catch (error) {
+            errorCallback(error);
           }
-        }
+        };
 
-        return fetch(path, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        })
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(err => {
-              const errorMsg = `HTTP error ${response.status}: ${err.detail || response.statusText}`;
-              console.error(`Service call for ${entityId} (${command}) failed:`, errorMsg, err);
-              throw new Error(errorMsg);
+        function updateApiServerView(data) {
+          apiStatusContent.innerHTML = ""; // Clear previous content
+          if (data && data.status) {
+            const ul = createDomElement("ul", {
+              className: "list-disc pl-5 space-y-1 text-gray-300",
             });
-          }
-          return response.json();
-        })
-        .then(responseData => {
-          console.log(`Command ${command} for ${entityId} successful:`, responseData);
-          // UI should update via WebSocket message triggering renderGroupedLights()
-          // Or, if optimistic updates are desired, handle here.
-        })
-        .catch(error => {
-          console.error(`Command ${command} for ${entityId} failed:`, error);
-          showToast(`Failed to control ${entityId}: ${error.message}`, 'error');
-        });
-      }
-
-      function renderCard(entity) {
-        const card = document.createElement('div');
-        card.className = 'p-4 rounded-lg shadow-md space-y-3 entity-card'; // Base classes
-        card.dataset.entityId = entity.entity_id;
-
-        const friendlyName = entity.friendly_name || entity.entity_id;
-        let state = entity.state || 'unknown'; // 'on' or 'off'
-        const raw_attrs = entity.raw || {}; // Use entity.raw for raw CAN values
-        const capabilities = entity.capabilities || [];
-
-        // Apply on/off class for styling
-        if (state.toLowerCase() === 'on') {
-          card.classList.add('light-on');
-          card.classList.remove('light-off');
-        } else {
-          card.classList.add('light-off');
-          card.classList.remove('light-on');
-        }
-
-        const h3 = document.createElement('h3');
-        h3.className = 'text-lg font-semibold';
-        h3.textContent = friendlyName;
-        card.appendChild(h3);
-
-        const hasBrightness = capabilities.includes('brightness');
-
-        if (hasBrightness) {
-          let currentBrightnessPercent = 0;
-          if (state.toLowerCase() === 'on') {
-            if (raw_attrs.operating_status !== undefined) {
-              currentBrightnessPercent = Math.min(Math.round((parseInt(raw_attrs.operating_status, 10) / 200) * 100), 100);
-            } else {
-              currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
+            const li = createDomElement("li", {
+              textContent: `Status: ${data.status}`,
+            });
+            ul.appendChild(li);
+            // Add more details if available in data.status or data object
+            if (data.message) {
+              const msgLi = createDomElement("li", {
+                textContent: `Message: ${data.message}`,
+              });
+              ul.appendChild(msgLi);
             }
-          }
-
-          const brightnessControlDiv = document.createElement('div');
-          brightnessControlDiv.className = 'brightness-control space-y-1 pt-2';
-
-          const label = document.createElement('label');
-          label.htmlFor = `br-${entity.entity_id}`;
-          label.className = 'text-sm';
-          label.textContent = 'Brightness: ';
-
-          const brightnessValueSpan = document.createElement('span');
-          brightnessValueSpan.id = `br-val-${entity.entity_id}`;
-          brightnessValueSpan.textContent = `${currentBrightnessPercent}%`;
-          label.appendChild(brightnessValueSpan);
-          brightnessControlDiv.appendChild(label);
-
-          const slider = document.createElement('input');
-          slider.type = 'range';
-          slider.id = `br-${entity.entity_id}`;
-          slider.dataset.entityId = entity.entity_id;
-          slider.className = 'w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider';
-          slider.min = '0';
-          slider.max = '100';
-          slider.value = String(currentBrightnessPercent);
-          brightnessControlDiv.appendChild(slider);
-
-          card.appendChild(brightnessControlDiv);
-
-          // Add event listeners for the slider
-          slider.addEventListener('input', (e) => {
-            const brightness = parseInt(e.target.value, 10); // 0-100
-            brightnessValueSpan.textContent = `${brightness}%`;
-          });
-          slider.addEventListener('change', (e) => { // 'change' event fires when user releases mouse
-            const entityId = e.target.dataset.entityId;
-            const brightness = parseInt(e.target.value, 10); // 0-100
-            callLightService(entityId, 'set', { state: 'on', brightness: brightness });
-          });
-        }
-
-        // Make the entire card clickable to toggle on/off
-        card.addEventListener('click', (e) => {
-          // Prevent toggle if the click was on the slider itself or its label or anything within brightness-control
-          if (e.target.closest('.brightness-control')) {
-            return;
-          }
-          const entityId = card.dataset.entityId;
-          callLightService(entityId, 'toggle');
-        });
-
-        return card;
-      }
-
-      entitySocket.onmessage = (event) => {
-        const entityData = JSON.parse(event.data);
-        const entity_id = entityData.entity_id;
-
-        if (entity_id) {
-          // If the entity is already in lightStates (i.e., it's a light we are displaying), update it.
-          if (lightStates.hasOwnProperty(entity_id)) {
-            lightStates[entity_id] = entityData;
-            renderGroupedLights();
-          }
-          // If it's a new entity that is a light (e.g., identified after initial load),
-          // add it to lightStates and render.
-          else if (entityData.device_type === 'light') {
-            lightStates[entity_id] = entityData;
-            // Check if its area needs to be added to the filter
-            const area = entityData.suggested_area || 'Unknown';
-            const areaFilter = document.getElementById('area-filter');
-            if (areaFilter) {
-              const existingOptions = Array.from(areaFilter.options).map(opt => opt.value);
-              if (!existingOptions.includes(area)) {
-                const opt = document.createElement('option');
-                opt.value = area;
-                opt.textContent = area;
-                areaFilter.appendChild(opt);
-                // Consider sorting filter options if many areas are dynamically added
-              }
+            if (data.version) {
+              const versionLi = createDomElement("li", {
+                textContent: `Server Version: ${data.version}`,
+              });
+              ul.appendChild(versionLi);
             }
-            renderGroupedLights();
-          }
-        }
-      };
-
-      function renderGroupedLights() {
-        console.log('renderGroupedLights called. lightStates:', JSON.parse(JSON.stringify(lightStates)), 'Filter:', filter ? filter.value : 'N/A');
-        if (!grid) {
-          console.error('renderGroupedLights: grid element not found!');
-          return;
-        }
-
-        const lightsLoadingP = document.getElementById('lights-loading-message');
-        if (lightsLoadingP) {
-            lightsLoadingP.classList.add('hidden');
-        }
-
-        grid.innerHTML = ''; // Clear previous content (cards, "No lights" message, etc.)
-
-        const selectedAreaFilter = filter.value;
-        const groupedByArea = {};
-        let lightsExistToDisplay = false;
-
-        // Group lights by area, applying the filter
-        for (const entityId in lightStates) {
-          const entity = lightStates[entityId];
-          if (entity.device_type === 'light') {
-            const area = entity.suggested_area || 'Unknown';
-            if (selectedAreaFilter === 'All' || selectedAreaFilter === area) {
-              if (!groupedByArea[area]) {
-                groupedByArea[area] = [];
-              }
-              groupedByArea[area].push(entity);
-              lightsExistToDisplay = true;
-            }
-          }
-        }
-
-        if (!lightsExistToDisplay) {
-          const messageP = document.createElement('p');
-          messageP.className = 'text-gray-500 text-center py-8';
-          if (Object.keys(lightStates).length === 0 && (!filter.value || filter.value === 'All')) {
-            messageP.textContent = 'No lights are currently configured or available.';
-            console.log('renderGroupedLights: Displaying "No lights configured" message.');
+            apiStatusContent.appendChild(ul);
           } else {
-            messageP.textContent = `No lights found for the current filter ("${selectedAreaFilter}").`;
-            console.log(`renderGroupedLights: Displaying "No lights found for filter: ${selectedAreaFilter}" message.`);
+            apiStatusContent.textContent = "Could not fetch API server status.";
           }
-          grid.appendChild(messageP);
-          return;
         }
 
-        const sortedAreas = Object.keys(groupedByArea).sort();
+        function updateApplicationHealthView(data) {
+          appHealthContent.innerHTML = ""; // Clear previous content
+          if (data && Object.keys(data).length > 0) {
+            const ul = createDomElement("ul", {
+              className: "list-disc pl-5 space-y-1 text-gray-300",
+            });
+            for (const key in data) {
+              const statusSpan = createDomElement("span", {
+                className:
+                  data[key] === "OK"
+                    ? CLASS_TEXT_GREEN_400
+                    : CLASS_TEXT_RED_400,
+                textContent: data[key],
+              });
+              const li = createDomElement("li", {
+                textContent: `${key
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (l) => l.toUpperCase())}: `,
+                children: [statusSpan],
+              });
+              ul.appendChild(li);
+            }
+            appHealthContent.appendChild(ul);
+          } else {
+            appHealthContent.textContent =
+              "Could not fetch application health status.";
+          }
+        }
 
-        for (const areaName of sortedAreas) {
-          const areaSectionDiv = document.createElement('div');
-          areaSectionDiv.className = 'area-section mb-8';
-          areaSectionDiv.dataset.areaName = areaName;
+        function updateCanStatusView(data) {
+          canStatusContent.innerHTML = ""; // Clear previous content
+          if (data && Object.keys(data).length > 0) {
+            const ul = createDomElement("ul", { className: "space-y-4" });
+            for (const iface in data) {
+              const ifaceData = data[iface];
+              const li = createDomElement("li"); // Each interface gets its own list item
 
-          const areaTitleH2 = document.createElement('h2');
-          areaTitleH2.className = 'text-2xl font-semibold mb-3 text-gray-200';
-          areaTitleH2.textContent = areaName;
-          areaSectionDiv.appendChild(areaTitleH2);
+              const interfaceDiv = createDomElement("div", {
+                className: "p-3 bg-gray-700 rounded",
+              }); // Theme: bg-gray-700
 
-          const dividerDiv = document.createElement('div');
-          dividerDiv.className = 'border-t border-gray-700 mb-6';
-          areaSectionDiv.appendChild(dividerDiv);
+              const nameH3 = createDomElement("h3", {
+                className: "text-md font-semibold text-gray-100 mb-1", // Theme: text-gray-100
+                textContent: iface,
+              });
+              interfaceDiv.appendChild(nameH3);
 
-          const entitiesGridDiv = document.createElement('div');
-          entitiesGridDiv.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 entity-grid';
-          areaSectionDiv.appendChild(entitiesGridDiv);
-
-          groupedByArea[areaName].forEach(entity => {
-            try {
-              const cardElement = renderCard(entity);
-              if (cardElement) {
-                entitiesGridDiv.appendChild(cardElement);
+              const detailsContainer = createDomElement("div", {
+                className: "space-y-px text-sm",
+              });
+              detailsContainer.appendChild(
+                createDetailParagraph(
+                  "State",
+                  ifaceData.state,
+                  ifaceData.state === "ERROR"
+                    ? CLASS_TEXT_RED_400
+                    : ifaceData.state === "BUS-OFF"
+                    ? CLASS_TEXT_YELLOW_400
+                    : CLASS_TEXT_GREEN_400
+                )
+              );
+              detailsContainer.appendChild(
+                createDetailParagraph("Restart Count", ifaceData.restart_ms)
+              );
+              detailsContainer.appendChild(
+                createDetailParagraph("TX Errors", ifaceData.txerr)
+              );
+              detailsContainer.appendChild(
+                createDetailParagraph("RX Errors", ifaceData.rxerr)
+              );
+              if (
+                ifaceData.hasOwnProperty("bittiming") &&
+                typeof ifaceData.bittiming === "object"
+              ) {
+                detailsContainer.appendChild(
+                  createDetailParagraph("Bitrate", ifaceData.bittiming.bitrate)
+                );
               } else {
-                console.warn(`renderCard for entity ${entity.entity_id} returned null or undefined.`);
-                const errorCardPlaceholder = document.createElement('div');
-                errorCardPlaceholder.className = 'p-4 rounded-lg shadow-md entity-card bg-yellow-700 text-white';
-                errorCardPlaceholder.textContent = `Could not render ${entity.friendly_name || entity.entity_id}. See console.`;
-                entitiesGridDiv.appendChild(errorCardPlaceholder);
+                detailsContainer.appendChild(
+                  createDetailParagraph("Bitrate", "N/A")
+                );
               }
-            } catch (e) {
-              console.error(`Error rendering card for entity ${entity.entity_id} (Area: ${areaName}):`, e);
-              const errorCardPlaceholder = document.createElement('div');
-              errorCardPlaceholder.className = 'p-4 rounded-lg shadow-md entity-card bg-red-800 text-white';
-              errorCardPlaceholder.textContent = `Error loading ${entity.friendly_name || entity.entity_id}. Check console.`;
-              entitiesGridDiv.appendChild(errorCardPlaceholder);
+              interfaceDiv.appendChild(detailsContainer);
+              li.appendChild(interfaceDiv);
+              ul.appendChild(li);
             }
-          });
-          grid.appendChild(areaSectionDiv);
-        }
-        console.log('renderGroupedLights: Finished rendering areas and cards.');
-      }
-
-      // Fetch initial light states
-      fetch(`${apiBasePath}/lights`)
-        .then(res => {
-          if (!res.ok) {
-            return res.text().then(text => {
-              throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}. Response: ${text}`);
-            });
-          }
-          return res.json();
-        })
-        .then(data => {
-          const lightsLoadingP = document.getElementById('lights-loading-message');
-          if (lightsLoadingP) {
-            lightsLoadingP.classList.add('hidden');
-          }
-          if (data && Array.isArray(data)) {
-            data.forEach(entity => {
-              if (entity.device_type === 'light') {
-                lightStates[entity.entity_id] = entity;
-                const area = entity.suggested_area || 'Unknown';
-                const areaFilter = document.getElementById('area-filter');
-                if (areaFilter) {
-                    const existingOptions = Array.from(areaFilter.options).map(opt => opt.value);
-                    if (!existingOptions.includes(area)) {
-                        const opt = document.createElement('option');
-                        opt.value = area;
-                        opt.textContent = area;
-                        areaFilter.appendChild(opt);
-                    }
-                }
-              }
-            });
-          } else if (data) {
-            console.warn("Received non-array data for lights:", data);
-          }
-          renderGroupedLights();
-        })
-        .catch(error => {
-          console.error("Failed to fetch lights:", error);
-          const lightsLoadingP = document.getElementById('lights-loading-message');
-          if (lightsLoadingP) {
-            lightsLoadingP.classList.add('hidden');
-          }
-          if (grid) {
-            grid.innerHTML = `<p class="text-red-500 text-center py-8">Error loading lights: ${error.message}. Check console for details.</p>`;
-          }
-        });
-
-      document.querySelectorAll('.nav-link').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const view = btn.getAttribute('data-view');
-
-          // If a main view navigation occurs, and logs are open, ensure logs remain visible
-          // The pinned log pane is independent of view sections now.
-
-          document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-          const targetView = document.getElementById(`${view}-view`);
-          if (targetView) {
-            targetView.classList.remove('hidden');
+            canStatusContent.appendChild(ul);
           } else {
-            console.error(`View section not found: ${view}-view`);
-            const homeViewFallback = document.getElementById('home-view');
-            if (homeViewFallback) homeViewFallback.classList.remove('hidden');
-            // If home is fallback, ensure its nav link is active
-            const homeNavLinkFallback = document.querySelector('.nav-link[data-view="home"]');
-            if (homeNavLinkFallback) {
-                document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
-                homeNavLinkFallback.classList.add('active-nav');
-            }
+            canStatusContent.textContent =
+              "Could not fetch CAN interface status or no interfaces are up.";
+          }
+        }
+
+        function createDetailParagraph(label, value, valueClass = "") {
+          const p = createDomElement("p", { className: "mb-1" });
+          const strong = createDomElement("strong", {
+            textContent: `${label}: `,
+          });
+          p.appendChild(strong);
+          if (valueClass) {
+            const span = createDomElement("span", {
+              className: valueClass,
+              textContent: String(value),
+            });
+            p.appendChild(span);
+          } else {
+            p.appendChild(document.createTextNode(String(value)));
+          }
+          return p;
+        }
+
+        function fetchCanStatus() {
+          fetchData("/api/can/status", {
+            successCallback: updateCanStatusView,
+            errorCallback: (error) => {
+              console.error("Failed to fetch CAN status:", error);
+              canStatusContent.textContent = `Error loading CAN status: ${error.message}`;
+            },
+            loadingElement: canStatusContent,
+          });
+        }
+
+        function renderGroupedLights(areas, entities) {
+          lightsContent.innerHTML = ""; // Clear previous content
+
+          if (Object.keys(areas).length === 0 && entities.length > 0) {
+            // Case: No areas defined, but entities exist. Render all under a default "All Lights" area.
+            const defaultAreaKey = "all_lights";
+            areas = {
+              [defaultAreaKey]: {
+                name: "All Lights",
+                entities: entities.map((e) => e.id),
+              },
+            };
+          } else if (Object.keys(areas).length === 0 && entities.length === 0) {
+            lightsContent.textContent = "No lights or areas defined.";
             return;
           }
 
-          document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
-          btn.classList.add('active-nav');
+          for (const areaKey in areas) {
+            const area = areas[areaKey];
+            const areaEntities = entities.filter(
+              (entity) => area.entities && area.entities.includes(entity.id)
+            );
 
-          // Remove specific logic for 'logs' view as it's now pinned
-          // if (view === 'logs') { ... } else { disconnectLogSocket(); ... }
+            const areaSectionDiv = createDomElement("div", {
+              className: "mb-6 p-4 bg-gray-800 rounded-lg shadow", // Theme: bg-gray-800
+              id: `area-${areaKey}`,
+            });
 
-          if (view === 'mapping') {
-            fetch(`${apiBasePath}/config/device_mapping`)
-              .then(res => {
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
-                return res.text();
-              })
-              .then(text => {
-                document.getElementById('mapping-content').textContent = text;
-              })
-              .catch(err => {
-                console.error("Failed to fetch device_mapping.yml:", err);
-                document.getElementById('mapping-content').textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
+            const areaTitleH2 = createDomElement("h2", {
+              className: "text-xl font-semibold mb-3 text-gray-100", // Theme: text-gray-100
+              textContent: area.name || "Unnamed Area",
+            });
+            areaSectionDiv.appendChild(areaTitleH2);
+
+            const entitiesGridDiv = createDomElement("div", {
+              className:
+                "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4",
+            });
+            areaSectionDiv.appendChild(entitiesGridDiv);
+
+            if (areaEntities.length === 0) {
+              const messageP = createDomElement("p", {
+                textContent: "No lights to display in this area.",
+                className: "text-gray-400", // Theme: text-gray-400
               });
-          } else if (view === 'spec') {
-            fetch(`${apiBasePath}/config/rvc_spec`)
-              .then(res => {
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
-                return res.text();
-              })
-              .then(text => {
-                document.getElementById('spec-content').textContent = text;
-              })
-              .catch(err => {
-                console.error("Failed to fetch rvc.json:", err);
-                document.getElementById('spec-content').textContent = `Error: Could not load rvc.json.\n${err.message}`;
-              });
-            fetch(`${apiBasePath}/config/rvc_spec_metadata`)
-              .then(res => {
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status} - ${res.statusText}`);
-                return res.json();
-              })
-              .then(data => {
-                const metadataDiv = document.getElementById('spec-metadata');
-                metadataDiv.innerHTML = ''; // Clear previous content
-
-                if (data.version || data.spec_document) {
-                  if (data.version) {
-                    const pVersion = document.createElement('p');
-                    const strongVersion = document.createElement('strong');
-                    strongVersion.textContent = 'Version: ';
-                    pVersion.appendChild(strongVersion);
-                    pVersion.appendChild(document.createTextNode(data.version));
-                    metadataDiv.appendChild(pVersion);
-                  }
-                  if (data.spec_document) {
-                    const pDoc = document.createElement('p');
-                    const strongDoc = document.createElement('strong');
-                    strongDoc.textContent = 'Document: ';
-                    pDoc.appendChild(strongDoc);
-
-                    const aDoc = document.createElement('a');
-                    aDoc.href = data.spec_document;
-                    aDoc.target = '_blank';
-                    aDoc.rel = 'noopener noreferrer'; // Ensured this is present
-                    aDoc.className = 'text-blue-400 hover:text-blue-300 underline';
-                    aDoc.textContent = data.spec_document;
-                    pDoc.appendChild(aDoc);
-                    metadataDiv.appendChild(pDoc);
-                  }
-                } else {
-                  // If neither version nor spec_document is present, display a message.
-                  const p = document.createElement('p');
-                  p.textContent = 'Spec metadata (version or document link) not available.';
-                  metadataDiv.appendChild(p);
+              areaSectionDiv.appendChild(messageP);
+            } else {
+              areaEntities.forEach((entity) => {
+                const card = renderCard(entity);
+                if (card) {
+                  // renderCard might return null if entity type is not 'light'
+                  entitiesGridDiv.appendChild(card);
                 }
-              })
-              .catch(err => {
-                console.error("Failed to fetch rvc.json metadata:", err);
-                const metadataDiv = document.getElementById('spec-metadata');
-                metadataDiv.innerHTML = ''; // Clear previous content
-                const p = document.createElement('p');
-                p.className = 'text-red-400'; // Style error messages
-                p.textContent = `Error: Could not load spec metadata. ${err.message}`;
-                metadataDiv.appendChild(p);
-              });
-          } else if (view === 'unmapped') {
-            const container = document.getElementById('unmapped-entries-container');
-            const loadingMsg = document.getElementById('unmapped-loading-message');
-            loadingMsg.classList.remove('hidden');
-            container.innerHTML = ''; // Clear previous entries
-            container.appendChild(loadingMsg);
-
-            fetch(`${apiBasePath}/unmapped_entries`)
-              .then(response => {
-                if (!response.ok) {
-                  throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-                }
-                return response.json();
-              })
-              .then(data => {
-                loadingMsg.classList.add('hidden');
-                if (Object.keys(data).length === 0) {
-                  container.innerHTML = '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
-                  return;
-                }
-
-                for (const [key, entry] of Object.entries(data)) {
-                  const entryDiv = document.createElement('div');
-                  entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
-
-                  // Header: DGN and Instance
-                  const header = document.createElement('h4');
-                  header.className = 'text-lg font-semibold text-yellow-300 mb-2';
-                  header.textContent = `DGN: ${entry.dgn_hex}${entry.dgn_name ? ' (' + entry.dgn_name + ')' : ''} - Instance: ${entry.instance}`;
-                  entryDiv.appendChild(header);
-
-                  // Details List
-                  const detailsList = document.createElement('ul');
-                  detailsList.className = 'list-disc list-inside space-y-1 text-sm mb-3';
-
-                  function addDetailItem(label, value) {
-                    const item = document.createElement('li');
-                    const strong = document.createElement('strong');
-                    strong.textContent = `${label}: `;
-                    item.appendChild(strong);
-                    item.appendChild(document.createTextNode(value));
-                    detailsList.appendChild(item);
-                  }
-
-                  if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
-                    addDetailItem('Original PGN', `${entry.pgn_hex}${entry.pgn_name ? ' (' + entry.pgn_name + ')' : ''}`);
-                  }
-                  addDetailItem('First Seen', new Date(entry.first_seen_timestamp * 1000).toLocaleString());
-                  addDetailItem('Last Seen', new Date(entry.last_seen_timestamp * 1000).toLocaleString());
-                  addDetailItem('Count', entry.count);
-                  addDetailItem('Last Data', entry.last_data_hex);
-                  if (entry.spec_entry && entry.spec_entry.name) {
-                    addDetailItem('Matched Spec Entry Name (for DGN)', entry.spec_entry.name);
-                  }
-                  entryDiv.appendChild(detailsList);
-
-                  // Decoded Signals (if any)
-                  if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-                    const signalsHeader = document.createElement('h5');
-                    signalsHeader.className = 'text-md font-medium text-gray-300 mt-2 mb-1';
-                    signalsHeader.textContent = `Decoded Signals (from PGN ${entry.pgn_hex}):`;
-                    entryDiv.appendChild(signalsHeader);
-                    const signalsList = document.createElement('ul');
-                    signalsList.className = 'list-disc list-inside pl-4 space-y-0.5 text-xs';
-                    for (const [key, value] of Object.entries(entry.decoded_signals)) {
-                      const signalItem = document.createElement('li');
-                      signalItem.innerHTML = `<strong>${key}:</strong> ${value}`; // Using innerHTML here for simplicity, assuming key/value are safe
-                      signalsList.appendChild(signalItem);
-                    }
-                    entryDiv.appendChild(signalsList);
-                  }
-
-                  // Suggestions (if any)
-                  if (entry.suggestions && entry.suggestions.length > 0) {
-                    const suggestionsHeader = document.createElement('h5');
-                    suggestionsHeader.className = 'text-md font-medium text-gray-300 mt-3 mb-1';
-                    suggestionsHeader.textContent = 'Suggestions:';
-                    entryDiv.appendChild(suggestionsHeader);
-                    const suggestionsList = document.createElement('ul');
-                    suggestionsList.className = 'list-disc list-inside pl-4 space-y-0.5 text-xs';
-                    entry.suggestions.forEach(suggestion => {
-                      const suggestionItem = document.createElement('li');
-                      suggestionItem.textContent = suggestion;
-                      suggestionsList.appendChild(suggestionItem);
-                    });
-                    entryDiv.appendChild(suggestionsList);
-                  }
-
-                  // YAML Suggestion
-                  const yamlSuggestion = generateYamlSuggestion(entry);
-                  const yamlHeader = document.createElement('h5');
-                  yamlHeader.className = 'text-md font-medium text-gray-300 mt-3 mb-1';
-                  yamlHeader.textContent = 'YAML Suggestion for device_mapping.yml:';
-                  entryDiv.appendChild(yamlHeader);
-
-                  const pre = document.createElement('pre');
-                  pre.className = 'bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs font-mono whitespace-pre-wrap';
-                  pre.textContent = yamlSuggestion;
-                  entryDiv.appendChild(pre);
-
-                  const copyButton = document.createElement('button');
-                  copyButton.className = 'copy-yaml-btn mt-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-3 rounded shadow';
-                  copyButton.innerHTML = '<i class="mdi mdi-content-copy mr-1" aria-hidden="true"></i>Copy YAML'; // Icon added
-                  copyButton.addEventListener('click', () => {
-                    navigator.clipboard.writeText(pre.textContent)
-                      .then(() => showToast('YAML copied to clipboard!', 'success'))
-                      .catch(err => {
-                        console.error('Failed to copy YAML: ', err);
-                        showToast('Failed to copy YAML.', 'error');
-                      });
-                  });
-                  entryDiv.appendChild(copyButton);
-                  container.appendChild(entryDiv);
-                }
-                // Event listeners for copy buttons are now added individually when button is created.
-              })
-              .catch(error => {
-                console.error('Error fetching unmapped entries:', error);
-                loadingMsg.classList.add('hidden');
-                container.innerHTML = `<p class="text-red-500">Error loading unmapped entries: ${error.message}</p>`;
-              });
-          }
-          // --- START: Add logic for Unknown PGNs view ---
-          else if (view === 'unknown-pgns') {
-            const container = document.getElementById('unknown-pgns-container');
-            const loadingMsg = document.getElementById('unknown-pgns-loading-message');
-            loadingMsg.classList.remove('hidden');
-            container.innerHTML = ''; // Clear previous entries
-            container.appendChild(loadingMsg);
-
-            fetch(`${apiBasePath}/unknown_pgns`)
-              .then(response => {
-                if (!response.ok) { // Check if response is ok
-                  throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-                }
-                return response.json();
-              })
-              .then(data => {
-                loadingMsg.classList.add('hidden');
-                if (Object.keys(data).length === 0) {
-                  container.innerHTML = '<p class="text-gray-500">No unknown PGNs found. All observed PGNs are in rvc.json.</p>';
-                  return;
-                }
-
-                for (const [arbIdHex, entry] of Object.entries(data)) {
-                  const entryDiv = document.createElement('div');
-                  entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
-
-                  const header = document.createElement('h4');
-                  header.className = 'text-lg font-semibold text-red-300 mb-2';
-                  header.textContent = `Arbitration ID: ${arbIdHex} (PGN: ${entry.pgn_hex || 'N/A'})`;
-                  entryDiv.appendChild(header);
-
-                  const detailsList = document.createElement('ul');
-                  detailsList.className = 'list-disc list-inside space-y-1 text-sm';
-
-                  function addDetailItem(label, value) {
-                    const item = document.createElement('li');
-                    const strong = document.createElement('strong');
-                    strong.textContent = `${label}: `;
-                    item.appendChild(strong);
-                    item.appendChild(document.createTextNode(value));
-                    detailsList.appendChild(item);
-                  }
-
-                  addDetailItem('Source Address', entry.source_address_hex || 'N/A');
-                  addDetailItem('Count', entry.count);
-                  addDetailItem('First Seen', new Date(entry.first_seen_timestamp * 1000).toLocaleString());
-                  addDetailItem('Last Seen', new Date(entry.last_seen_timestamp * 1000).toLocaleString());
-                  addDetailItem('Last Data', entry.last_data_hex);
-
-                  entryDiv.appendChild(detailsList);
-                  container.appendChild(entryDiv);
-                }
-              })
-              .catch(error => {
-                console.error('Error fetching unknown PGNs:', error);
-                loadingMsg.classList.add('hidden');
-                container.innerHTML = `<p class="text-red-500">Error loading unknown PGNs: ${error.message}</p>`;
               });
             }
-          // --- END: Add logic for Unknown PGNs view ---
-          // Add this else if block to handle fetching CAN status when home is selected
-          else if (view === 'home') {
-            fetchCanStatus(); // Re-fetch CAN status when navigating to home
-          }
-        });
-      });
-
-      // Function to generate YAML suggestion
-      function generateYamlSuggestion(entry) {
-        const dgnKey = entry.dgn_hex; // Use DGN for the mapping file key
-        const instanceKey = String(entry.instance); // Instance ID
-
-        // Create a sanitized entity_id suggestion
-        const dgnForId = dgnKey.toLowerCase();
-        const instanceForId = instanceKey.toLowerCase().replace(/[^a-z0-9_]/g, ''); // Basic sanitize
-        let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
-
-        let yaml = `# Suggested entry for DGN: ${dgnKey}${entry.dgn_name ? ' (' + entry.dgn_name + ')' : ''}, Instance: ${instanceKey}\n`;
-        if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
-          yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${entry.pgn_name ? ' (' + entry.pgn_name + ')' : ''}\n`;
-        }
-        yaml += `# First seen: ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}\n`;
-        yaml += `# Last seen: ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}\n`;
-        yaml += `# Count: ${entry.count}\n`;
-        yaml += `# Last Data: ${entry.last_data_hex}\n`;
-
-        if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-          yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
-          for (const [key, value] of Object.entries(entry.decoded_signals)) {
-            yaml += `#   ${key}: ${value}\n`;
+            lightsContent.appendChild(areaSectionDiv);
           }
         }
-        if (entry.spec_entry && entry.spec_entry.name) {
-            yaml += `# Matched Spec Entry Name (for DGN): ${entry.spec_entry.name}\n`;
+
+        function renderCard(entity) {
+          if (entity.type !== "light") return null; // Only render cards for lights
+
+          const initialStateClass =
+            entity.state === "on" ? CLASS_LIGHT_ON : CLASS_LIGHT_OFF;
+
+          const card = createDomElement("div", {
+            className: `entity-card p-4 rounded-lg shadow-md cursor-pointer transition-all duration-200 ease-in-out ${initialStateClass} border border-gray-700`, // Theme: border-gray-700
+            dataset: { entityId: entity.id, type: entity.type },
+          });
+
+          const nameH3 = createDomElement("h3", {
+            className: "text-lg font-semibold text-gray-100 mb-2 truncate", // Theme: text-gray-100
+            textContent: entity.attributes.friendly_name || entity.id,
+            attributes: { title: entity.attributes.friendly_name || entity.id },
+          });
+          card.appendChild(nameH3);
+
+          const stateP = createDomElement("p", {
+            className: "text-sm text-gray-300 mb-1", // Theme: text-gray-300
+            textContent: `State: ${entity.state}`,
+          });
+          card.appendChild(stateP);
+
+          if (entity.attributes.hasOwnProperty("brightness")) {
+            const brightnessControlDiv = createDomElement("div", {
+              className: "mt-2",
+            });
+
+            const brightnessValueSpan = createDomElement("span", {
+              id: `brightness-value-${entity.id}`,
+              textContent: entity.attributes.brightness
+                ? Math.round(entity.attributes.brightness / 2.55) + "%"
+                : "N/A",
+            });
+
+            const label = createDomElement("label", {
+              attributes: { for: `brightness-${entity.id}` },
+              className: "text-sm text-gray-400 block mb-1", // Theme: text-gray-400
+              textContent: "Brightness: ",
+              children: [brightnessValueSpan],
+            });
+            brightnessControlDiv.appendChild(label);
+
+            const slider = createDomElement("input", {
+              attributes: {
+                type: "range",
+                id: `brightness-${entity.id}`,
+                min: "0",
+                max: "100",
+                value: entity.attributes.brightness
+                  ? Math.round(entity.attributes.brightness / 2.55)
+                  : "0",
+              },
+              className:
+                "w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer", // Theme: bg-gray-700
+            });
+
+            slider.addEventListener("input", (e) => {
+              brightnessValueSpan.textContent = e.target.value + "%";
+            });
+            slider.addEventListener("change", (e) => {
+              const brightness = Math.round(e.target.value * 2.55);
+              // console.log(`Setting brightness for ${entity.id} to ${brightness} (${e.target.value}%)`);
+              callLightService(entity.id, "turn_on", { brightness });
+            });
+            brightnessControlDiv.appendChild(slider);
+            card.appendChild(brightnessControlDiv);
+          }
+
+          card.addEventListener("click", (e) => {
+            if (e.target.type === "range") return; // Don't toggle if clicking on slider
+            const service = entity.state === "on" ? "turn_off" : "turn_on";
+            callLightService(entity.id, service);
+          });
+          return card;
         }
-        yaml += `\n`; // Blank line for readability before the YAML structure
 
-        // Start of the structured YAML suggestion
-        yaml += `${dgnKey}:\n`;
-        yaml += `  ${instanceKey}:\n`; // Instance ID as a key (e.g., 255: or "default":)
-        yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
-        yaml += `      friendly_name: "Unmapped ${entry.dgn_name || dgnKey} Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
-        yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
-        yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
-        yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
-        yaml += `      # --- Optional fields based on device_type and system needs ---\n`;
-        yaml += `      # interface: canX # TODO: Specify CAN interface if known (e.g., can0, can1)\n`;
-        yaml += `      # status_dgn: '${dgnKey}' # Status DGN is typically this DGN key\n`;
-        yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status DGN, specify command PGN\n`;
-        yaml += `      # group_mask: '0xXX' # TODO: If part of a command/status group\n`;
-        yaml += `      # --- Example for using a YAML template (if defined in your mapping file) ---\n`;
-        yaml += `      # <<: *switchable_light  # For on/off lights, if &switchable_light template exists\n`;
-        yaml += `      # <<: *dimmable_light   # For dimmable lights, if &dimmable_light template exists\n`;
-
-        return yaml;
-      }
-
-      // Sidebar toggle logic
-      const sidebar = document.getElementById('sidebar');
-      const mobileMenuButton = document.getElementById('mobileMenuButton');
-      const closeSidebarButton = document.getElementById('closeSidebarButton');
-      const toggleSidebarDesktopButton = document.getElementById('toggleSidebarDesktop');
-      const desktopSidebarVisibleKey = 'desktopSidebarVisible';
-      const sidebarNavContent = document.getElementById('sidebarNavContent');
-
-      function setDesktopSidebarVisible(visible) {
-        console.log('[setDesktopSidebarVisible] Called with visible:', visible);
-        localStorage.setItem(desktopSidebarVisibleKey, visible);
-        if (visible) { // EXPANDING
-          console.log('[setDesktopSidebarVisible] Expanding sidebar.');
-          sidebar.classList.remove('md:w-16'); // Remove collapsed width
-          sidebar.classList.add('md:w-64');    // Add expanded width
-          mainContent.classList.remove('md:ml-16');
-          mainContent.classList.add('md:ml-64');
-          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
-          if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
-          sidebar.classList.remove('sidebar-collapsed-hoverable'); // Remove hover indication class
-        } else { // COLLAPSING
-          console.log('[setDesktopSidebarVisible] Collapsing sidebar.');
-          sidebar.classList.remove('md:w-64');  // Remove expanded width
-          sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
-          mainContent.classList.remove('md:ml-64');
-          mainContent.classList.add('md:ml-16'); // Adjust main content margin to collapsed width
-          toggleSidebarDesktopButton.innerHTML = '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
-          if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
-          sidebar.classList.add('sidebar-collapsed-hoverable'); // Add hover indication class
+        async function callLightService(entityId, service, data = {}) {
+          try {
+            const response = await fetch(`/api/lights/${entityId}/${service}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            // console.log(`Light service call successful for ${entityId}:`, result);
+            return result;
+          } catch (error) {
+            console.error(
+              `Failed to call light service for ${entityId}:`,
+              error
+            );
+            throw error;
+          }
         }
-        console.log('[setDesktopSidebarVisible] Requesting adjustPinnedLogsLayout via rAF.');
-        requestAnimationFrame(() => {
-          console.log('[setDesktopSidebarVisible] Executing adjustPinnedLogsLayout via rAF from setDesktopSidebarVisible.');
-          adjustPinnedLogsLayout();
+
+        navLinks.forEach((link) => {
+          link.addEventListener("click", function (event) {
+            event.preventDefault();
+            const view = this.getAttribute(ATTR_DATA_VIEW);
+
+            // Mobile: close sidebar on nav
+            if (
+              window.innerWidth < MD_BREAKPOINT_PX &&
+              !sidebar.classList.contains(CLASS_HIDDEN)
+            ) {
+              sidebar.classList.add(CLASS_HIDDEN);
+            }
+
+            // console.log('Navigating to view:', view); // REMOVED
+
+            // Remove active class from all links and views
+            navLinks.forEach((l) => l.classList.remove(CLASS_ACTIVE_NAV));
+            views.forEach((v) => v.classList.add(CLASS_HIDDEN));
+
+            // Add active class to the clicked link and corresponding view
+            this.classList.add(CLASS_ACTIVE_NAV);
+            const activeView = document.getElementById(`${view}-view`);
+            if (activeView) {
+              activeView.classList.remove(CLASS_HIDDEN);
+              currentView = view;
+              // console.log(`Current view set to: ${currentView}`);
+
+              // Specific fetch logic for views that need it
+              switch (view) {
+                case "lights":
+                  fetchData("/api/lights", {
+                    successCallback: (data) => {
+                      // console.log('Lights data loaded:', data);
+                      if (data.areas && data.entities) {
+                        renderGroupedLights(data.areas, data.entities);
+                      } else {
+                        lightsContent.textContent =
+                          "Error: Invalid lights data structure.";
+                      }
+                    },
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch lights:", error);
+                      lightsContent.textContent = `Error loading lights: ${error.message}`;
+                    },
+                    loadingElement: lightsContent, // Optional: show loading state in lightsContent
+                  });
+                  break;
+                case "mapping":
+                  fetchData("/api/mapping/content", {
+                    responseType: "text",
+                    successCallback: (data) => {
+                      mappingContent.textContent = data;
+                      specMetadataDiv.innerHTML = ""; // Clear spec metadata when viewing mapping
+                    },
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch mapping data:", error);
+                      mappingContent.textContent = `Error loading mapping: ${error.message}`;
+                    },
+                    loadingElement: mappingContent,
+                  });
+                  break;
+                case "spec":
+                  fetchData("/api/specification/content", {
+                    responseType: "text",
+                    successCallback: (data) => {
+                      specContent.textContent = data;
+                    },
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch spec data:", error);
+                      specContent.textContent = `Error loading specification: ${error.message}`;
+                    },
+                    loadingElement: specContent,
+                  });
+                  fetchData("/api/specification/metadata", {
+                    successCallback: (data) => {
+                      specMetadataDiv.innerHTML = ""; // Clear previous content
+
+                      if (data.version || data.spec_document) {
+                        if (data.version) {
+                          const strongVersion = createDomElement("strong", {
+                            textContent: "Version: ",
+                          });
+                          const pVersion = createDomElement("p", {
+                            children: [
+                              strongVersion,
+                              document.createTextNode(data.version),
+                            ],
+                          });
+                          specMetadataDiv.appendChild(pVersion);
+                        }
+                        if (data.spec_document) {
+                          const strongDoc = createDomElement("strong", {
+                            textContent: "Document: ",
+                          });
+                          const aDoc = createDomElement("a", {
+                            attributes: {
+                              href: data.spec_document,
+                              target: "_blank",
+                              rel: "noopener noreferrer",
+                            },
+                            className:
+                              "text-blue-400 hover:text-blue-300 underline",
+                            textContent: data.spec_document,
+                          });
+                          const pDoc = createDomElement("p", {
+                            children: [strongDoc, aDoc],
+                          });
+                          specMetadataDiv.appendChild(pDoc);
+                        }
+                      } else {
+                        specMetadataDiv.appendChild(
+                          createDomElement("p", {
+                            textContent:
+                              "Spec metadata (version or document link) not available.",
+                          })
+                        );
+                      }
+                    },
+                    errorCallback: (err) => {
+                      console.error("Failed to fetch rvc.json metadata:", err);
+                      specMetadataDiv.innerHTML = ""; // Clear previous content
+                      specMetadataDiv.appendChild(
+                        createDomElement("p", {
+                          className: CLASS_TEXT_RED_400,
+                          textContent: `Error: Could not load spec metadata. ${err.message}`,
+                        })
+                      );
+                    },
+                  });
+                  break;
+                case "unmapped":
+                  fetchData("/api/mapping/unmapped", {
+                    successCallback: (data) => {
+                      unmappedEntriesContent.innerHTML = ""; // Clear
+                      if (data && data.length > 0) {
+                        data.forEach((entry) => {
+                          const entryDiv = createDomElement("div", {
+                            className: "p-3 bg-gray-700 rounded mb-3",
+                          }); // Theme: bg-gray-700
+                          const header = createDomElement("h4", {
+                            className: "text-md font-semibold text-gray-100", // Theme: text-gray-100
+                            textContent: `PGN: ${entry.pgn} (0x${entry.pgn
+                              .toString(16)
+                              .toUpperCase()}) - Count: ${
+                              entry.count
+                            }, Last Seen: ${new Date(
+                              entry.last_seen * 1000
+                            ).toLocaleString()}`,
+                          });
+                          entryDiv.appendChild(header);
+
+                          if (
+                            entry.decoded_data &&
+                            entry.decoded_data.length > 0
+                          ) {
+                            const detailsHeader = createDomElement("h5", {
+                              className:
+                                "text-sm font-medium text-gray-200 mt-2 mb-1",
+                              textContent: "Decoded Data:",
+                            }); // Theme: text-gray-200
+                            entryDiv.appendChild(detailsHeader);
+                            const detailsList = createDomElement("ul", {
+                              className:
+                                "list-disc list-inside pl-2 text-xs text-gray-300",
+                            }); // Theme: text-gray-300
+                            entry.decoded_data.forEach((sig) => {
+                              const listItem = createDomElement("li", {
+                                textContent: `${sig.name}: ${sig.value_raw} (${sig.value_type})`,
+                              });
+                              if (sig.value_resolved) {
+                                listItem.textContent += ` -> ${sig.value_resolved}`;
+                              }
+                              detailsList.appendChild(listItem);
+                            });
+                            entryDiv.appendChild(detailsList);
+                          }
+
+                          if (
+                            entry.suggestions &&
+                            entry.suggestions.length > 0
+                          ) {
+                            const suggestionsHeader = createDomElement("h5", {
+                              className:
+                                "text-sm font-medium text-gray-200 mt-2 mb-1",
+                              textContent: "Suggestions:",
+                            }); // Theme: text-gray-200
+                            entryDiv.appendChild(suggestionsHeader);
+                            const suggestionsList = createDomElement("ul", {
+                              className:
+                                "list-disc list-inside pl-2 text-xs text-gray-300",
+                            }); // Theme: text-gray-300
+                            entry.suggestions.forEach((sugg) => {
+                              const listItem = createDomElement("li", {
+                                textContent: sugg,
+                              });
+                              suggestionsList.appendChild(listItem);
+                            });
+                            entryDiv.appendChild(suggestionsList);
+                          }
+
+                          if (entry.yaml_representation) {
+                            const yamlHeader = createDomElement("h5", {
+                              className:
+                                "text-sm font-medium text-gray-200 mt-2 mb-1",
+                              textContent: "YAML:",
+                            }); // Theme: text-gray-200
+                            entryDiv.appendChild(yamlHeader);
+                            const pre = createDomElement("pre", {
+                              className:
+                                "bg-gray-800 p-2 rounded text-xs overflow-x-auto",
+                            }); // Theme: bg-gray-800
+                            pre.textContent = entry.yaml_representation;
+
+                            const copyButton = createDomElement("button", {
+                              className:
+                                "ml-2 text-xs py-1 px-2 rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-150", // Theme: bg-blue-600 hover:bg-blue-700 text-white
+                              dataset: { yaml: entry.yaml_representation },
+                            });
+                            copyButton.innerHTML = ICON_COPY + " Copy YAML";
+                            copyButton.addEventListener(
+                              "click",
+                              handleCopyYaml
+                            );
+                            yamlHeader.appendChild(copyButton); // Append button to header
+                            entryDiv.appendChild(pre);
+                          }
+                          unmappedEntriesContent.appendChild(entryDiv);
+                        });
+                      } else {
+                        unmappedEntriesContent.textContent =
+                          "No unmapped entries found.";
+                      }
+                    },
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch unmapped entries:", error);
+                      unmappedEntriesContent.textContent = `Error loading unmapped entries: ${error.message}`;
+                    },
+                    loadingElement: unmappedEntriesContent,
+                  });
+                  break;
+                case "unknown-pgns":
+                  fetchData("/api/mapping/unknown_pgns", {
+                    successCallback: (data) => {
+                      unknownPgnsContent.innerHTML = ""; // Clear
+                      if (data && data.length > 0) {
+                        data.forEach((entry) => {
+                          const entryDiv = createDomElement("div", {
+                            className: "p-3 bg-gray-700 rounded mb-3",
+                          }); // Theme: bg-gray-700
+                          const header = createDomElement("h4", {
+                            className: "text-md font-semibold text-gray-100", // Theme: text-gray-100
+                            textContent: `PGN: ${entry.pgn} (0x${entry.pgn
+                              .toString(16)
+                              .toUpperCase()}) - Count: ${
+                              entry.count
+                            }, Last Seen: ${new Date(
+                              entry.last_seen * 1000
+                            ).toLocaleString()}`,
+                          });
+                          entryDiv.appendChild(header);
+
+                          if (entry.yaml_representation) {
+                            const yamlHeader = createDomElement("h5", {
+                              className:
+                                "text-sm font-medium text-gray-200 mt-2 mb-1",
+                              textContent: "YAML:",
+                            }); // Theme: text-gray-200
+                            entryDiv.appendChild(yamlHeader);
+                            const pre = createDomElement("pre", {
+                              className:
+                                "bg-gray-800 p-2 rounded text-xs overflow-x-auto",
+                            }); // Theme: bg-gray-800
+                            pre.textContent = entry.yaml_representation;
+
+                            const copyButton = createDomElement("button", {
+                              className:
+                                "ml-2 text-xs py-1 px-2 rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-150", // Theme: bg-blue-600 hover:bg-blue-700 text-white
+                              dataset: { yaml: entry.yaml_representation },
+                            });
+                            copyButton.innerHTML = ICON_COPY + " Copy YAML";
+                            copyButton.addEventListener(
+                              "click",
+                              handleCopyYaml
+                            );
+                            yamlHeader.appendChild(copyButton); // Append button to header
+                            entryDiv.appendChild(pre);
+                          }
+                          unknownPgnsContent.appendChild(entryDiv);
+                        });
+                      } else {
+                        unknownPgnsContent.textContent =
+                          "No unknown PGNs found.";
+                      }
+                    },
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch unknown PGNs:", error);
+                      unknownPgnsContent.textContent = `Error loading unknown PGNs: ${error.message}`;
+                    },
+                    loadingElement: unknownPgnsContent,
+                  });
+                  break;
+                case "api-status":
+                  fetchData("/api/status", {
+                    successCallback: updateApiServerView,
+                    errorCallback: (error) => {
+                      console.error("Failed to fetch API status:", error);
+                      apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+                    },
+                    loadingElement: apiStatusContent,
+                  });
+                  break;
+                case "app-health":
+                  fetchData("/api/health", {
+                    successCallback: updateApplicationHealthView,
+                    errorCallback: (error) => {
+                      console.error(
+                        "Failed to fetch application health:",
+                        error
+                      );
+                      appHealthContent.textContent = `Error loading application health: ${error.message}`;
+                    },
+                    loadingElement: appHealthContent,
+                  });
+                  break;
+                case "can-status":
+                  fetchCanStatus();
+                  break;
+                default:
+                  console.warn(`Unknown view: ${view}`);
+              }
+            }
+          });
         });
-      }
 
-      // Mobile sidebar toggle
-      mobileMenuButton.addEventListener('click', () => {
-        sidebar.classList.remove('-translate-x-full');
-        sidebar.classList.add('translate-x-0');
-        // Optionally add an overlay for mobile
-        // const overlay = document.createElement('div');
-        // overlay.id = 'sidebar-overlay';
-        // overlay.className = 'fixed inset-0 bg-black opacity-50 z-30 md:hidden';
-        // document.body.appendChild(overlay);
-        // overlay.addEventListener('click', () => toggleMobileSidebar(false));
-      });
+        function handleCopyYaml(event) {
+          const yamlToCopy = event.currentTarget.dataset.yaml;
+          if (navigator.clipboard && yamlToCopy) {
+            navigator.clipboard
+              .writeText(yamlToCopy)
+              .then(() => showToast("YAML copied to clipboard!", "success"))
+              .catch((err) => {
+                console.error("Failed to copy YAML: ", err);
+                showToast("Failed to copy YAML.", "error");
+              });
+          } else {
+            showToast(
+              "Clipboard API not available or no YAML to copy.",
+              "warning"
+            );
+          }
+        }
 
-      closeSidebarButton.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-        sidebar.classList.remove('translate-x-0');
-        // const overlay = document.getElementById('sidebar-overlay');
-        // if (overlay) overlay remove();
-      });
+        // Sidebar Toggle Logic
+        const mobileMenuButton = document.getElementById("mobileMenuButton");
+        const closeSidebarButton =
+          document.getElementById("closeSidebarButton");
+        const desktopSidebarVisibleKey = "desktopSidebarVisible";
+        const sidebarNavContent = document.getElementById("sidebarNavContent");
 
-      // Desktop sidebar toggle
-      toggleSidebarDesktopButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
-        const isVisible = sidebar.classList.contains('md:w-64'); // Check if expanded
-        console.log('[SidebarToggle] Button clicked. Currently isVisible (expanded):', isVisible);
-        setDesktopSidebarVisible(!isVisible);
-      });
+        function setDesktopSidebarVisible(visible) {
+          console.log(
+            "[setDesktopSidebarVisible] Called with visible:",
+            visible
+          );
+          localStorage.setItem(desktopSidebarVisibleKey, visible);
+          if (visible) {
+            // EXPANDING
+            console.log("[setDesktopSidebarVisible] Expanding sidebar.");
+            sidebar.classList.remove("md:w-16"); // Remove collapsed width
+            sidebar.classList.add("md:w-64"); // Add expanded width
+            mainContent.classList.remove("md:ml-16");
+            mainContent.classList.add("md:ml-64");
+            toggleSidebarDesktopButton.innerHTML =
+              '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
+            if (sidebarNavContent) sidebarNavContent.classList.remove("hidden");
+            sidebar.classList.remove("sidebar-collapsed-hoverable"); // Remove hover indication class
+          } else {
+            // COLLAPSING
+            console.log("[setDesktopSidebarVisible] Collapsing sidebar.");
+            sidebar.classList.remove("md:w-64"); // Remove expanded width
+            sidebar.classList.add("md:w-16"); // Add collapsed width (e.g., 4rem)
+            mainContent.classList.remove("md:ml-64");
+            mainContent.classList.add("md:ml-16"); // Adjust main content margin to collapsed width
+            toggleSidebarDesktopButton.innerHTML =
+              '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
+            if (sidebarNavContent) sidebarNavContent.classList.add("hidden");
+            sidebar.classList.add("sidebar-collapsed-hoverable"); // Add hover indication class
+          }
+          console.log(
+            "[setDesktopSidebarVisible] Requesting adjustPinnedLogsLayout via rAF."
+          );
+          requestAnimationFrame(() => {
+            console.log(
+              "[setDesktopSidebarVisible] Executing adjustPinnedLogsLayout via rAF from setDesktopSidebarVisible."
+            );
+            adjustPinnedLogsLayout();
+          });
+        }
 
-      // Allow clicking the entire collapsed sidebar pane to expand it on desktop
-      sidebar.addEventListener('click', () => {
-        const isCollapsedDesktop = window.innerWidth >= 768 && sidebar.classList.contains('md:w-16');
-        console.log('[SidebarClick] Sidebar area clicked. isCollapsedDesktop:', isCollapsedDesktop);
-        if (isCollapsedDesktop) {
+        // Mobile sidebar toggle
+        mobileMenuButton.addEventListener("click", () => {
+          sidebar.classList.remove("-translate-x-full");
+          sidebar.classList.add("translate-x-0");
+          // Optionally add an overlay for mobile
+          // const overlay = document.createElement('div');
+          // overlay.id = 'sidebar-overlay';
+          // overlay.className = 'fixed inset-0 bg-black opacity-50 z-30 md:hidden';
+          // document.body.appendChild(overlay);
+          // overlay.addEventListener('click', () => toggleMobileSidebar(false));
+        });
+
+        closeSidebarButton.addEventListener("click", () => {
+          sidebar.classList.add("-translate-x-full");
+          sidebar.classList.remove("translate-x-0");
+          // const overlay = document.getElementById('sidebar-overlay');
+          // if (overlay) overlay remove();
+        });
+
+        // Desktop sidebar toggle
+        toggleSidebarDesktopButton.addEventListener("click", (event) => {
+          event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
+          const isVisible = sidebar.classList.contains("md:w-64"); // Check if expanded
+          console.log(
+            "[SidebarToggle] Button clicked. Currently isVisible (expanded):",
+            isVisible
+          );
+          setDesktopSidebarVisible(!isVisible);
+        });
+
+        // Allow clicking the entire collapsed sidebar pane to expand it on desktop
+        sidebar.addEventListener("click", () => {
+          const isCollapsedDesktop =
+            window.innerWidth >= 768 && sidebar.classList.contains("md:w-16");
+          console.log(
+            "[SidebarClick] Sidebar area clicked. isCollapsedDesktop:",
+            isCollapsedDesktop
+          );
+          if (isCollapsedDesktop) {
+            setDesktopSidebarVisible(true);
+          }
+        });
+
+        // Initialize sidebar state from localStorage for desktop
+        const storedState = localStorage.getItem(desktopSidebarVisibleKey);
+        if (storedState === "false") {
+          setDesktopSidebarVisible(false);
+        } else {
+          // null, 'true', or any other value defaults to visible
           setDesktopSidebarVisible(true);
         }
-      });
 
-      // Initialize sidebar state from localStorage for desktop
-      const storedState = localStorage.getItem(desktopSidebarVisibleKey);
-      if (storedState === 'false') {
-        setDesktopSidebarVisible(false);
-      } else { // null, 'true', or any other value defaults to visible
-        setDesktopSidebarVisible(true);
-      }
-
-      // Close mobile sidebar when a nav link is clicked
-      document.querySelectorAll('#sidebar .nav-link').forEach(link => {
-        link.addEventListener('click', () => {
-          if (window.innerWidth < 768) { // Tailwind's 'md' breakpoint
-            sidebar.classList.add('-translate-x-full');
-            sidebar.classList.remove('translate-x-0');
-            // const overlay = document.getElementById('sidebar-overlay');
-            // if (overlay) overlay remove();
-          }
-        });
-      });
-
-      // Set default view and initialize components
-      document.addEventListener('DOMContentLoaded', () => {
-        // Set "Home" as the default view
-        document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-        const homeView = document.getElementById('home-view');
-        const homeNavLink = document.querySelector('.nav-link[data-view="home"]');
-
-        if (homeView) {
-          homeView.classList.remove('hidden');
-          document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active-nav'));
-          if (homeNavLink) homeNavLink.classList.add('active-nav');
-        } else {
-          // Fallback if home-view is not found, show the first available view (e.g. lights)
-          const lightsView = document.getElementById('lights-view');
-          const lightsNavLink = document.querySelector('.nav-link[data-view="lights"]');
-          if (lightsView) lightsView.classList.remove('hidden');
-          if (lightsNavLink) lightsNavLink.classList.add('active-nav');
-        }
-
-        // Any other initializations that need to happen after DOM is ready
-        // For example, if you still need to fetch initial data for other views:
-        // fetchInitialDataForOtherViews();
-
-        // THE REDUNDANT LISTENER BLOCK PREVIOUSLY HERE HAS BEEN REMOVED.
-
-        // Setup interval to refresh CAN status periodically if desired
-        // setInterval(fetchCanStatus, 30000); // Refresh every 30 seconds, for example
-
-        // --- Add Event Listeners for Quick Light Controls ---
-        const quickControlButtons = [
-          { id: 'btn-all-on', entityId: 'all_lights', command: 'set', data: { state: 'on' } },
-          { id: 'btn-all-off', entityId: 'all_lights', command: 'set', data: { state: 'off' } },
-          { id: 'btn-exterior-on', entityId: 'exterior_lights', command: 'set', data: { state: 'on' } },
-          { id: 'btn-exterior-off', entityId: 'exterior_lights', command: 'set', data: { state: 'off' } },
-          { id: 'btn-interior-on', entityId: 'interior_lights', command: 'set', data: { state: 'on' } },
-          { id: 'btn-interior-off', entityId: 'interior_lights', command: 'set', data: { state: 'off' } },
-        ];
-
-        quickControlButtons.forEach(control => {
-          const button = document.getElementById(control.id);
-          if (button) {
-            button.addEventListener('click', () => {
-              // Temporarily disable button and show loading state
-              const originalHtml = button.innerHTML;
-              button.disabled = true;
-              // Ensure the loading icon is an <i> tag if using MDI
-              button.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
-
-              callLightService(control.entityId, control.command, control.data)
-                .then(response => {
-                  // Assuming callLightService resolves with response data on success
-                  // And responseData might have a message or status to show
-                  let toastMessage = `${control.id.replace('btn-', '').replace('-', ' ')} command sent.`;
-                  if (response && response.message) {
-                    toastMessage = response.message;
-                  } else if (response && response.status) {
-                     toastMessage = `Status: ${response.status}`;
-                  }
-                  showToast(toastMessage, 'success');
-                })
-                .catch(error => {
-                  // Error is already shown by showToast in callLightService,
-                  // but we log it here for button-specific context if needed.
-                  console.error(`Quick control for ${control.entityId} (button ${control.id}) failed:`, error);
-                  // showToast is already called by callLightService on error.
-                })
-                .finally(() => {
-                  button.disabled = false;
-                  button.innerHTML = originalHtml;
-                });
-            });
-          } else {
-            console.warn(`Quick control button with ID ${control.id} not found.`);
-          }
-        });
-
-        // --- End of Added Event Listeners for Quick Light Controls ---
-
-        // Initial data fetches
-        fetchCanStatus(); // Existing
-        fetchApiServerStatus(); // New
-        fetchApplicationHealth(); // New
-
-        // Setup periodic refresh for status sections (optional, adjust intervals as needed)
-        setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
-        setInterval(fetchApiServerStatus, 30000); // Refresh API status every 30 seconds
-        setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
-
-        // Add event listeners for log control buttons
-        if (logPauseBtn) {
-          logPauseBtn.addEventListener('click', () => {
-            isLogPaused = true;
-            logPauseBtn.disabled = true;
-            logResumeBtn.disabled = false;
-            showToast('Log streaming paused.', 'info');
-          });
-        }
-
-        if (logResumeBtn) {
-          logResumeBtn.addEventListener('click', () => {
-            isLogPaused = false;
-            logPauseBtn.disabled = false;
-            logResumeBtn.disabled = true;
-            showToast('Log streaming resumed.', 'info');
-            // If connection was closed and we are resuming, try to reconnect
-            if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
-              connectLogSocket();
+        // Close mobile sidebar when a nav link is clicked
+        document.querySelectorAll("#sidebar .nav-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            if (window.innerWidth < 768) {
+              // Tailwind's 'md' breakpoint
+              sidebar.classList.add("-translate-x-full");
+              sidebar.classList.remove("translate-x-0");
+              // const overlay = document.getElementById('sidebar-overlay');
+              // if (overlay) overlay remove();
             }
           });
-        }
+        });
 
-        if (logClearBtn) {
-          logClearBtn.addEventListener('click', () => {
-            logStream.innerHTML = '';
-            showToast('Logs cleared.', 'info');
+        // Set default view and initialize components
+        document.addEventListener("DOMContentLoaded", () => {
+          // Set "Home" as the default view
+          document
+            .querySelectorAll(".view-section")
+            .forEach((sec) => sec.classList.add("hidden"));
+          const homeView = document.getElementById("home-view");
+          const homeNavLink = document.querySelector(
+            '.nav-link[data-view="home"]'
+          );
+
+          if (homeView) {
+            homeView.classList.remove("hidden");
+            document
+              .querySelectorAll(".nav-link")
+              .forEach((b) => b.classList.remove("active-nav"));
+            if (homeNavLink) homeNavLink.classList.add("active-nav");
+          } else {
+            // Fallback if home-view is not found, show the first available view (e.g. lights)
+            const lightsView = document.getElementById("lights-view");
+            const lightsNavLink = document.querySelector(
+              '.nav-link[data-view="lights"]'
+            );
+            if (lightsView) lightsView.classList.remove("hidden");
+            if (lightsNavLink) lightsNavLink.classList.add("active-nav");
+          }
+
+          // Any other initializations that need to happen after DOM is ready
+          // For example, if you still need to fetch initial data for other views:
+          // fetchInitialDataForOtherViews();
+
+          // THE REDUNDANT LISTENER BLOCK PREVIOUSLY HERE HAS BEEN REMOVED.
+
+          // Setup interval to refresh CAN status periodically if desired
+          // setInterval(fetchCanStatus, 30000); // Refresh every 30 seconds, for example
+
+          // --- Add Event Listeners for Quick Light Controls ---
+          const quickControlButtons = [
+            {
+              id: "btn-all-on",
+              entityId: "all_lights",
+              command: "set",
+              data: { state: "on" },
+            },
+            {
+              id: "btn-all-off",
+              entityId: "all_lights",
+              command: "set",
+              data: { state: "off" },
+            },
+            {
+              id: "btn-exterior-on",
+              entityId: "exterior_lights",
+              command: "set",
+              data: { state: "on" },
+            },
+            {
+              id: "btn-exterior-off",
+              entityId: "exterior_lights",
+              command: "set",
+              data: { state: "off" },
+            },
+            {
+              id: "btn-interior-on",
+              entityId: "interior_lights",
+              command: "set",
+              data: { state: "on" },
+            },
+            {
+              id: "btn-interior-off",
+              entityId: "interior_lights",
+              command: "set",
+              data: { state: "off" },
+            },
+          ];
+
+          quickControlButtons.forEach((control) => {
+            const button = document.getElementById(control.id);
+            if (button) {
+              button.addEventListener("click", () => {
+                // Temporarily disable button and show loading state
+                const originalHtml = button.innerHTML;
+                button.disabled = true;
+                // Ensure the loading icon is an <i> tag if using MDI
+                button.innerHTML =
+                  '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+
+                callLightService(
+                  control.entityId,
+                  control.command,
+                  control.data
+                )
+                  .then((response) => {
+                    // Assuming callLightService resolves with response data on success
+                    // And responseData might have a message or status to show
+                    let toastMessage = `${control.id
+                      .replace("btn-", "")
+                      .replace("-", " ")} command sent.`;
+                    if (response && response.message) {
+                      toastMessage = response.message;
+                    } else if (response && response.status) {
+                      toastMessage = `Status: ${response.status}`;
+                    }
+                    showToast(toastMessage, "success");
+                  })
+                  .catch((error) => {
+                    // Error is already shown by showToast in callLightService,
+                    // but we log it here for button-specific context if needed.
+                    console.error(
+                      `Quick control for ${control.entityId} (button ${control.id}) failed:`,
+                      error
+                    );
+                    // showToast is already called by callLightService on error.
+                  })
+                  .finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = originalHtml;
+                  });
+              });
+            } else {
+              console.warn(
+                `Quick control button with ID ${control.id} not found.`
+              );
+            }
           });
-        }
 
-        // Add event listeners for log filters
-        if (logLevelFilter) {
-          logLevelFilter.addEventListener('change', () => {
-              logStream.innerHTML = ''; // Clear logs when filter changes, as past logs might not match
-              // Or, re-filter existing logs if desired (more complex)
-              if (logSocket && logSocket.readyState === WebSocket.OPEN && !isLogPaused) {
-                  // If connected and not paused, new logs will adhere to the filter.
-                  // Consider if a re-fetch or re-display of buffered/past logs is needed.
+          // --- End of Added Event Listeners for Quick Light Controls ---
+
+          // Initial data fetches
+          fetchCanStatus(); // Existing
+          fetchData("/api/status", {
+            successCallback: updateApiServerView,
+            errorCallback: (error) => {
+              console.error("Failed to fetch API status:", error);
+              apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+            },
+            loadingElement: apiStatusContent,
+          });
+          fetchData("/api/health", {
+            successCallback: updateApplicationHealthView,
+            errorCallback: (error) => {
+              console.error("Failed to fetch application health:", error);
+              appHealthContent.textContent = `Error loading application health: ${error.message}`;
+            },
+            loadingElement: appHealthContent,
+          });
+
+          // Setup periodic refresh for status sections (optional, adjust intervals as needed)
+          setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
+          setInterval(() => {
+            fetchData("/api/status", {
+              successCallback: updateApiServerView,
+              errorCallback: (error) => {
+                console.error("Failed to fetch API status:", error);
+                apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+              },
+              loadingElement: apiStatusContent,
+            });
+          }, 30000); // Refresh API status every 30 seconds
+          setInterval(() => {
+            fetchData("/api/health", {
+              successCallback: updateApplicationHealthView,
+              errorCallback: (error) => {
+                console.error("Failed to fetch application health:", error);
+                appHealthContent.textContent = `Error loading application health: ${error.message}`;
+              },
+              loadingElement: appHealthContent,
+            });
+          }, 30000); // Refresh App health every 30 seconds
+
+          // Add event listeners for log control buttons
+          const logPauseBtn = document.getElementById("log-pause");
+          const logResumeBtn = document.getElementById("log-resume");
+          const logClearBtn = document.getElementById("log-clear"); // Get clear button
+
+          if (logPauseBtn) {
+            logPauseBtn.addEventListener("click", () => {
+              isLogPaused = true;
+              logPauseBtn.disabled = true;
+              logResumeBtn.disabled = false;
+              showToast("Log streaming paused.", "info");
+            });
+          }
+
+          if (logResumeBtn) {
+            logResumeBtn.addEventListener("click", () => {
+              isLogPaused = false;
+              logPauseBtn.disabled = false;
+              logResumeBtn.disabled = true;
+              showToast("Log streaming resumed.", "info");
+              // If connection was closed and we are resuming, try to reconnect
+              if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
+                connectLogSocket();
               }
-          });
-        }
-        if (logSearchInput) {
-          logSearchInput.addEventListener('input', () => {
+            });
+          }
+
+          if (logClearBtn) {
+            logClearBtn.addEventListener("click", () => {
+              logStream.innerHTML = "";
+              showToast("Logs cleared.", "info");
+            });
+          }
+
+          // Add event listeners for log filters
+          const logLevelFilter = document.getElementById("log-level");
+          const logSearchInput = document.getElementById("log-search");
+
+          if (logLevelFilter) {
+            logLevelFilter.addEventListener("change", () => {
+              logStream.innerHTML = ""; // Clear logs when filter changes, as past logs might not match
+              // Or, re-filter existing logs if desired (more complex)
+              if (
+                logSocket &&
+                logSocket.readyState === WebSocket.OPEN &&
+                !isLogPaused
+              ) {
+                // If connected and not paused, new logs will adhere to the filter.
+                // Consider if a re-fetch or re-display of buffered/past logs is needed.
+              }
+            });
+          }
+          if (logSearchInput) {
+            logSearchInput.addEventListener("input", () => {
               // Similar to level filter, might want to clear or re-filter existing logs.
               // For simplicity, new logs will be filtered. Real-time re-filtering is more complex.
               // Throttling this event might be good for performance if re-filtering live.
-          });
-        }
-
-        // --- START: Create New Scene Button Listener ---
-        const createSceneButton = document.getElementById('btn-create-scene');
-        if (createSceneButton) {
-          createSceneButton.addEventListener('click', () => {
-            alert('Create New Scene button clicked! Feature coming soon.');
-            // Potentially call showToast here instead of alert
-            // showToast('Scene creation functionality is under development.', 'info', 4000);
-          });
-        }
-        // --- END: Create New Scene Button Listener ---
-
-        // Theme switcher
-        const themeSwitcher = document.getElementById('themeSwitcher');
-        const THEME_KEY = 'selectedTheme';
-        const VALID_THEMES = ['default', 'dark', 'light', 'catppuccin-mocha', 'catppuccin-latte'];
-
-        function applyTheme(theme) {
-          let currentTheme = theme;
-          if (typeof currentTheme !== 'string' || !VALID_THEMES.includes(currentTheme)) {
-            console.warn(`Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`);
-            currentTheme = 'default';
+            });
           }
 
-          document.body.classList.remove(...VALID_THEMES.map(t => `theme-${t}`));
-          document.body.classList.add(`theme-${currentTheme}`);
-          localStorage.setItem(THEME_KEY, currentTheme);
+          // --- START: Create New Scene Button Listener ---
+          const createSceneButton = document.getElementById("btn-create-scene");
+          if (createSceneButton) {
+            createSceneButton.addEventListener("click", () => {
+              alert("Create New Scene button clicked! Feature coming soon.");
+              // Potentially call showToast here instead of alert
+              // showToast('Scene creation functionality is under development.', 'info', 4000);
+            });
+          }
+          // --- END: Create New Scene Button Listener ---
+
+          // Theme switcher
+          const themeSwitcher = document.getElementById("themeSwitcher");
+          const THEME_KEY = "selectedTheme";
+          const VALID_THEMES = [
+            "default",
+            "dark",
+            "light",
+            "catppuccin-mocha",
+            "catppuccin-latte",
+          ];
+
+          function applyTheme(theme) {
+            let currentTheme = theme;
+            if (
+              typeof currentTheme !== "string" ||
+              !VALID_THEMES.includes(currentTheme)
+            ) {
+              console.warn(
+                `Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`
+              );
+              currentTheme = "default";
+            }
+
+            document.body.classList.remove(
+              ...VALID_THEMES.map((t) => `theme-${t}`)
+            );
+            document.body.classList.add(`theme-${currentTheme}`);
+            localStorage.setItem(THEME_KEY, currentTheme);
+
+            if (themeSwitcher) {
+              themeSwitcher.value = currentTheme;
+            } else {
+              // This case should ideally be caught by the check below before calling applyTheme initially
+              // or before adding the event listener.
+              console.warn(
+                "applyTheme called but themeSwitcher element not found when trying to set its value."
+              );
+            }
+          }
 
           if (themeSwitcher) {
-            themeSwitcher.value = currentTheme;
+            themeSwitcher.addEventListener("change", (event) => {
+              applyTheme(event.target.value);
+            });
+
+            // Load saved theme on page load
+            const savedTheme = localStorage.getItem(THEME_KEY);
+            // applyTheme will validate and default if savedTheme is null or invalid
+            applyTheme(savedTheme);
           } else {
-            // This case should ideally be caught by the check below before calling applyTheme initially
-            // or before adding the event listener.
-            console.warn('applyTheme called but themeSwitcher element not found when trying to set its value.');
+            console.error(
+              "Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired."
+            );
+            // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
+            // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
+            applyTheme("default");
           }
-        }
+        });
 
-        if (themeSwitcher) {
-          themeSwitcher.addEventListener('change', (event) => {
-            applyTheme(event.target.value);
-          });
+        // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+        window.addEventListener("resize", adjustPinnedLogsLayout);
 
-          // Load saved theme on page load
-          const savedTheme = localStorage.getItem(THEME_KEY);
-          // applyTheme will validate and default if savedTheme is null or invalid
-          applyTheme(savedTheme);
-        } else {
-          console.error("Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired.");
-          // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
-          // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
-          applyTheme('default');
-        }
-      });
-
-      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
-      window.addEventListener('resize', adjustPinnedLogsLayout);
-
-      // --- START: WebSocket Cleanup on Page Unload ---
-      window.addEventListener('beforeunload', () => {
-        console.log('Closing WebSockets before page unload...');
-        if (logSocket) {
-          logSocket.close();
-          console.log('Log WebSocket closed.');
-        }
-        if (entitySocket) {
-          entitySocket.close();
-          console.log('Entity WebSocket closed.');
-        }
-      });
-      // --- END: WebSocket Cleanup on Page Unload ---
-
-    })(); // END IIFE
+        // --- START: WebSocket Cleanup on Page Unload ---
+        window.addEventListener("beforeunload", () => {
+          console.log("Closing WebSockets before page unload...");
+          if (logSocket) {
+            logSocket.close();
+            console.log("Log WebSocket closed.");
+          }
+          if (entitySocket) {
+            entitySocket.close();
+            console.log("Entity WebSocket closed.");
+          }
+        });
+        // --- END: WebSocket Cleanup on Page Unload ---
+      })();
         </script>
     </body>
 </html>
