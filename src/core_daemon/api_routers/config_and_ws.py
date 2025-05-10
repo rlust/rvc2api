@@ -3,8 +3,9 @@ Manages API routes for configuration and WebSocket interactions.
 
 This module provides FastAPI endpoints for:
 - Retrieving the current application configuration.
-- Managing WebSocket connections for real-time updates (e.g., CAN messages).
+- Managing WebSocket connections for real-time updates (e.g., CAN messages, logs).
 - Providing server and application status.
+- Streaming application logs to WebSocket clients.
 """
 
 import json
@@ -181,7 +182,7 @@ async def serve_websocket_endpoint(ws: WebSocket):
 
 @api_router_config_ws.websocket("/ws/logs")
 async def serve_websocket_logs_endpoint(ws: WebSocket):
-    """Handles WebSocket connections for streaming application logs."""
+    print("LOG WS HANDLER CALLED")  # Debug: confirm handler is hit
     await websocket_logs_endpoint(ws)
 
 
