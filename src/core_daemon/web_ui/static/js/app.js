@@ -414,7 +414,7 @@
    * Fetches and updates the API server status.
    */
   function fetchApiStatus() {
-    fetchData("/api/status/server", {
+    fetchData(`${apiBasePath}/status/server`, {
       successCallback: updateApiServerView,
       errorCallback: (error) => {
         console.error("Failed to fetch API server status:", error);
@@ -432,7 +432,7 @@
    * Fetches and updates the application health status.
    */
   function fetchAppHealth() {
-    fetchData("/api/status/application", {
+    fetchData(`${apiBasePath}/status/application`, {
       successCallback: updateApplicationHealthView,
       errorCallback: (error) => {
         console.error("Failed to fetch application health:", error);
@@ -450,7 +450,7 @@
    * Fetches and updates the CAN interface status.
    */
   function fetchCanStatus() {
-    fetchData("/api/can/status", {
+    fetchData(`${apiBasePath}/can/status`, {
       successCallback: updateCanStatusView,
       errorCallback: (error) => {
         console.error("Failed to fetch CAN status:", error);
@@ -654,7 +654,7 @@
    * Uses /api/entities?type=light as per user's note.
    */
   function fetchLights() {
-    fetchData("/api/entities?type=light", {
+    fetchData(`${apiBasePath}/entities?type=light`, {
       successCallback: updateLightsView,
       errorCallback: (error) => {
         console.error("Failed to fetch lights:", error);
@@ -673,7 +673,7 @@
    * Uses /api/config/mapping and expects text, displaying it directly.
    */
   function fetchMappingContent() {
-    fetchData("/api/config/mapping", {
+    fetchData(`${apiBasePath}/config/mapping`, {
       // Changed to /api/config/mapping
       responseType: "text", // Expect text
       successCallback: (textData) => {
@@ -731,7 +731,7 @@
    */
   function fetchSpecContent() {
     // Fetch Spec Content (Text)
-    fetchData("/api/config/rvc_spec", {
+    fetchData(`${apiBasePath}/config/rvc_spec`, {
       responseType: "text",
       successCallback: updateSpecTextView,
       errorCallback: (error) => {
@@ -744,7 +744,7 @@
     });
 
     // Fetch Spec Metadata (JSON)
-    fetchData("/api/config/rvc_spec_metadata", {
+    fetchData(`${apiBasePath}/config/rvc_spec_metadata`, {
       responseType: "json",
       successCallback: updateSpecMetadataView,
       errorCallback: (error) => {
@@ -874,7 +874,7 @@
 
   // Patch fetchUnmappedEntries to use the new renderer
   function fetchUnmappedEntries() {
-    fetchData("/api/unmapped_entries", {
+    fetchData(`${apiBasePath}/unmapped_entries`, {
       successCallback: renderUnmappedEntries,
       errorCallback: (error) => {
         if (unmappedEntriesContent)
@@ -892,7 +892,7 @@
    * Uses /api/unknown_pgns as per user's note.
    */
   function fetchUnknownPgns() {
-    fetchData("/api/unknown_pgns", {
+    fetchData(`${apiBasePath}/unknown_pgns`, {
       // New endpoint (corrected)
       successCallback: (data) => {
         if (!unknownPgnsContent) return;
@@ -1311,32 +1311,32 @@
     const controls = [
       {
         id: "btn-all-on",
-        path: "/api/lights/all/on",
+        path: `${apiBasePath}/lights/all/on`,
         name: "All Lights On",
       },
       {
         id: "btn-all-off",
-        path: "/api/lights/all/off",
+        path: `${apiBasePath}/lights/all/off`,
         name: "All Lights Off",
       },
       {
         id: "btn-interior-on",
-        path: "/api/lights/interior/on",
+        path: `${apiBasePath}/lights/interior/on`,
         name: "Interior Lights On",
       },
       {
         id: "btn-interior-off",
-        path: "/api/lights/interior/off",
+        path: `${apiBasePath}/lights/interior/off`,
         name: "Interior Lights Off",
       },
       {
         id: "btn-exterior-on",
-        path: "/api/lights/exterior/on",
+        path: `${apiBasePath}/lights/exterior/on`,
         name: "Exterior Lights On",
       },
       {
         id: "btn-exterior-off",
-        path: "/api/lights/exterior/off",
+        path: `${apiBasePath}/lights/exterior/off`,
         name: "Exterior Lights Off",
       },
     ];
@@ -1779,9 +1779,18 @@
     );
 
     if (toggleSidebarDesktopButton) {
-      toggleSidebarDesktopButton.addEventListener("click", () =>
-        setDesktopSidebarVisible(!isDesktopSidebarExpanded)
-      );
+      toggleSidebarDesktopButton.addEventListener("click", () => {
+        setDesktopSidebarVisible(!isDesktopSidebarExpanded);
+        // Update ARIA attributes for accessibility
+        sidebar.setAttribute(
+          "aria-expanded",
+          isDesktopSidebarExpanded ? "true" : "false"
+        );
+        toggleSidebarDesktopButton.setAttribute(
+          "aria-expanded",
+          isDesktopSidebarExpanded ? "true" : "false"
+        );
+      });
     }
     if (mobileMenuButton && sidebar && closeSidebarButton) {
       mobileMenuButton.addEventListener("click", () =>
