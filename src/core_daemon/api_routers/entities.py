@@ -12,7 +12,7 @@ This module includes routes for:
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
@@ -24,7 +24,6 @@ from core_daemon.app_state import (
     get_last_known_brightness,
     history,
     light_command_info,
-    light_entity_ids,
     set_last_known_brightness,
     state,
     update_entity_state_and_history,
@@ -38,13 +37,7 @@ from core_daemon.metrics import CAN_TX_ENQUEUE_LATENCY, CAN_TX_ENQUEUE_TOTAL, CA
 
 # Models
 from core_daemon.models import UnknownPGNEntry  # Import UnknownPGNEntry
-from core_daemon.models import (
-    BulkLightControlResponse,
-    ControlCommand,
-    ControlEntityResponse,
-    Entity,
-    UnmappedEntryModel,
-)
+from core_daemon.models import ControlCommand, ControlEntityResponse, Entity, UnmappedEntryModel
 
 # WebSocket for broadcasting updates
 from core_daemon.websocket import broadcast_to_clients
@@ -160,65 +153,6 @@ async def get_unknown_pgns_api():
         A dictionary of unknown PGNs.
     """
     return unknown_pgns
-
-
-@api_router_entities.get(
-    "/lights", response_model=List[Entity]
-)  # Changed Dict[str, Entity] to List[Entity]
-async def list_lights(
-    state_filter: Optional[str] = Query(None, alias="state", description="Filter by 'on'/'off'"),
-    capability: Optional[str] = Query(None, description="e.g. 'brightness' or 'on_off'"),
-    area: Optional[str] = Query(None),
-):
-    """
-    Return lights, optionally filtered by:
-    - state (\'on\' or \'off\')
-    - a specific capability (e.g. \'brightness\')
-    - area (suggested_area)
-
-    Args:
-        state_filter: Optional filter by light state ('on' or 'off').
-        capability: Optional filter by light capability (e.g., 'brightness').
-        area: Optional filter by light suggested_area.
-
-    Returns:
-        A list of lights matching the filter criteria.
-    """
-    results: List[Entity] = []  # Changed to List
-    for eid, ent in state.items():
-        if eid not in light_entity_ids:
-            continue
-        cfg = entity_id_lookup.get(eid, {})
-        if cfg.get("device_type") != "light":
-            continue
-        if area and cfg.get("suggested_area") != area:
-            continue
-        caps = cfg.get("capabilities", [])
-        if capability and capability not in caps:
-            continue
-        if state_filter:
-            val = ent.get("state")
-            if not val or val.strip().lower() != state_filter.strip().lower():
-                continue
-
-        # Ensure the entity data includes necessary fields from cfg
-        # Create a mutable copy of ent to avoid modifying the global state directly
-        enriched_ent_data = ent.copy() if isinstance(ent, dict) else ent.model_dump()
-
-        # Explicitly set device_type and other relevant fields from cfg
-        # This ensures they are present in the final Entity object
-        enriched_ent_data["device_type"] = cfg.get(
-            "device_type", "light"
-        )  # Default to 'light' if somehow missing in cfg but passed filter
-        if "suggested_area" not in enriched_ent_data and cfg.get("suggested_area"):
-            enriched_ent_data["suggested_area"] = cfg.get("suggested_area")
-        if "capabilities" not in enriched_ent_data and cfg.get("capabilities"):
-            enriched_ent_data["capabilities"] = cfg.get("capabilities")
-        if "friendly_name" not in enriched_ent_data and cfg.get("friendly_name"):
-            enriched_ent_data["friendly_name"] = cfg.get("friendly_name")
-
-        results.append(Entity(**enriched_ent_data))  # Append to list
-    return results
 
 
 @api_router_entities.get("/meta", response_model=Dict[str, List[str]])
@@ -501,247 +435,4 @@ async def control_entity(
         state="on" if target_brightness_ui > 0 else "off",
         brightness=target_brightness_ui,
         action=action,
-    )
-
-
-async def _bulk_control_lights(
-    group_filter: Optional[str],
-    command: str,
-    state_cmd: Optional[str] = None,
-    brightness_val: Optional[int] = None,
-) -> List[Dict[str, Any]]:
-    """
-    Internal helper to process bulk light control commands.
-
-    Iterates through controllable light entities, applying filters (e.g., group)
-    and executing the specified command (set, toggle, brightness_up, brightness_down).
-    It determines the target brightness for each light based on the command,
-    current state, and last known brightness, then uses `_send_light_can_command`
-    to queue the CAN message and perform optimistic updates.
-
-    Args:
-        group_filter: Optional string to filter lights by their assigned group.
-        command: The primary command (e.g., 'set', 'toggle').
-        state_cmd: For 'set' command, the target state ('on' or 'off').
-        brightness_val: For 'set' command with 'on' state, the target brightness (0-100).
-
-    Returns:
-        A list of dictionaries, each representing the result of the command
-        for a processed light entity (status, action, new state, brightness).
-    """
-    results = []
-    action_description_base = f"Bulk {command}"
-    if state_cmd:
-        action_description_base += f" {state_cmd}"
-    if brightness_val is not None:
-        action_description_base += f" to {brightness_val}%"
-    if group_filter:
-        logger.info(
-            f"Processing bulk command for group: {group_filter}, command: {command}, "
-            f"state: {state_cmd}, brightness: {brightness_val}"
-        )
-    else:
-        logger.info(
-            f"Processing bulk command for ALL lights, command: {command}, "
-            f"state: {state_cmd}, brightness: {brightness_val}"
-        )
-
-    controlled_entity_ids = set()
-
-    for entity_id, entity_config in entity_id_lookup.items():
-        if entity_id in controlled_entity_ids:
-            continue
-
-        is_light_entity = (
-            entity_id in light_entity_ids or entity_config.get("device_type") == "light"
-        )
-        is_controllable_light = entity_id in light_command_info and is_light_entity
-
-        if not is_controllable_light:
-            continue
-
-        if group_filter:
-            entity_groups = entity_config.get("groups", [])
-            # Ensure entity_groups is a list for the 'in' operator
-            if not isinstance(entity_groups, list):
-                entity_groups = [entity_groups] if entity_groups else []
-            if group_filter not in entity_groups:
-                continue
-
-        current_state_data = state.get(entity_id, {})
-        current_on_str = current_state_data.get("state", "off")
-        current_on = current_on_str.lower() == "on"
-        current_raw_values = current_state_data.get("raw", {})
-        current_brightness_raw = current_raw_values.get("operating_status", 0)
-        current_brightness_ui = (
-            min(int(current_brightness_raw) // 2, 100)
-            if isinstance(current_brightness_raw, (int, float, str))
-            and str(current_brightness_raw).isdigit()
-            else (100 if current_on else 0)
-        )
-        last_brightness_ui = get_last_known_brightness(entity_id)
-
-        target_brightness_ui = current_brightness_ui
-        action_suffix = ""
-
-        if command == "set":
-            if state_cmd is not None and state_cmd not in {"on", "off"}:
-                results.append(
-                    {
-                        "entity_id": entity_id,
-                        "status": "error",
-                        "detail": "State must be 'on' or 'off'",
-                    }
-                )
-                continue
-            if state_cmd == "on":
-                if brightness_val is not None:
-                    target_brightness_ui = brightness_val
-                elif not current_on:
-                    target_brightness_ui = last_brightness_ui
-                action_suffix = f"ON to {target_brightness_ui}%"
-            elif state_cmd == "off":
-                if current_on and current_brightness_ui > 0:
-                    set_last_known_brightness(entity_id, current_brightness_ui)
-                target_brightness_ui = 0
-                action_suffix = "OFF"
-            elif brightness_val is not None:  # Setting brightness implies ON
-                target_brightness_ui = brightness_val
-                action_suffix = f"Brightness to {target_brightness_ui}% (implies ON)"
-
-        elif command == "toggle":
-            if current_on:
-                if current_brightness_ui > 0:
-                    set_last_known_brightness(entity_id, current_brightness_ui)
-                target_brightness_ui = 0
-                action_suffix = "Toggle OFF"
-            else:
-                target_brightness_ui = last_brightness_ui
-                action_suffix = f"Toggle ON to {target_brightness_ui}%"
-
-        elif command == "brightness_up":
-            if not current_on and current_brightness_ui == 0:
-                target_brightness_ui = 10
-            else:
-                target_brightness_ui = min(current_brightness_ui + 10, 100)
-            action_suffix = f"Brightness UP to {target_brightness_ui}%"
-
-        elif command == "brightness_down":
-            target_brightness_ui = max(current_brightness_ui - 10, 0)
-            action_suffix = f"Brightness DOWN to {target_brightness_ui}%"
-        else:
-            results.append(
-                {"entity_id": entity_id, "status": "error", "detail": f"Invalid command: {command}"}
-            )
-            continue
-
-        full_action_description = f"{action_description_base} ({action_suffix}) for {entity_id}"
-
-        if target_brightness_ui > 0:
-            set_last_known_brightness(entity_id, target_brightness_ui)
-
-        success = await _send_light_can_command(
-            entity_id, target_brightness_ui, full_action_description
-        )
-        results.append(
-            {
-                "entity_id": entity_id,
-                "status": "sent" if success else "error",
-                "action": full_action_description,
-                "state": "on" if target_brightness_ui > 0 else "off",
-                "brightness": target_brightness_ui,
-            }
-        )
-        controlled_entity_ids.add(entity_id)
-
-    if (
-        not controlled_entity_ids and group_filter
-    ):  # Only log warning if a filter was applied and nothing matched
-        logger.warning(
-            f"Bulk control command ({action_description_base}) did not match any lights "
-            f"for group_filter: '{group_filter}'."
-        )
-    elif (
-        not controlled_entity_ids and not group_filter
-    ):  # Log if no lights controlled when targeting all
-        logger.info(
-            f"Bulk control command ({action_description_base}) targeted all lights,"
-            f"but no controllable lights found or processed."
-        )
-
-    return results
-
-
-@api_router_entities.post("/lights/control", response_model=BulkLightControlResponse)
-async def control_lights_bulk(
-    cmd: ControlCommand = Body(...),
-    group: Optional[str] = Query(
-        None, description="Group to control (e.g., 'interior', 'all')"  # Shortened description
-    ),
-):
-    """
-    Control multiple lights based on a group or all lights if no group is specified.
-    The special group 'all' explicitly targets all controllable lights.
-    If group is None or empty, it also targets all controllable lights.
-
-    Args:
-        cmd: The control command to execute.
-        group: Optional group to filter lights by (e.g., 'interior', 'all').
-
-    Returns:
-        A response indicating the status of the bulk control command.
-    """
-    logger.info(
-        f"HTTP Bulk CMD RX: group='{group}', command='{cmd.command}', "
-        f"state='{cmd.state}', brightness='{cmd.brightness}'"
-    )
-
-    # Treat group=None, group="", or group="all" as targeting all lights by passing None to helper
-    effective_group_filter = group if group and group.lower() != "all" else None
-
-    results = await _bulk_control_lights(
-        group_filter=effective_group_filter,
-        command=cmd.command,
-        state_cmd=cmd.state,
-        brightness_val=cmd.brightness,
-    )
-
-    lights_processed = len(results)
-    lights_commanded_successfully = sum(1 for r in results if r.get("status") == "sent")
-    errors = [r for r in results if r.get("status") == "error"]
-
-    if lights_processed == 0:
-        message = f"No lights found or matched the specified criteria (group: {group})."
-        if effective_group_filter is None and group is None:  # Explicitly "all" or no group given
-            message = "No controllable lights found in the system."
-        elif effective_group_filter is None and group and group.lower() == "all":
-            message = "No controllable lights for group 'all'."  # Further shortened
-
-        return BulkLightControlResponse(
-            status="no_match",
-            message=message,
-            action=cmd.command,
-            group=group,
-            lights_processed=0,
-            lights_commanded=0,
-            errors=[],
-            details=[],
-        )
-
-    overall_status = "success"
-    if errors:
-        overall_status = "partial_error" if lights_commanded_successfully > 0 else "error"
-
-    return BulkLightControlResponse(
-        status=overall_status,
-        message="Bulk command processing complete.",
-        action=cmd.command,
-        group=group,
-        lights_processed=lights_processed,
-        lights_commanded=lights_commanded_successfully,  # Changed to keyword argument
-        errors=[
-            {"entity_id": e.get("entity_id"), "detail": e.get("detail", "Unknown error")}
-            for e in errors
-        ],
-        details=results,
     )

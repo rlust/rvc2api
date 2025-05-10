@@ -1305,90 +1305,109 @@
 
   /**
    * Sets up event listeners for bulk light control buttons (All/Interior/Exterior On/Off).
-   * Each button sends a POST to the appropriate API endpoint and shows feedback.
+   * Each button fetches all lights, filters by group/area, and sends control commands to each.
    */
   function setupBulkLightControlButtons() {
     const controls = [
       {
         id: "btn-all-on",
-        path: `${apiBasePath}/lights/all/on`,
         name: "All Lights On",
+        filter: () => true,
+        command: { command: "set", state: "on" },
       },
       {
         id: "btn-all-off",
-        path: `${apiBasePath}/lights/all/off`,
         name: "All Lights Off",
+        filter: () => true,
+        command: { command: "set", state: "off" },
       },
       {
         id: "btn-interior-on",
-        path: `${apiBasePath}/lights/interior/on`,
         name: "Interior Lights On",
+        filter: (entity) => (entity.groups || []).includes("interior"),
+        command: { command: "set", state: "on" },
       },
       {
         id: "btn-interior-off",
-        path: `${apiBasePath}/lights/interior/off`,
         name: "Interior Lights Off",
+        filter: (entity) => (entity.groups || []).includes("interior"),
+        command: { command: "set", state: "off" },
       },
       {
         id: "btn-exterior-on",
-        path: `${apiBasePath}/lights/exterior/on`,
         name: "Exterior Lights On",
+        filter: (entity) => (entity.groups || []).includes("exterior"),
+        command: { command: "set", state: "on" },
       },
       {
         id: "btn-exterior-off",
-        path: `${apiBasePath}/lights/exterior/off`,
         name: "Exterior Lights Off",
+        filter: (entity) => (entity.groups || []).includes("exterior"),
+        command: { command: "set", state: "off" },
       },
     ];
     controls.forEach((control) => {
       const button = document.getElementById(control.id);
       if (!button) return;
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         const originalHTML = button.innerHTML;
         button.disabled = true;
         button.innerHTML =
           '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
-        fetch(control.path, { method: "POST" })
-          .then((response) => {
-            if (!response.ok) {
-              return response.json().then((err) => {
-                throw new Error(
-                  `HTTP error ${response.status}: ${
-                    err.detail || response.statusText
-                  }`
-                );
-              });
+        try {
+          // Fetch all lights
+          const resp = await fetch(`${apiBasePath}/entities?type=light`);
+          if (!resp.ok) throw new Error("Failed to fetch lights");
+          const lights = await resp.json();
+          // Filter lights for this control
+          const entities = Object.values(lights).filter(
+            (entity) => entity.device_type === "light" && control.filter(entity)
+          );
+          if (entities.length === 0) {
+            showToast(`No lights found for ${control.name}.`, "warning");
+            return;
+          }
+          // Send control command to each entity
+          let successCount = 0;
+          let errorCount = 0;
+          for (const entity of entities) {
+            try {
+              const res = await fetch(
+                `${apiBasePath}/entities/${entity.entity_id}/control`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(control.command),
+                }
+              );
+              if (!res.ok) throw new Error(await res.text());
+              successCount++;
+            } catch (err) {
+              errorCount++;
+              console.error(`Failed to control ${entity.entity_id}:`, err);
             }
-            return response.json();
-          })
-          .then((data) => {
-            if (data.errors && data.errors.length > 0) {
-              showToast(
-                `${control.name}: ${data.lights_commanded} commanded with ${data.errors.length} errors. Check console.`,
-                "warning"
-              );
-              console.warn(
-                `Bulk action '${control.name}' errors:`,
-                data.errors
-              );
-            } else {
-              showToast(
-                `${control.name}: ${data.lights_commanded} lights commanded.`,
-                "success"
-              );
-            }
-          })
-          .catch((error) => {
+          }
+          if (errorCount > 0) {
             showToast(
-              `Failed to execute ${control.name}. Error: ${error.message}`,
-              "error"
+              `${control.name}: ${successCount} succeeded, ${errorCount} failed.`,
+              errorCount === entities.length ? "error" : "warning"
             );
-            console.error(`Command ${control.name} failed:`, error);
-          })
-          .finally(() => {
-            button.disabled = false;
-            button.innerHTML = originalHTML;
-          });
+          } else {
+            showToast(
+              `${control.name}: ${successCount} lights commanded.`,
+              "success"
+            );
+          }
+        } catch (error) {
+          showToast(
+            `Failed to execute ${control.name}. Error: ${error.message}`,
+            "error"
+          );
+          console.error(`Command ${control.name} failed:`, error);
+        } finally {
+          button.disabled = false;
+          button.innerHTML = originalHTML;
+        }
       });
     });
   }
