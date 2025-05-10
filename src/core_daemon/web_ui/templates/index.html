@@ -692,7 +692,10 @@
         canStatusContainer.innerHTML = ''; // Clear previous content or loading message
 
         if (Object.keys(statusData).length === 0) {
-          canStatusContainer.innerHTML = '<p class="text-gray-400">No CAN interfaces found or status not available.</p>';
+          const p = document.createElement('p');
+          p.className = 'text-gray-400';
+          p.textContent = 'No CAN interfaces found or status not available.';
+          canStatusContainer.appendChild(p);
           return;
         }
 
@@ -704,71 +707,104 @@
           const li = document.createElement('li');
           li.className = 'p-5 bg-gray-700 rounded-lg shadow-md'; // Slightly more padding and shadow
 
+          // Interface Name Header
+          const h3 = document.createElement('h3');
+          h3.className = 'text-xl font-semibold text-blue-300 mb-4 border-b border-gray-600 pb-2';
+          h3.textContent = interfaceName;
+          li.appendChild(h3);
+
+          const mainGridDiv = document.createElement('div');
+          mainGridDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm';
+
+          // Left Column (State, Bitrate, etc.)
+          const leftColDiv = document.createElement('div');
           let statusText = iface.state || 'N/A';
           let statusColor = 'text-gray-400'; // Default/unknown
-
-          if (iface.state === 'ERROR-ACTIVE' || iface.state === 'UP' || iface.state === 'RUNNING') {
-            statusColor = 'text-green-400'; // Healthy states
-          } else if (iface.state === 'ERROR-WARNING') {
-            statusColor = 'text-yellow-400'; // Warning state
-          } else if (iface.state === 'ERROR-PASSIVE') {
-            statusColor = 'text-orange-500'; // Passive error state (more distinct orange)
-          } else if (iface.state === 'BUS-OFF' || iface.state === 'DOWN' || iface.state === 'STOPPED') {
-            statusColor = 'text-red-500'; // Error/Offline states (more distinct red)
-          }
+          if (iface.state === 'ERROR-ACTIVE' || iface.state === 'UP' || iface.state === 'RUNNING') statusColor = 'text-green-400';
+          else if (iface.state === 'ERROR-WARNING') statusColor = 'text-yellow-400';
+          else if (iface.state === 'ERROR-PASSIVE') statusColor = 'text-orange-500';
+          else if (iface.state === 'BUS-OFF' || iface.state === 'DOWN' || iface.state === 'STOPPED') statusColor = 'text-red-500';
 
           const bitrateDisplay = iface.bitrate ? `${(iface.bitrate / 1000).toFixed(0)} kbps` : 'N/A';
           const samplePointDisplay = iface.sample_point ? `${(iface.sample_point * 100).toFixed(1)}%` : 'N/A';
+
+          leftColDiv.appendChild(createDetailParagraph('State:', statusText, `${statusColor} font-semibold`));
+          leftColDiv.appendChild(createDetailParagraph('Bitrate:', bitrateDisplay));
+          leftColDiv.appendChild(createDetailParagraph('Sample Point:', samplePointDisplay));
+          leftColDiv.appendChild(createDetailParagraph('Restart MS:', iface.restart_ms === undefined ? 'N/A' : String(iface.restart_ms)));
+          mainGridDiv.appendChild(leftColDiv);
+
+          // Right Column (TQ, BRP, etc.)
+          const rightColDiv = document.createElement('div');
           const tqDisplay = iface.tq ? `${iface.tq} ns` : 'N/A';
+          rightColDiv.appendChild(createDetailParagraph('TQ:', tqDisplay));
+          rightColDiv.appendChild(createDetailParagraph('BRP:', iface.brp === undefined ? 'N/A' : String(iface.brp)));
+          rightColDiv.appendChild(createDetailParagraph('Prop Seg:', iface.prop_seg === undefined ? 'N/A' : String(iface.prop_seg)));
+          rightColDiv.appendChild(createDetailParagraph('Phase Seg1:', iface.phase_seg1 === undefined ? 'N/A' : String(iface.phase_seg1)));
+          rightColDiv.appendChild(createDetailParagraph('Phase Seg2:', iface.phase_seg2 === undefined ? 'N/A' : String(iface.phase_seg2)));
+          rightColDiv.appendChild(createDetailParagraph('SJW:', iface.sjw === undefined ? 'N/A' : String(iface.sjw)));
+          mainGridDiv.appendChild(rightColDiv);
 
-          li.innerHTML = `
-            <h3 class="text-xl font-semibold text-blue-300 mb-4 border-b border-gray-600 pb-2">${interfaceName}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div>
-                <p class="mb-1"><strong>State:</strong> <span class="${statusColor} font-semibold">${statusText}</span></p>
-                <p class="mb-1"><strong>Bitrate:</strong> ${bitrateDisplay}</p>
-                <p class="mb-1"><strong>Sample Point:</strong> ${samplePointDisplay}</p>
-                <p class="mb-1"><strong>Restart MS:</strong> ${iface.restart_ms === undefined ? 'N/A' : iface.restart_ms}</p>
-              </div>
-              <div>
-                <p class="mb-1"><strong>TQ:</strong> ${tqDisplay}</p>
-                <p class="mb-1"><strong>BRP:</strong> ${iface.brp === undefined ? 'N/A' : iface.brp}</p>
-                <p class="mb-1"><strong>Prop Seg:</strong> ${iface.prop_seg === undefined ? 'N/A' : iface.prop_seg}</p>
-                <p class="mb-1"><strong>Phase Seg1:</strong> ${iface.phase_seg1 === undefined ? 'N/A' : iface.phase_seg1}</p>
-                <p class="mb-1"><strong>Phase Seg2:</strong> ${iface.phase_seg2 === undefined ? 'N/A' : iface.phase_seg2}</p>
-                <p class="mb-1"><strong>SJW:</strong> ${iface.sjw === undefined ? 'N/A' : iface.sjw}</p>
-              </div>
+          // Counters & Errors Section (Conditional)
+          if (iface.tx_packets !== undefined || iface.rx_packets !== undefined || iface.tx_errors !== undefined || iface.restarts !== undefined) {
+            const countersDiv = document.createElement('div');
+            countersDiv.className = 'md:col-span-2 mt-3 pt-3 border-t border-gray-600';
+            const countersH4 = document.createElement('h4');
+            countersH4.className = 'text-md font-medium text-gray-300 mb-2';
+            countersH4.textContent = 'Counters & Errors';
+            countersDiv.appendChild(countersH4);
+            const countersGrid = document.createElement('div');
+            countersGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1';
+            countersGrid.appendChild(createDetailParagraph('TX Packets:', iface.tx_packets === undefined ? 'N/A' : String(iface.tx_packets)));
+            countersGrid.appendChild(createDetailParagraph('RX Packets:', iface.rx_packets === undefined ? 'N/A' : String(iface.rx_packets)));
+            countersGrid.appendChild(createDetailParagraph('TX Bytes:', iface.tx_bytes === undefined ? 'N/A' : String(iface.tx_bytes)));
+            countersGrid.appendChild(createDetailParagraph('RX Bytes:', iface.rx_bytes === undefined ? 'N/A' : String(iface.rx_bytes)));
+            countersGrid.appendChild(createDetailParagraph('TX Errors:', iface.tx_errors === undefined ? 'N/A' : String(iface.tx_errors)));
+            countersGrid.appendChild(createDetailParagraph('RX Errors:', iface.rx_errors === undefined ? 'N/A' : String(iface.rx_errors)));
+            countersGrid.appendChild(createDetailParagraph('Bus Errors:', iface.bus_errors === undefined ? 'N/A' : String(iface.bus_errors)));
+            countersGrid.appendChild(createDetailParagraph('Restarts:', iface.restarts === undefined ? 'N/A' : String(iface.restarts)));
+            countersDiv.appendChild(countersGrid);
+            mainGridDiv.appendChild(countersDiv);
+          }
 
-              ${ (iface.tx_packets !== undefined || iface.rx_packets !== undefined || iface.tx_errors !== undefined || iface.restarts !== undefined) ? `
-                <div class="md:col-span-2 mt-3 pt-3 border-t border-gray-600">
-                  <h4 class="text-md font-medium text-gray-300 mb-2">Counters & Errors</h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-                    <p><strong>TX Packets:</strong> ${iface.tx_packets === undefined ? 'N/A' : iface.tx_packets}</p>
-                    <p><strong>RX Packets:</strong> ${iface.rx_packets === undefined ? 'N/A' : iface.rx_packets}</p>
-                    <p><strong>TX Bytes:</strong> ${iface.tx_bytes === undefined ? 'N/A' : iface.tx_bytes}</p>
-                    <p><strong>RX Bytes:</strong> ${iface.rx_bytes === undefined ? 'N/A' : iface.rx_bytes}</p>
-                    <p><strong>TX Errors:</strong> ${iface.tx_errors === undefined ? 'N/A' : iface.tx_errors}</p>
-                    <p><strong>RX Errors:</strong> ${iface.rx_errors === undefined ? 'N/A' : iface.rx_errors}</p>
-                    <p><strong>Bus Errors:</strong> ${iface.bus_errors === undefined ? 'N/A' : iface.bus_errors}</p>
-                    <p><strong>Restarts:</strong> ${iface.restarts === undefined ? 'N/A' : iface.restarts}</p>
-                  </div>
-                </div>
-              ` : ''}
+          // Device Info Section (Conditional)
+          if (iface.parentbus || iface.parentdev) {
+            const devInfoDiv = document.createElement('div');
+            devInfoDiv.className = 'md:col-span-2 mt-3 pt-3 border-t border-gray-600';
+            const devInfoH4 = document.createElement('h4');
+            devInfoH4.className = 'text-md font-medium text-gray-300 mb-2';
+            devInfoH4.textContent = 'Device Info';
+            devInfoDiv.appendChild(devInfoH4);
+            const devInfoGrid = document.createElement('div');
+            devInfoGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1';
+            devInfoGrid.appendChild(createDetailParagraph('Parent Bus:', iface.parentbus || 'N/A'));
+            devInfoGrid.appendChild(createDetailParagraph('Parent Dev:', iface.parentdev || 'N/A'));
+            devInfoDiv.appendChild(devInfoGrid);
+            mainGridDiv.appendChild(devInfoDiv);
+          }
 
-              ${ (iface.parentbus || iface.parentdev) ? `
-                <div class="md:col-span-2 mt-3 pt-3 border-t border-gray-600">
-                  <h4 class="text-md font-medium text-gray-300 mb-2">Device Info</h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-                    <p><strong>Parent Bus:</strong> ${iface.parentbus || 'N/A'}</p>
-                    <p><strong>Parent Dev:</strong> ${iface.parentdev || 'N/A'}</p>
-                  </div>
-                </div>
-              ` : ''}
-            </div>
-          `;
+          li.appendChild(mainGridDiv);
           ul.appendChild(li);
         }
         canStatusContainer.appendChild(ul);
+      }
+
+      // Helper function to create <p><strong>Label:</strong> Value</p> structure
+      function createDetailParagraph(label, value, valueClass = '') {
+        const p = document.createElement('p');
+        p.className = 'mb-1';
+        const strong = document.createElement('strong');
+        strong.textContent = `${label} `;
+        p.appendChild(strong);
+        if (valueClass) {
+          const span = document.createElement('span');
+          span.className = valueClass;
+          span.textContent = String(value);
+          p.appendChild(span);
+        } else {
+          p.appendChild(document.createTextNode(String(value)));
+        }
+        return p;
       }
 
       // --- Fetch and Display API Server Status (NEW) ---
