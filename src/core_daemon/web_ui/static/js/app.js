@@ -8,7 +8,7 @@
  * - UI event handling for navigation, controls, and user feedback
  * - Utility functions for DOM manipulation and notifications
  *
- * Author: rvc2api contributors
+ * Author: Ryan Holt
  * Last updated: 2025-05-10
  */
 
@@ -69,6 +69,8 @@
   const CLASS_TEXT_GREEN_400 = "text-green-400";
   const CLASS_TEXT_RED_400 = "text-red-400";
   const CLASS_TEXT_YELLOW_400 = "text-yellow-400";
+
+  const apiBasePath = "/api";
 
   // =====================
   // DOM ELEMENT CACHE
@@ -195,10 +197,10 @@
    */
   function fetchData(url, options = {}) {
     const {
-      method = 'GET',
-      headers = method === 'GET' ? {} : { 'Content-Type': 'application/json' },
+      method = "GET",
+      headers = method === "GET" ? {} : { "Content-Type": "application/json" },
       body = null,
-      responseType = 'json',
+      responseType = "json",
       successCallback = () => {},
       errorCallback = null,
       loadingElement = null,
@@ -206,41 +208,50 @@
     } = options;
 
     if (loadingElement) {
-      loadingElement.textContent = 'Loading...';
-      loadingElement.classList.remove('text-red-500');
-      loadingElement.classList.add('text-gray-400');
+      loadingElement.textContent = "Loading...";
+      loadingElement.classList.remove("text-red-500");
+      loadingElement.classList.add("text-gray-400");
     }
 
     fetch(url, {
       method,
       headers,
-      body: body && method !== 'GET' ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+      body:
+        body && method !== "GET"
+          ? typeof body === "string"
+            ? body
+            : JSON.stringify(body)
+          : undefined,
     })
       .then((response) => {
         if (!response.ok) {
           // Try to parse error JSON, fallback to status text
           return response[responseType]()
             .then((err) => {
-              throw { message: err.message || response.statusText, status: response.status };
+              throw {
+                message: err.message || response.statusText,
+                status: response.status,
+              };
             })
             .catch(() => {
               throw { message: response.statusText, status: response.status };
             });
         }
-        return responseType === 'text' ? response.text() : response.json();
+        return responseType === "text" ? response.text() : response.json();
       })
       .then((data) => {
-        if (loadingElement) loadingElement.textContent = '';
+        if (loadingElement) loadingElement.textContent = "";
         successCallback(data);
       })
       .catch((error) => {
         if (loadingElement) {
           loadingElement.textContent = `Error: ${error.message || error}`;
-          loadingElement.classList.remove('text-gray-400');
-          loadingElement.classList.add('text-red-500');
+          loadingElement.classList.remove("text-gray-400");
+          loadingElement.classList.add("text-red-500");
         }
-        if (showToastOnError) showToast(`Error: ${error.message || error}`, 'error');
-        if (typeof errorCallback === 'function') errorCallback(error);
+        if (showToastOnError)
+          showToast(`Error: ${error.message || error}`, "error");
+        if (typeof errorCallback === "function") errorCallback(error);
       });
   }
 
@@ -288,11 +299,16 @@
    */
   function updateApiServerView(data) {
     if (!apiStatusContent) return;
-    apiStatusContent.innerHTML = '';
-    const status = data.status || 'unknown';
-    const message = data.message || '';
-    const version = data.version || APP_VERSION || '';
-    const statusColor = status === 'ok' ? CLASS_TEXT_GREEN_400 : status === 'error' ? CLASS_TEXT_RED_400 : CLASS_TEXT_YELLOW_400;
+    apiStatusContent.innerHTML = "";
+    const status = data.status || "unknown";
+    const message = data.message || "";
+    const version = data.version || APP_VERSION || "";
+    const statusColor =
+      status === "ok"
+        ? CLASS_TEXT_GREEN_400
+        : status === "error"
+        ? CLASS_TEXT_RED_400
+        : CLASS_TEXT_YELLOW_400;
     apiStatusContent.innerHTML = `
       <div class="flex items-center space-x-2">
         <span class="font-semibold">Status:</span>
@@ -311,15 +327,15 @@
    */
   function updateApplicationHealthView(data) {
     if (!appHealthContent) return;
-    appHealthContent.innerHTML = '';
-    if (!data || typeof data !== 'object') {
-      appHealthContent.textContent = 'No health data available.';
+    appHealthContent.innerHTML = "";
+    if (!data || typeof data !== "object") {
+      appHealthContent.textContent = "No health data available.";
       return;
     }
     const entries = Object.entries(data).map(([key, value]) => {
       return `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`;
     });
-    appHealthContent.innerHTML = entries.join('');
+    appHealthContent.innerHTML = entries.join("");
   }
 
   /**
@@ -329,16 +345,24 @@
    */
   function updateCanStatusView(data) {
     if (!canStatusContent) return;
-    canStatusContent.innerHTML = '';
-    if (!data || !data.interfaces || Object.keys(data.interfaces).length === 0) {
-      canStatusContent.textContent = 'No CAN interfaces found.';
+    canStatusContent.innerHTML = "";
+    if (
+      !data ||
+      !data.interfaces ||
+      Object.keys(data.interfaces).length === 0
+    ) {
+      canStatusContent.textContent = "No CAN interfaces found.";
       return;
     }
     const interfaces = data.interfaces;
     Object.entries(interfaces).forEach(([iface, stats]) => {
-      const ifaceDiv = document.createElement('div');
-      ifaceDiv.className = 'mb-2';
-      ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${stats.state || 'unknown'}</span> <span class="ml-2 text-xs text-gray-400">RX: ${stats.rx_packets || 0} / TX: ${stats.tx_packets || 0}</span>`;
+      const ifaceDiv = document.createElement("div");
+      ifaceDiv.className = "mb-2";
+      ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${
+        stats.state || "unknown"
+      }</span> <span class="ml-2 text-xs text-gray-400">RX: ${
+        stats.rx_packets || 0
+      } / TX: ${stats.tx_packets || 0}</span>`;
       canStatusContent.appendChild(ifaceDiv);
     });
   }
@@ -742,7 +766,8 @@
     if (!unmappedEntriesContent) return;
     unmappedEntriesContent.innerHTML = "";
     if (Object.keys(data).length === 0) {
-      unmappedEntriesContent.innerHTML = '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
+      unmappedEntriesContent.innerHTML =
+        '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
       return;
     }
     for (const [key, entry] of Object.entries(data)) {
@@ -761,26 +786,30 @@
       unmappedEntriesContent.appendChild(entryDiv);
     }
     // Add event listeners to copy buttons
-    unmappedEntriesContent.querySelectorAll(".copy-yaml-btn").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        const yamlText = event.target.previousElementSibling.querySelector("code").innerText;
-        navigator.clipboard.writeText(yamlText)
-          .then(() => {
-            event.target.textContent = "Copied!";
-            showToast("YAML copied to clipboard!", "success");
-            setTimeout(() => {
-              event.target.textContent = "Copy YAML";
-            }, 2000);
-          })
-          .catch((err) => {
-            showToast("Failed to copy YAML.", "error");
-            event.target.textContent = "Failed to copy";
-            setTimeout(() => {
-              event.target.textContent = "Copy YAML";
-            }, 2000);
-          });
+    unmappedEntriesContent
+      .querySelectorAll(".copy-yaml-btn")
+      .forEach((button) => {
+        button.addEventListener("click", (event) => {
+          const yamlText =
+            event.target.previousElementSibling.querySelector("code").innerText;
+          navigator.clipboard
+            .writeText(yamlText)
+            .then(() => {
+              event.target.textContent = "Copied!";
+              showToast("YAML copied to clipboard!", "success");
+              setTimeout(() => {
+                event.target.textContent = "Copy YAML";
+              }, 2000);
+            })
+            .catch((err) => {
+              showToast("Failed to copy YAML.", "error");
+              event.target.textContent = "Failed to copy";
+              setTimeout(() => {
+                event.target.textContent = "Copy YAML";
+              }, 2000);
+            });
+        });
       });
-    });
   }
 
   /**
@@ -794,15 +823,26 @@
     const dgnForId = dgnKey.toLowerCase();
     const instanceForId = instanceKey.replace(/[^a-z0-9_]/g, "");
     let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
-    let yaml = `# Suggested entry for DGN: ${dgnKey}${entry.dgn_name ? " (" + entry.dgn_name + ")" : ""}, Instance: ${instanceKey}\n`;
+    let yaml = `# Suggested entry for DGN: ${dgnKey}${
+      entry.dgn_name ? " (" + entry.dgn_name + ")" : ""
+    }, Instance: ${instanceKey}\n`;
     if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
-      yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${entry.pgn_name ? " (" + entry.pgn_name + ")" : ""}\n`;
+      yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${
+        entry.pgn_name ? " (" + entry.pgn_name + ")" : ""
+      }\n`;
     }
-    yaml += `# First seen: ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}\n`;
-    yaml += `# Last seen: ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}\n`;
+    yaml += `# First seen: ${new Date(
+      entry.first_seen_timestamp * 1000
+    ).toLocaleString()}\n`;
+    yaml += `# Last seen: ${new Date(
+      entry.last_seen_timestamp * 1000
+    ).toLocaleString()}\n`;
     yaml += `# Count: ${entry.count}\n`;
     yaml += `# Last Data: ${entry.last_data_hex}\n`;
-    if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
+    if (
+      entry.decoded_signals &&
+      Object.keys(entry.decoded_signals).length > 0
+    ) {
       yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
       for (const [key, value] of Object.entries(entry.decoded_signals)) {
         yaml += `#   ${key}: ${value}\n`;
@@ -815,7 +855,9 @@
     yaml += `${dgnKey}:\n`;
     yaml += `  ${instanceKey}:\n`;
     yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
-    yaml += `      friendly_name: "Unmapped ${entry.dgn_name || dgnKey} Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
+    yaml += `      friendly_name: "Unmapped ${
+      entry.dgn_name || dgnKey
+    } Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
     yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
     yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
     yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
@@ -1311,7 +1353,9 @@
             if (!response.ok) {
               return response.json().then((err) => {
                 throw new Error(
-                  `HTTP error ${response.status}: ${err.detail || response.statusText}`
+                  `HTTP error ${response.status}: ${
+                    err.detail || response.statusText
+                  }`
                 );
               });
             }
@@ -1323,7 +1367,10 @@
                 `${control.name}: ${data.lights_commanded} commanded with ${data.errors.length} errors. Check console.`,
                 "warning"
               );
-              console.warn(`Bulk action '${control.name}' errors:`, data.errors);
+              console.warn(
+                `Bulk action '${control.name}' errors:`,
+                data.errors
+              );
             } else {
               showToast(
                 `${control.name}: ${data.lights_commanded} lights commanded.`,
@@ -1364,7 +1411,13 @@
     let pendingResizeHeightPx = 0;
     let originalContainerTransition = "";
 
-    if (!pinnedLogsContainer || !pinnedLogsResizeHandle || !pinnedLogsContent || !mainContent) return;
+    if (
+      !pinnedLogsContainer ||
+      !pinnedLogsResizeHandle ||
+      !pinnedLogsContent ||
+      !mainContent
+    )
+      return;
 
     // Restore state from localStorage
     const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === "true";
@@ -1426,7 +1479,8 @@
     pinnedLogsContainer.style.transition = "none";
     setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
     setTimeout(() => {
-      pinnedLogsContainer.style.transition = originalTransition || "height 0.3s ease-in-out";
+      pinnedLogsContainer.style.transition =
+        originalTransition || "height 0.3s ease-in-out";
     }, 50);
 
     // Drag-to-resize logic
@@ -1444,8 +1498,12 @@
         if (!isResizingLogs) return;
         const dy = startY - moveEvent.clientY;
         let newHeightPx = startHeight + dy;
-        const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
-        newHeightPx = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(newHeightPx, maxHeightPx));
+        const maxHeightPx =
+          window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+        newHeightPx = Math.max(
+          MIN_LOGS_PANEL_HEIGHT_PX,
+          Math.min(newHeightPx, maxHeightPx)
+        );
         pendingResizeHeightPx = newHeightPx;
         if (resizeRafId === null) {
           resizeRafId = requestAnimationFrame(() => {
@@ -1470,10 +1528,14 @@
           pinnedLogsContainer.style.height = currentExpandedLogsHeight;
           pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
           mainContent.style.paddingBottom = currentExpandedLogsHeight;
-          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, currentExpandedLogsHeight);
+          localStorage.setItem(
+            PINNED_LOGS_HEIGHT_KEY,
+            currentExpandedLogsHeight
+          );
           document.body.style.userSelect = "";
           document.body.style.cursor = "";
-          pinnedLogsContainer.style.transition = originalContainerTransition || "height 0.3s ease-in-out";
+          pinnedLogsContainer.style.transition =
+            originalContainerTransition || "height 0.3s ease-in-out";
         }
       };
       document.addEventListener("mousemove", onMouseMove);
@@ -1498,10 +1560,14 @@
     }
     // Responsive: clamp height on window resize
     window.addEventListener("resize", () => {
-      const maxHeightPx = window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+      const maxHeightPx =
+        window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
       let heightNum = parseFloat(currentExpandedLogsHeight);
       if (currentExpandedLogsHeight.endsWith("px")) {
-        heightNum = Math.max(MIN_LOGS_PANEL_HEIGHT_PX, Math.min(heightNum, maxHeightPx));
+        heightNum = Math.max(
+          MIN_LOGS_PANEL_HEIGHT_PX,
+          Math.min(heightNum, maxHeightPx)
+        );
         currentExpandedLogsHeight = `${heightNum}px`;
       } else if (currentExpandedLogsHeight.endsWith("vh")) {
         heightNum = Math.max(
@@ -1578,23 +1644,42 @@
    * - Maintains ARIA and accessibility
    */
   function setupSidebarCollapseExpand() {
-    if (!sidebar || !mainContent || !toggleSidebarDesktopButton || !sidebarNavContent) return;
+    if (
+      !sidebar ||
+      !mainContent ||
+      !toggleSidebarDesktopButton ||
+      !sidebarNavContent
+    )
+      return;
     // Click-to-expand on collapsed sidebar (desktop only)
     sidebar.addEventListener("click", (e) => {
       const isCollapsedDesktop =
-        window.innerWidth >= MD_BREAKPOINT_PX && sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
+        window.innerWidth >= MD_BREAKPOINT_PX &&
+        sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
       if (isCollapsedDesktop) {
         setDesktopSidebarVisible(true);
       }
     });
     // Save/restore state on load (already handled in setDesktopSidebarVisible)
     // Add ARIA attributes for accessibility
-    sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
-    toggleSidebarDesktopButton.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+    sidebar.setAttribute(
+      "aria-expanded",
+      isDesktopSidebarExpanded ? "true" : "false"
+    );
+    toggleSidebarDesktopButton.setAttribute(
+      "aria-expanded",
+      isDesktopSidebarExpanded ? "true" : "false"
+    );
     // Update ARIA on toggle
     toggleSidebarDesktopButton.addEventListener("click", () => {
-      sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
-      toggleSidebarDesktopButton.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+      sidebar.setAttribute(
+        "aria-expanded",
+        isDesktopSidebarExpanded ? "true" : "false"
+      );
+      toggleSidebarDesktopButton.setAttribute(
+        "aria-expanded",
+        isDesktopSidebarExpanded ? "true" : "false"
+      );
     });
   }
 
@@ -1644,7 +1729,9 @@
       pinnedLogsContainer.style.left = "0px";
     } else {
       // Desktop: align with sidebar
-      const isSidebarCollapsedDesktop = sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
+      const isSidebarCollapsedDesktop = sidebar.classList.contains(
+        SIDEBAR_COLLAPSED_WIDTH_DESKTOP
+      );
       if (isSidebarCollapsedDesktop) {
         pinnedLogsContainer.style.left = "4rem"; // Collapsed width
       } else {

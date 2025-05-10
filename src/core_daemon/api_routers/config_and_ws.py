@@ -197,6 +197,8 @@ async def get_rvc_spec_file_contents():
 
 @api_router_config_ws.get("/config/mapping", response_class=PlainTextResponse)
 async def get_device_mapping_file_contents():
+    print("ACTUAL_MAP_PATH:", ACTUAL_MAP_PATH)
+    print("Exists:", os.path.exists(ACTUAL_MAP_PATH) if ACTUAL_MAP_PATH else None)
     # ACTUAL_MAP_PATH is now imported from config.py
     if ACTUAL_MAP_PATH and os.path.exists(ACTUAL_MAP_PATH):
         return FileResponse(ACTUAL_MAP_PATH, media_type="text/plain")
