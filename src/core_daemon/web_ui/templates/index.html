@@ -404,6 +404,7 @@
       }
 
       function setPinnedLogsState(isOpen, height) {
+        console.log('[setPinnedLogsState] Called with isOpen:', isOpen, 'Height:', height);
         localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
         if (isOpen && height) {
           localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
@@ -411,17 +412,25 @@
         }
 
         if (isOpen) {
+          console.log('[setPinnedLogsState] Opening pinned logs.');
           pinnedLogsContent.classList.remove('hidden');
           pinnedLogsContainer.style.height = currentExpandedLogsHeight;
           pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
           mainContent.style.paddingBottom = currentExpandedLogsHeight;
           pinnedLogsChevronIcon.classList.remove('mdi-chevron-up');
           pinnedLogsChevronIcon.classList.add('mdi-chevron-down');
+          console.log('[setPinnedLogsState] Calling connectLogSocket.');
           connectLogSocket();
           if (logStream.childElementCount === 0 && logSocket && logSocket.readyState === WebSocket.OPEN) {
+            console.log('[setPinnedLogsState] Showing logsWaitingMessage.');
             logsWaitingMessage.classList.remove('hidden');
+          } else {
+            // Ensure it's hidden if conditions aren't met or logs are present
+            console.log('[setPinnedLogsState] Hiding logsWaitingMessage (or keeping hidden).');
+            logsWaitingMessage.classList.add('hidden');
           }
         } else {
+          console.log('[setPinnedLogsState] Closing pinned logs.');
           pinnedLogsContent.classList.add('hidden');
           pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
           mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT; // Adjust padding for collapsed bar
@@ -431,6 +440,7 @@
           // but for a pinned pane, usually keep it connected if user might reopen.
           // For now, let's keep it simple and not disconnect immediately on collapse.
           // disconnectLogSocket(); // Optional: if you want to save resources
+          console.log('[setPinnedLogsState] Hiding logsWaitingMessage because panel is closing.');
           logsWaitingMessage.classList.add('hidden');
         }
       }
@@ -1346,8 +1356,10 @@
       const sidebarNavContent = document.getElementById('sidebarNavContent');
 
       function setDesktopSidebarVisible(visible) {
+        console.log('[setDesktopSidebarVisible] Called with visible:', visible);
         localStorage.setItem(desktopSidebarVisibleKey, visible);
         if (visible) { // EXPANDING
+          console.log('[setDesktopSidebarVisible] Expanding sidebar.');
           sidebar.classList.remove('md:w-16'); // Remove collapsed width
           sidebar.classList.add('md:w-64');    // Add expanded width
           mainContent.classList.remove('md:ml-16');
@@ -1356,6 +1368,7 @@
           if (sidebarNavContent) sidebarNavContent.classList.remove('hidden');
           sidebar.classList.remove('sidebar-collapsed-hoverable'); // Remove hover indication class
         } else { // COLLAPSING
+          console.log('[setDesktopSidebarVisible] Collapsing sidebar.');
           sidebar.classList.remove('md:w-64');  // Remove expanded width
           sidebar.classList.add('md:w-16');   // Add collapsed width (e.g., 4rem)
           mainContent.classList.remove('md:ml-64');
@@ -1364,6 +1377,7 @@
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
           sidebar.classList.add('sidebar-collapsed-hoverable'); // Add hover indication class
         }
+        console.log('[setDesktopSidebarVisible] Calling adjustPinnedLogsLayout.');
         adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
       }
 
@@ -1390,16 +1404,15 @@
       toggleSidebarDesktopButton.addEventListener('click', (event) => {
         event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
         const isVisible = sidebar.classList.contains('md:w-64'); // Check if expanded
+        console.log('[SidebarToggle] Button clicked. Currently isVisible (expanded):', isVisible);
         setDesktopSidebarVisible(!isVisible);
       });
 
       // Allow clicking the entire collapsed sidebar pane to expand it on desktop
       sidebar.addEventListener('click', () => {
         const isCollapsedDesktop = window.innerWidth >= 768 && sidebar.classList.contains('md:w-16');
+        console.log('[SidebarClick] Sidebar area clicked. isCollapsedDesktop:', isCollapsedDesktop);
         if (isCollapsedDesktop) {
-          // If the sidebar is collapsed in desktop view, clicking on it should expand it.
-          // The toggleSidebarDesktopButton also calls setDesktopSidebarVisible(true) when clicked in this state.
-          // Calling setDesktopSidebarVisible(true) multiple times is handled gracefully by the function.
           setDesktopSidebarVisible(true);
         }
       });
@@ -1411,6 +1424,9 @@
       } else { // null, 'true', or any other value defaults to visible
         setDesktopSidebarVisible(true);
       }
+      // Explicitly call adjustPinnedLogsLayout after initial sidebar state is set
+      console.log('[DOMContentLoaded] Initializing pinned logs layout.');
+      adjustPinnedLogsLayout();
 
       // Close mobile sidebar when a nav link is clicked
       document.querySelectorAll('#sidebar .nav-link').forEach(link => {
