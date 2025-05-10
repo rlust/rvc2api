@@ -232,25 +232,68 @@
 
   /**
    * Updates the API server status view.
+   * Fetches from /api/status/server and displays status, message, and version.
    * @param {object} data - Data from the API.
-   * @param {string} data.status - Server status.
-   * @param {string} [data.message] - Optional message.
+   * @param {string} data.status - Server status (e.g., 'ok', 'error').
+   * @param {string} [data.message] - Optional status message.
    * @param {string} [data.version] - Server version.
    */
-  // ... existing updateApiServerView ...
+  function updateApiServerView(data) {
+    if (!apiStatusContent) return;
+    apiStatusContent.innerHTML = '';
+    const status = data.status || 'unknown';
+    const message = data.message || '';
+    const version = data.version || APP_VERSION || '';
+    const statusColor = status === 'ok' ? CLASS_TEXT_GREEN_400 : status === 'error' ? CLASS_TEXT_RED_400 : CLASS_TEXT_YELLOW_400;
+    apiStatusContent.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <span class="font-semibold">Status:</span>
+        <span class="${statusColor}">${status}</span>
+        <span class="ml-4 font-semibold">Version:</span>
+        <span>${version}</span>
+      </div>
+      <div class="mt-2 text-sm text-gray-400">${message}</div>
+    `;
+  }
 
   /**
    * Updates the application health view.
-   * @param {object} data - Health data with keys as service names and values as status (e.g., "OK", "Error").
+   * Fetches from /api/status/application and displays key health metrics.
+   * @param {object} data - Health data with keys as metric names and values as status/counts.
    */
-  // ... existing updateApplicationHealthView ...
+  function updateApplicationHealthView(data) {
+    if (!appHealthContent) return;
+    appHealthContent.innerHTML = '';
+    if (!data || typeof data !== 'object') {
+      appHealthContent.textContent = 'No health data available.';
+      return;
+    }
+    const entries = Object.entries(data).map(([key, value]) => {
+      return `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`;
+    });
+    appHealthContent.innerHTML = entries.join('');
+  }
 
   /**
    * Updates the CAN status view.
-   * @param {object} data - CAN interface status data.
+   * Fetches from /api/can/status and displays CAN interface status.
+   * @param {object} data - CAN status data, expected to have an 'interfaces' object.
    */
-  // ... existing updateCanStatusView ...
-  // ... existing createDetailParagraph ...
+  function updateCanStatusView(data) {
+    if (!canStatusContent) return;
+    canStatusContent.innerHTML = '';
+    if (!data || !data.interfaces || Object.keys(data.interfaces).length === 0) {
+      canStatusContent.textContent = 'No CAN interfaces found.';
+      return;
+    }
+    const interfaces = data.interfaces;
+    Object.entries(interfaces).forEach(([iface, stats]) => {
+      const ifaceDiv = document.createElement('div');
+      ifaceDiv.className = 'mb-2';
+      ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${stats.state || 'unknown'}</span> <span class="ml-2 text-xs text-gray-400">RX: ${stats.rx_packets || 0} / TX: ${stats.tx_packets || 0}</span>`;
+      canStatusContent.appendChild(ifaceDiv);
+    });
+  }
 
   /**
    * Calls a service for an entity, typically for control commands.
@@ -299,8 +342,7 @@
    * Fetches and updates the API server status.
    */
   function fetchApiStatus() {
-    fetchData("/api/status", {
-      // Assuming this is the correct new endpoint
+    fetchData("/api/status/server", {
       successCallback: updateApiServerView,
       errorCallback: (error) => {
         console.error("Failed to fetch API server status:", error);
@@ -318,8 +360,7 @@
    * Fetches and updates the application health status.
    */
   function fetchAppHealth() {
-    fetchData("/api/health", {
-      // Assuming this is the correct new endpoint
+    fetchData("/api/status/application", {
       successCallback: updateApplicationHealthView,
       errorCallback: (error) => {
         console.error("Failed to fetch application health:", error);
