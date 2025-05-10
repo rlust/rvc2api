@@ -4,20 +4,21 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>rvc2api UI</title>
-        <!-- <script src="https://cdn.tailwindcss.com"></script> --> <!-- Moved to end of body -->
+        <script src="https://cdn.tailwindcss.com" defer></script> <!-- Moved here and deferred -->
         <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
               rel="stylesheet">
         <link rel="stylesheet"
               href="{{ url_for('static', path='css/custom.css') }}">
     </head>
     <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
-        <div id="toast-container"></div>
+        <div id="toast-container" role="status" aria-live="polite"></div>
+        <!-- Added ARIA roles -->
         <!-- Toast messages will appear here -->
         <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
             <div class="flex items-center">
                 <button id="mobileMenuButton"
                         class="md:hidden text-gray-300 hover:text-white mr-4">
-                    <i class="mdi mdi-menu text-2xl"></i>
+                    <i class="mdi mdi-menu text-2xl" aria-hidden="true"></i>
                 </button>
                 <span>rvc2api Dashboard</span>
             </div>
@@ -42,17 +43,17 @@
                         <span class="text-lg font-semibold">Navigation</span>
                         <button id="closeSidebarButton"
                                 class="md:hidden text-gray-400 hover:text-white">
-                            <i class="mdi mdi-close text-2xl"></i>
+                            <i class="mdi mdi-close text-2xl" aria-hidden="true"></i>
                         </button>
                     </div>
                     <nav class="space-y-2">
                         <button data-view="home"
                                 class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
-                            Home
+                            <i class="mdi mdi-home-outline mr-2" aria-hidden="true"></i>Home
                         </button>
                         <button data-view="lights"
                                 class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                            Lights
+                            <i class="mdi mdi-lightbulb-outline mr-2" aria-hidden="true"></i>Lights
                         </button>
                         <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
                         <!-- Configuration Section -->
@@ -61,11 +62,11 @@
                             <div class="space-y-1">
                                 <button data-view="mapping"
                                         class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                    device_mapping.yml
+                                    <i class="mdi mdi-file-settings-outline mr-2" aria-hidden="true"></i>device_mapping.yml
                                 </button>
                                 <button data-view="spec"
                                         class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                    rvc.json
+                                    <i class="mdi mdi-code-json mr-2" aria-hidden="true"></i>rvc.json
                                 </button>
                             </div>
                         </div>
@@ -75,11 +76,11 @@
                             <div class="space-y-1">
                                 <button data-view="unmapped"
                                         class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                    Unmapped Entries
+                                    <i class="mdi mdi-alert-circle-outline mr-2" aria-hidden="true"></i>Unmapped Entries
                                 </button>
                                 <button data-view="unknown-pgns"
                                         class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                    Unknown PGNs
+                                    <i class="mdi mdi-help-rhombus-outline mr-2" aria-hidden="true"></i>Unknown PGNs
                                 </button>
                             </div>
                         </div>
@@ -88,7 +89,7 @@
                 <div class="border-t border-gray-700 pt-4 text-center">
                     <button id="toggleSidebarDesktop"
                             class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
-                        <i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>
+                        <i class="mdi mdi-chevron-left text-xl" aria-hidden="true"></i> <span class="ml-2">Collapse</span>
                     </button>
                 </div>
             </aside>
@@ -106,33 +107,33 @@
                             <div class="space-y-4">
                                 <button id="btn-all-on"
                                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights On
+                                    <i class="mdi mdi-lightbulb-group-outline mr-2" aria-hidden="true"></i>All Lights On
                                 </button>
                                 <button id="btn-all-off"
                                         class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All Lights Off
+                                    <i class="mdi mdi-lightbulb-group-off-outline mr-2" aria-hidden="true"></i>All Lights Off
                                 </button>
                             </div>
                             <!-- Column 2: Exterior Lights -->
                             <div class="space-y-4">
                                 <button id="btn-exterior-on"
                                         class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
+                                    <i class="mdi mdi-outdoor-lamp mr-2" aria-hidden="true"></i>Exterior On
                                 </button>
                                 <button id="btn-exterior-off"
                                         class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-dome-light mr-2"></i>Exterior Off
+                                    <i class="mdi mdi-dome-light mr-2" aria-hidden="true"></i>Exterior Off
                                 </button>
                             </div>
                             <!-- Column 3: Interior Lights -->
                             <div class="space-y-4">
                                 <button id="btn-interior-on"
                                         class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
+                                    <i class="mdi mdi-home-lightbulb-outline mr-2" aria-hidden="true"></i>Interior On
                                 </button>
                                 <button id="btn-interior-off"
                                         class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center">
-                                    <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i>Interior Off
+                                    <i class="mdi mdi-home-lightbulb-off-outline mr-2" aria-hidden="true"></i>Interior Off
                                 </button>
                             </div>
                         </div>
@@ -145,9 +146,8 @@
                                 This section will allow you to define and trigger custom scenes involving multiple devices (lights, locks, etc.).
                             </p>
                             <button id="btn-create-scene"
-                                    class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600"
-                                    onclick="alert('Create New Scene button clicked!')">
-                                <i class="mdi mdi-plus-circle-outline mr-2"></i>Create New Scene
+                                    class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600">
+                                <i class="mdi mdi-plus-circle-outline mr-2" aria-hidden="true"></i>Create New Scene
                             </button>
                         </div>
                     </div>
@@ -185,7 +185,7 @@
                         <h1 class="text-3xl font-bold">RV-C Lights</h1>
                         <div>
                             <label class="block mb-1 text-sm text-gray-300">
-                                <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
+                                <i class="mdi mdi-filter-variant mr-1" aria-hidden="true"></i>Filter by Area:
                             </label>
                             <select id="area-filter"
                                     class="bg-gray-900 text-gray-100 border border-gray-700 rounded p-2">
@@ -248,7 +248,7 @@
                  class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
                 <span class="font-semibold text-gray-300 ml-2">Logs</span>
                 <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
-                    <i class="mdi mdi-chevron-up text-2xl"></i>
+                    <i class="mdi mdi-chevron-up text-2xl" aria-hidden="true"></i>
                 </button>
             </div>
             <div id="pinnedLogsContent"
@@ -438,45 +438,51 @@
       }
       // --- END: Log WebSocket Connection Functions ---
 
-      // --- START: Add showToast function ---
-      function showToast(message, type = 'info', duration = 3000) {
+      // --- START: Toast Notification System ---
+      function createToastContainer() { // Defined before showToast
+        let container = document.getElementById('toast-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'toast-container';
+          // Ensure it has ARIA roles if created dynamically, though it's in HTML now
+          container.setAttribute('role', 'status');
+          container.setAttribute('aria-live', 'polite');
+          container.className = 'fixed bottom-5 right-5 space-y-2 z-[100]'; // Ensure high z-index
+          document.body.appendChild(container);
+        }
+        return container;
+      }
+
+      function showToast(message, type = 'info', duration = 3000) { // Single definition
         const toastContainer = document.getElementById('toast-container') || createToastContainer();
         const toast = document.createElement('div');
-        toast.className = `p-4 rounded-md shadow-lg text-white`;
+        toast.className = `p-4 rounded-md shadow-lg text-white max-w-sm`; // Added max-w-sm
 
         if (type === 'error') {
           toast.classList.add('bg-red-600');
         } else if (type === 'success') {
           toast.classList.add('bg-green-600');
-        } else {
-          toast.classList.add('bg-blue-600'); // Default to info
+        } else { // info or default
+          toast.classList.add('bg-blue-600');
         }
 
         toast.textContent = message;
         toastContainer.appendChild(toast);
 
+        // Fade out and remove
         setTimeout(() => {
-          toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.5s ease-out';
           setTimeout(() => {
             toast.remove();
-            if (toastContainer.childElementCount === 0) {
-              toastContainer.remove(); // Remove container if no toasts are left
+            if (toastContainer.childElementCount === 0 && toastContainer.parentElement === document.body) {
+              // Optionally remove container if it was dynamically added and is now empty
+              // For now, keep it if it's defined in HTML.
             }
           }, 500);
         }, duration);
       }
-
-      function createToastContainer() {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'toast-container';
-          container.className = 'fixed bottom-5 right-5 space-y-2 z-50';
-          document.body.appendChild(container);
-        }
-        return container;
-      }
-      // --- END: Add showToast function ---
+      // --- END: Toast Notification System ---
 
       // Constants for sidebar widths
       const SIDEBAR_EXPANDED_WIDTH_DESKTOP = '16rem'; // Corresponds to md:w-64
@@ -1220,11 +1226,11 @@
                 if (data.version && data.spec_document) {
                   metadataDiv.innerHTML = `
                     <p><strong>Version:</strong> ${data.version}</p>
-                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
+                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
                   `;
                 } else if (data.spec_document) { // Case where only document is present
                   metadataDiv.innerHTML = `
-                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
+                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
                   `;
                 }
                 else {
@@ -1563,90 +1569,8 @@
 
         // Setup interval to refresh CAN status periodically if desired
         // setInterval(fetchCanStatus, 30000); // Refresh every 30 seconds, for example
-      });
 
-      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
-      window.addEventListener('resize', adjustPinnedLogsLayout);
-
-      const themeSwitcher = document.getElementById('themeSwitcher');
-      const THEME_KEY = 'selectedTheme';
-      const VALID_THEMES = ['default', 'dark', 'light', 'catppuccin-mocha', 'catppuccin-latte'];
-
-      // Toast Notification Function
-      function showToast(message, type = 'info', duration = 5000) {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast-message toast-${type}`;
-
-        const messageSpan = document.createElement('span');
-        messageSpan.textContent = message;
-        toast.appendChild(messageSpan);
-
-        const closeButton = document.createElement('button');
-        closeButton.className = 'toast-close-btn';
-        closeButton.innerHTML = '&times;'; // MDI icon could be used here too e.g. <i class="mdi mdi-close"></i>
-        closeButton.onclick = () => {
-          toast.classList.remove('show');
-          setTimeout(() => toast.remove(), 300); // Remove after transition
-        };
-        toast.appendChild(closeButton);
-
-        container.appendChild(toast);
-
-        // Trigger the animation
-        setTimeout(() => {
-          toast.classList.add('show');
-        }, 10); // Small delay to ensure transition is applied
-
-        // Auto-remove toast
-        setTimeout(() => {
-          toast.classList.remove('show');
-          setTimeout(() => toast.remove(), 300); // Remove from DOM after transition
-        }, duration);
-      }
-
-      function applyTheme(theme) {
-        let currentTheme = theme;
-        if (typeof currentTheme !== 'string' || !VALID_THEMES.includes(currentTheme)) {
-          console.warn(`Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`);
-          currentTheme = 'default';
-        }
-
-        document.body.classList.remove(...VALID_THEMES.map(t => `theme-${t}`));
-        document.body.classList.add(`theme-${currentTheme}`);
-        localStorage.setItem(THEME_KEY, currentTheme);
-
-        if (themeSwitcher) {
-          themeSwitcher.value = currentTheme;
-        } else {
-          // This case should ideally be caught by the check below before calling applyTheme initially
-          // or before adding the event listener.
-          console.warn('applyTheme called but themeSwitcher element not found when trying to set its value.');
-        }
-      }
-
-      if (themeSwitcher) {
-        themeSwitcher.addEventListener('change', (event) => {
-          applyTheme(event.target.value);
-        });
-
-        // Load saved theme on page load
-        const savedTheme = localStorage.getItem(THEME_KEY);
-        // applyTheme will validate and default if savedTheme is null or invalid
-        applyTheme(savedTheme);
-      } else {
-        console.error("Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired.");
-        // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
-        // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
-        applyTheme('default');
-      }
-
-      window.addEventListener('resize', adjustPinnedLogsLayout);
-
-      // --- Add Event Listeners for Quick Light Controls ---
-      document.addEventListener('DOMContentLoaded', () => {
+        // --- Add Event Listeners for Quick Light Controls ---
         const quickControlButtons = [
           { id: 'btn-all-on', entityId: 'all_lights', command: 'set', data: { state: 'on' } },
           { id: 'btn-all-off', entityId: 'all_lights', command: 'set', data: { state: 'off' } },
@@ -1693,70 +1617,110 @@
             console.warn(`Quick control button with ID ${control.id} not found.`);
           }
         });
-      });
-      // --- End of Added Event Listeners for Quick Light Controls ---
 
-      // Initial data fetches
-      fetchCanStatus(); // Existing
-      fetchApiServerStatus(); // New
-      fetchApplicationHealth(); // New
+        // Initial data fetches
+        fetchCanStatus(); // Existing
+        fetchApiServerStatus(); // New
+        fetchApplicationHealth(); // New
 
-      // Setup periodic refresh for status sections (optional, adjust intervals as needed)
-      setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
-      setInterval(fetchApiServerStatus, 30000); // Refresh API status every 30 seconds
-      setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
+        // Setup periodic refresh for status sections (optional, adjust intervals as needed)
+        setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
+        setInterval(fetchApiServerStatus, 30000); // Refresh API status every 30 seconds
+        setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
 
-      // Add event listeners for log control buttons
-      if (logPauseBtn) {
-        logPauseBtn.addEventListener('click', () => {
-          isLogPaused = true;
-          logPauseBtn.disabled = true;
-          logResumeBtn.disabled = false;
-          showToast('Log streaming paused.', 'info');
-        });
-      }
+        // Add event listeners for log control buttons
+        if (logPauseBtn) {
+          logPauseBtn.addEventListener('click', () => {
+            isLogPaused = true;
+            logPauseBtn.disabled = true;
+            logResumeBtn.disabled = false;
+            showToast('Log streaming paused.', 'info');
+          });
+        }
 
-      if (logResumeBtn) {
-        logResumeBtn.addEventListener('click', () => {
-          isLogPaused = false;
-          logPauseBtn.disabled = false;
-          logResumeBtn.disabled = true;
-          showToast('Log streaming resumed.', 'info');
-          // If connection was closed and we are resuming, try to reconnect
-          if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
-            connectLogSocket();
-          }
-        });
-      }
-
-      if (logClearBtn) {
-        logClearBtn.addEventListener('click', () => {
-          logStream.innerHTML = '';
-          showToast('Logs cleared.', 'info');
-        });
-      }
-
-      // Add event listeners for log filters
-      if (logLevelFilter) {
-        logLevelFilter.addEventListener('change', () => {
-            logStream.innerHTML = ''; // Clear logs when filter changes, as past logs might not match
-            // Or, re-filter existing logs if desired (more complex)
-            if (logSocket && logSocket.readyState === WebSocket.OPEN && !isLogPaused) {
-                // If connected and not paused, new logs will adhere to the filter.
-                // Consider if a re-fetch or re-display of buffered/past logs is needed.
+        if (logResumeBtn) {
+          logResumeBtn.addEventListener('click', () => {
+            isLogPaused = false;
+            logPauseBtn.disabled = false;
+            logResumeBtn.disabled = true;
+            showToast('Log streaming resumed.', 'info');
+            // If connection was closed and we are resuming, try to reconnect
+            if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
+              connectLogSocket();
             }
-        });
-      }
-      if (logSearchInput) {
-        logSearchInput.addEventListener('input', () => {
-            // Similar to level filter, might want to clear or re-filter existing logs.
-            // For simplicity, new logs will be filtered. Real-time re-filtering is more complex.
-            // Throttling this event might be good for performance if re-filtering live.
-        });
-      }
+          });
+        }
 
-      // Theme switcher
+        if (logClearBtn) {
+          logClearBtn.addEventListener('click', () => {
+            logStream.innerHTML = '';
+            showToast('Logs cleared.', 'info');
+          });
+        }
+
+        // Add event listeners for log filters
+        if (logLevelFilter) {
+          logLevelFilter.addEventListener('change', () => {
+              logStream.innerHTML = ''; // Clear logs when filter changes, as past logs might not match
+              // Or, re-filter existing logs if desired (more complex)
+              if (logSocket && logSocket.readyState === WebSocket.OPEN && !isLogPaused) {
+                  // If connected and not paused, new logs will adhere to the filter.
+                  // Consider if a re-fetch or re-display of buffered/past logs is needed.
+              }
+          });
+        }
+        if (logSearchInput) {
+          logSearchInput.addEventListener('input', () => {
+              // Similar to level filter, might want to clear or re-filter existing logs.
+              // For simplicity, new logs will be filtered. Real-time re-filtering is more complex.
+              // Throttling this event might be good for performance if re-filtering live.
+          });
+        }
+
+        // Theme switcher
+        const themeSwitcher = document.getElementById('themeSwitcher');
+        const THEME_KEY = 'selectedTheme';
+        const VALID_THEMES = ['default', 'dark', 'light', 'catppuccin-mocha', 'catppuccin-latte'];
+
+        function applyTheme(theme) {
+          let currentTheme = theme;
+          if (typeof currentTheme !== 'string' || !VALID_THEMES.includes(currentTheme)) {
+            console.warn(`Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`);
+            currentTheme = 'default';
+          }
+
+          document.body.classList.remove(...VALID_THEMES.map(t => `theme-${t}`));
+          document.body.classList.add(`theme-${currentTheme}`);
+          localStorage.setItem(THEME_KEY, currentTheme);
+
+          if (themeSwitcher) {
+            themeSwitcher.value = currentTheme;
+          } else {
+            // This case should ideally be caught by the check below before calling applyTheme initially
+            // or before adding the event listener.
+            console.warn('applyTheme called but themeSwitcher element not found when trying to set its value.');
+          }
+        }
+
+        if (themeSwitcher) {
+          themeSwitcher.addEventListener('change', (event) => {
+            applyTheme(event.target.value);
+          });
+
+          // Load saved theme on page load
+          const savedTheme = localStorage.getItem(THEME_KEY);
+          // applyTheme will validate and default if savedTheme is null or invalid
+          applyTheme(savedTheme);
+        } else {
+          console.error("Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired.");
+          // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
+          // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
+          applyTheme('default');
+        }
+      });
+
+      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+      window.addEventListener('resize', adjustPinnedLogsLayout);
         </script>
-        <script src="https://cdn.tailwindcss.com"></script> <!-- Moved here -->
     </body>
 </html>
