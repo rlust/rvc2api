@@ -1280,6 +1280,10 @@
               });
             }
           // --- END: Add logic for Unknown PGNs view ---
+          // Add this else if block to handle fetching CAN status when home is selected
+          else if (view === 'home') {
+            fetchCanStatus(); // Re-fetch CAN status when navigating to home
+          }
         });
       });
 
@@ -1443,17 +1447,7 @@
         // For example, if you still need to fetch initial data for other views:
         // fetchInitialDataForOtherViews();
 
-        // Fetch initial CAN status when home view is active or becomes active
-        // And setup listener for view changes if you have one, or just fetch if it's always on home.
-        document.querySelectorAll('.nav-link').forEach(link => {
-          link.addEventListener('click', () => {
-            const viewId = link.getAttribute('data-view');
-            if (viewId === 'home') {
-              fetchCanStatus(); // Fetch CAN status when navigating to home
-            }
-            // ... existing view switching logic ...
-          });
-        });
+        // THE REDUNDANT LISTENER BLOCK PREVIOUSLY HERE HAS BEEN REMOVED.
 
         // Setup interval to refresh CAN status periodically if desired
         // setInterval(fetchCanStatus, 30000); // Refresh every 30 seconds, for example
