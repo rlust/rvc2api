@@ -1377,8 +1377,11 @@
           if (sidebarNavContent) sidebarNavContent.classList.add('hidden');
           sidebar.classList.add('sidebar-collapsed-hoverable'); // Add hover indication class
         }
-        console.log('[setDesktopSidebarVisible] Calling adjustPinnedLogsLayout.');
-        adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
+        console.log('[setDesktopSidebarVisible] Requesting adjustPinnedLogsLayout via rAF.');
+        requestAnimationFrame(() => {
+          console.log('[setDesktopSidebarVisible] Executing adjustPinnedLogsLayout via rAF from setDesktopSidebarVisible.');
+          adjustPinnedLogsLayout();
+        });
       }
 
       // Mobile sidebar toggle
@@ -1424,9 +1427,6 @@
       } else { // null, 'true', or any other value defaults to visible
         setDesktopSidebarVisible(true);
       }
-      // Explicitly call adjustPinnedLogsLayout after initial sidebar state is set
-      console.log('[DOMContentLoaded] Initializing pinned logs layout.');
-      adjustPinnedLogsLayout();
 
       // Close mobile sidebar when a nav link is clicked
       document.querySelectorAll('#sidebar .nav-link').forEach(link => {
