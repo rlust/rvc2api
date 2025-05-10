@@ -1404,6 +1404,33 @@
     });
 
   /**
+   * Enhances sidebar collapse/expand/hover behavior.
+   * - Click-to-expand on collapsed sidebar (desktop)
+   * - Robust state save/restore in localStorage
+   * - Maintains ARIA and accessibility
+   */
+  function setupSidebarCollapseExpand() {
+    if (!sidebar || !mainContent || !toggleSidebarDesktopButton || !sidebarNavContent) return;
+    // Click-to-expand on collapsed sidebar (desktop only)
+    sidebar.addEventListener("click", (e) => {
+      const isCollapsedDesktop =
+        window.innerWidth >= MD_BREAKPOINT_PX && sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
+      if (isCollapsedDesktop) {
+        setDesktopSidebarVisible(true);
+      }
+    });
+    // Save/restore state on load (already handled in setDesktopSidebarVisible)
+    // Add ARIA attributes for accessibility
+    sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+    toggleSidebarDesktopButton.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+    // Update ARIA on toggle
+    toggleSidebarDesktopButton.addEventListener("click", () => {
+      sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+      toggleSidebarDesktopButton.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
+    });
+  }
+
+  /**
    * Initializes the application.
    * Sets up event listeners, loads initial state, and fetches data for the default view.
    */
@@ -1578,6 +1605,7 @@
 
     setupBulkLightControlButtons();
     setupPinnedLogsResizablePanel();
+    setupSidebarCollapseExpand();
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
   }

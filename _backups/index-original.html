@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rvc2api UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .nav-link.active-nav {
+        background-color: #4a5568; /* Tailwind gray-600 */
+      }
+      /* Collapsed sidebar hover effect */
+      #sidebar.sidebar-collapsed-hoverable {
+        cursor: pointer;
+      }
+      body.theme-default #sidebar.sidebar-collapsed-hoverable:hover,
+      body.theme-dark #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: #374151; /* Tailwind gray-700 */
+      }
+      body.theme-light #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: #e5e7eb; /* Tailwind gray-200 */
+      }
+      /* Catppuccin Mocha Palette */
+      :root {
+        --ctp-mocha-rosewater: #f5e0dc;
+        --ctp-mocha-flamingo: #f2cdcd;
+        --ctp-mocha-pink: #f5c2e7;
+        --ctp-mocha-mauve: #cba6f7;
+        --ctp-mocha-red: #f38ba8;
+        --ctp-mocha-maroon: #eba0ac;
+        --ctp-mocha-peach: #fab387;
+        --ctp-mocha-yellow: #f9e2af;
+        --ctp-mocha-green: #a6e3a1;
+        --ctp-mocha-teal: #94e2d5;
+        --ctp-mocha-sky: #89dceb;
+        --ctp-mocha-sapphire: #74c7ec;
+        --ctp-mocha-blue: #89b4fa;
+        --ctp-mocha-lavender: #b4befe;
+        --ctp-mocha-text: #cad3f5;
+        --ctp-mocha-subtext1: #bac2de;
+        --ctp-mocha-subtext0: #a6adc8;
+        --ctp-mocha-overlay2: #9399b2;
+        --ctp-mocha-overlay1: #7f849c;
+        --ctp-mocha-overlay0: #6c7086;
+        --ctp-mocha-surface2: #585b70;
+        --ctp-mocha-surface1: #45475a;
+        --ctp-mocha-surface0: #313244;
+        --ctp-mocha-base: #1e1e2e;
+        --ctp-mocha-mantle: #181825;
+        --ctp-mocha-crust: #11111b;
+      }
+
+      /* Catppuccin Latte Palette */
+      :root {
+        --ctp-latte-rosewater: #dc8a78;
+        --ctp-latte-flamingo: #dd7878;
+        --ctp-latte-pink: #ea76cb;
+        --ctp-latte-mauve: #8839ef;
+        --ctp-latte-red: #d20f39;
+        --ctp-latte-maroon: #e64553;
+        --ctp-latte-peach: #fe640b;
+        --ctp-latte-yellow: #df8e1d;
+        --ctp-latte-green: #40a02b;
+        --ctp-latte-teal: #179299;
+        --ctp-latte-sky: #04a5e5;
+        --ctp-latte-sapphire: #209fb5;
+        --ctp-latte-blue: #1e66f5;
+        --ctp-latte-lavender: #7287fd;
+        --ctp-latte-text: #4c4f69;
+        --ctp-latte-subtext1: #5c5f77;
+        --ctp-latte-subtext0: #6c6f85;
+        --ctp-latte-overlay2: #7c7f93;
+        --ctp-latte-overlay1: #8c8fa1;
+        --ctp-latte-overlay0: #9ca0b0;
+        --ctp-latte-surface2: #acb0be;
+        --ctp-latte-surface1: #bcc0cc;
+        --ctp-latte-surface0: #ccd0da;
+        --ctp-latte-base: #eff1f5;
+        --ctp-latte-mantle: #e6e9ef;
+        --ctp-latte-crust: #dce0e8;
+      }
+
+      /* Basic Theme Styles */
+      body.theme-default {
+        background-color: #1a202c; /* Tailwind gray-900 */
+        color: #e2e8f0; /* Tailwind gray-100 */
+      }
+      body.theme-dark header,
+      body.theme-dark aside,
+      body.theme-dark #pinnedLogsContainer,
+      body.theme-dark #pinnedLogsContent,
+      body.theme-dark .view-section pre,
+      body.theme-dark .view-section div[class*="bg-gray-800"] {
+        background-color: #1f2937; /* Darker gray, e.g., gray-800 */
+        color: #d1d5db; /* Lighter gray text */
+      }
+      body.theme-dark .nav-link.active-nav {
+        background-color: #374151; /* gray-700 */
+      }
+      body.theme-dark button,
+      body.theme-dark select,
+      body.theme-dark input {
+        background-color: #374151; /* gray-700 */
+        color: #d1d5db;
+        border-color: #4b5563; /* gray-600 */
+      }
+      body.theme-dark #log-stream {
+        background-color: #111827;
+        color: #a7f3d0;
+      } /* Even darker for log, greenish text */
+
+      body.theme-light {
+        background-color: #f3f4f6; /* Tailwind gray-100 */
+        color: #1f2937; /* Tailwind gray-800 */
+      }
+      body.theme-light header,
+      body.theme-light aside,
+      body.theme-light #pinnedLogsContainer,
+      body.theme-light #pinnedLogsContent,
+      body.theme-light .view-section pre,
+      body.theme-light .view-section div[class*="bg-gray-800"] {
+        background-color: #ffffff; /* White */
+        color: #1f2937; /* Dark gray text */
+        border-color: #e5e7eb; /* Lighter border */
+      }
+      body.theme-light .nav-link {
+        color: #374151;
+      }
+      body.theme-light .nav-link.active-nav {
+        background-color: #e5e7eb; /* gray-200 */
+        color: #111827;
+      }
+      body.theme-light button,
+      body.theme-light select,
+      body.theme-light input {
+        background-color: #e5e7eb; /* gray-200 */
+        color: #1f2937;
+        border-color: #d1d5db; /* gray-300 */
+      }
+      body.theme-light #log-stream {
+        background-color: #e5e7eb;
+        color: #065f46;
+      } /* Light bg for log, dark green text */
+      body.theme-light #spec-content {
+        color: #0000aa;
+      } /* Dark blue for spec content in light theme */
+      body.theme-light #mapping-content {
+        color: #007700;
+      } /* Dark green for mapping content in light theme */
+
+      /* Catppuccin Mocha Theme Styles */
+      body.theme-catppuccin-mocha {
+        background-color: var(--ctp-mocha-base);
+        color: var(--ctp-mocha-text);
+      }
+      body.theme-catppuccin-mocha header,
+      body.theme-catppuccin-mocha aside,
+      body.theme-catppuccin-mocha #pinnedLogsContainer,
+      body.theme-catppuccin-mocha #pinnedLogsContent,
+      body.theme-catppuccin-mocha .view-section pre,
+      body.theme-catppuccin-mocha .view-section div[class*="bg-gray-800"] /* Approx for general dark cards */ {
+        background-color: var(--ctp-mocha-mantle);
+        color: var(--ctp-mocha-text);
+        border-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha .nav-link {
+        color: var(--ctp-mocha-subtext0);
+      }
+      body.theme-catppuccin-mocha .nav-link:hover {
+        color: var(--ctp-mocha-text);
+        background-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha .nav-link.active-nav {
+        background-color: var(--ctp-mocha-surface1);
+        color: var(--ctp-mocha-mauve);
+      }
+      body.theme-catppuccin-mocha button,
+      body.theme-catppuccin-mocha select,
+      body.theme-catppuccin-mocha input {
+        background-color: var(--ctp-mocha-surface0);
+        color: var(--ctp-mocha-text);
+        border-color: var(--ctp-mocha-surface1);
+      }
+      body.theme-catppuccin-mocha button:hover,
+      body.theme-catppuccin-mocha select:hover,
+      body.theme-catppuccin-mocha input:hover {
+        border-color: var(--ctp-mocha-overlay0);
+      }
+      body.theme-catppuccin-mocha #log-stream {
+        background-color: var(--ctp-mocha-crust);
+        color: var(--ctp-mocha-green);
+      }
+      body.theme-catppuccin-mocha #spec-content {
+        color: var(--ctp-mocha-blue);
+      }
+      body.theme-catppuccin-mocha #mapping-content {
+        color: var(--ctp-mocha-teal);
+      }
+      body.theme-catppuccin-mocha #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha #pinnedLogsHeader:hover {
+        background-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha #toggleSidebarDesktop:hover {
+        background-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha .bg-blue-600 {
+        background-color: var(--ctp-mocha-blue);
+      }
+      body.theme-catppuccin-mocha .hover\\:bg-blue-700:hover {
+        background-color: var(--ctp-mocha-sapphire);
+      }
+      body.theme-catppuccin-mocha .bg-gray-700 {
+        background-color: var(--ctp-mocha-surface1);
+      }
+      body.theme-catppuccin-mocha .hover\\:bg-gray-600:hover {
+        background-color: var(--ctp-mocha-surface2);
+      }
+      body.theme-catppuccin-mocha .bg-yellow-500 {
+        background-color: var(--ctp-mocha-yellow);
+        color: var(--ctp-mocha-base);
+      }
+      body.theme-catppuccin-mocha .hover\\:bg-yellow-600:hover {
+        background-color: var(--ctp-mocha-peach);
+        color: var(--ctp-mocha-base);
+      }
+      body.theme-catppuccin-mocha .bg-green-600 {
+        background-color: var(--ctp-mocha-green);
+        color: var(--ctp-mocha-base);
+      }
+      body.theme-catppuccin-mocha .hover\\:bg-green-700:hover {
+        background-color: var(--ctp-mocha-teal);
+        color: var(--ctp-mocha-base);
+      }
+      body.theme-catppuccin-mocha .text-gray-300 {
+        color: var(--ctp-mocha-subtext0);
+      }
+      body.theme-catppuccin-mocha .text-gray-100 {
+        color: var(--ctp-mocha-text);
+      }
+      body.theme-catppuccin-mocha .text-gray-400 {
+        color: var(--ctp-mocha-overlay1);
+      }
+      body.theme-catppuccin-mocha .text-gray-500 {
+        color: var(--ctp-mocha-overlay0);
+      }
+      body.theme-catppuccin-mocha .border-gray-700 {
+        border-color: var(--ctp-mocha-surface0);
+      }
+      body.theme-catppuccin-mocha .border-gray-600 {
+        border-color: var(--ctp-mocha-surface1);
+      }
+      body.theme-catppuccin-mocha .bg-gray-900 {
+        background-color: var(--ctp-mocha-base);
+      } /* For select dropdown bg */
+      body.theme-catppuccin-mocha .bg-black {
+        background-color: var(--ctp-mocha-crust);
+      } /* For log stream bg */
+      body.theme-catppuccin-mocha .text-green-400 {
+        color: var(--ctp-mocha-green);
+      } /* Log stream text */
+      body.theme-catppuccin-mocha .text-blue-300 {
+        color: var(--ctp-mocha-blue);
+      } /* Spec content */
+      body.theme-catppuccin-mocha .text-green-300 {
+        color: var(--ctp-mocha-teal);
+      } /* Mapping content */
+      body.theme-catppuccin-mocha .text-red-500 {
+        color: var(--ctp-mocha-red);
+      }
+      body.theme-catppuccin-mocha .text-yellow-400 {
+        color: var(--ctp-mocha-yellow);
+      }
+      body.theme-catppuccin-mocha .text-blue-400 {
+        color: var(--ctp-mocha-blue);
+      }
+      body.theme-catppuccin-mocha .hover\\:text-white:hover {
+        color: var(--ctp-mocha-text);
+      }
+
+      /* Catppuccin Latte Theme Styles */
+      body.theme-catppuccin-latte {
+        background-color: var(--ctp-latte-base);
+        color: var(--ctp-latte-text);
+      }
+      body.theme-catppuccin-latte header,
+      body.theme-catppuccin-latte aside,
+      body.theme-catppuccin-latte #pinnedLogsContainer,
+      body.theme-catppuccin-latte #pinnedLogsContent,
+      body.theme-catppuccin-latte .view-section pre,
+      body.theme-catppuccin-latte .view-section div[class*="bg-gray-800"] /* Approx for general light cards */ {
+        background-color: var(--ctp-latte-mantle);
+        color: var(--ctp-latte-text);
+        border-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte .nav-link {
+        color: var(--ctp-latte-subtext0);
+      }
+      body.theme-catppuccin-latte .nav-link:hover {
+        color: var(--ctp-latte-text);
+        background-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte .nav-link.active-nav {
+        background-color: var(--ctp-latte-surface1);
+        color: var(--ctp-latte-mauve);
+      }
+      body.theme-catppuccin-latte button,
+      body.theme-catppuccin-latte select,
+      body.theme-catppuccin-latte input {
+        background-color: var(--ctp-latte-surface0);
+        color: var(--ctp-latte-text);
+        border-color: var(--ctp-latte-surface1);
+      }
+      body.theme-catppuccin-latte button:hover,
+      body.theme-catppuccin-latte select:hover,
+      body.theme-catppuccin-latte input:hover {
+        border-color: var(--ctp-latte-overlay0);
+      }
+      body.theme-catppuccin-latte #log-stream {
+        background-color: var(--ctp-latte-crust);
+        color: var(--ctp-latte-green);
+      }
+      body.theme-catppuccin-latte #spec-content {
+        color: var(--ctp-latte-blue);
+      }
+      body.theme-catppuccin-latte #mapping-content {
+        color: var(--ctp-latte-teal);
+      }
+      body.theme-catppuccin-latte #sidebar.sidebar-collapsed-hoverable:hover {
+        background-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte #pinnedLogsHeader:hover {
+        background-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte #toggleSidebarDesktop:hover {
+        background-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte .bg-blue-600 {
+        background-color: var(--ctp-latte-blue);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .hover\\:bg-blue-700:hover {
+        background-color: var(--ctp-latte-sapphire);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .bg-gray-700 {
+        background-color: var(--ctp-latte-surface1);
+        color: var(--ctp-latte-text);
+      } /* Adjusted for better contrast */
+      body.theme-catppuccin-latte .hover\\:bg-gray-600:hover {
+        background-color: var(--ctp-latte-surface2);
+        color: var(--ctp-latte-text);
+      } /* Adjusted */
+      body.theme-catppuccin-latte .bg-yellow-500 {
+        background-color: var(--ctp-latte-yellow);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .hover\\:bg-yellow-600:hover {
+        background-color: var(--ctp-latte-peach);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .bg-green-600 {
+        background-color: var(--ctp-latte-green);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .hover\\:bg-green-700:hover {
+        background-color: var(--ctp-latte-teal);
+        color: var(--ctp-latte-base);
+      }
+      body.theme-catppuccin-latte .text-gray-300 {
+        color: var(--ctp-latte-subtext0);
+      }
+      body.theme-catppuccin-latte .text-gray-100 {
+        color: var(--ctp-latte-text);
+      } /* Main text on light bg */
+      body.theme-catppuccin-latte .text-gray-400 {
+        color: var(--ctp-latte-overlay1);
+      }
+      body.theme-catppuccin-latte .text-gray-500 {
+        color: var(--ctp-latte-overlay0);
+      }
+      body.theme-catppuccin-latte .border-gray-700 {
+        border-color: var(--ctp-latte-surface0);
+      }
+      body.theme-catppuccin-latte .border-gray-600 {
+        border-color: var(--ctp-latte-surface1);
+      }
+      body.theme-catppuccin-latte .bg-gray-900 {
+        background-color: var(--ctp-latte-base);
+      } /* For select dropdown bg */
+      body.theme-catppuccin-latte .bg-black {
+        background-color: var(--ctp-latte-crust);
+      } /* For log stream bg */
+      body.theme-catppuccin-latte .text-green-400 {
+        color: var(--ctp-latte-green);
+      } /* Log stream text */
+      body.theme-catppuccin-latte .text-blue-300 {
+        color: var(--ctp-latte-blue);
+      } /* Spec content */
+      body.theme-catppuccin-latte .text-green-300 {
+        color: var(--ctp-latte-teal);
+      } /* Mapping content */
+      body.theme-catppuccin-latte .text-red-500 {
+        color: var(--ctp-latte-red);
+      }
+      body.theme-catppuccin-latte .text-yellow-400 {
+        color: var(--ctp-latte-yellow);
+      }
+      body.theme-catppuccin-latte .text-blue-400 {
+        color: var(--ctp-latte-blue);
+      }
+      body.theme-catppuccin-latte .hover\\:text-white:hover {
+        color: var(--ctp-latte-text);
+      } /* Hover text on light bg */
+
+      /* Light card specific styles for on/off state */
+      .entity-card.light-on {
+        /* Default theme ON state - more prominent */
+        border-left-width: 4px;
+        border-left-color: var(
+          --ctp-mocha-green,
+          #48bb78 /* Tailwind green-500 as fallback */
+        );
+      }
+      body.theme-default .entity-card.light-on {
+        background-color: #2d3748; /* gray-800 slightly lighter */
+        border-left-color: #68d391;
+      }
+      body.theme-dark .entity-card.light-on {
+        background-color: #2c3440;
+        border-left-color: #58b082;
+      }
+      body.theme-light .entity-card.light-on {
+        background-color: #f0f4f8;
+        border-left-color: #48bb78;
+      }
+      body.theme-catppuccin-mocha .entity-card.light-on {
+        background-color: var(--ctp-mocha-surface0);
+        border-left-color: var(--ctp-mocha-green);
+      }
+      body.theme-catppuccin-latte .entity-card.light-on {
+        background-color: var(--ctp-latte-surface0);
+        border-left-color: var(--ctp-latte-green);
+      }
+
+      .entity-card.light-off {
+        /* Default theme OFF state - more subdued */
+        opacity: 0.75;
+        border-width: 1px;
+        border-style: solid;
+        border-color: #374151; /* Fallback border color (Tailwind gray-700) */
+      }
+      body.theme-default .entity-card.light-off {
+        background-color: #15181e; /* Darker than page background */
+        opacity: 1; /* Full opacity */
+        border-color: #2d3748; /* Tailwind gray-800 for definition */
+      }
+      body.theme-dark .entity-card.light-off {
+        background-color: #1a202c; /* Darker than general card background (e.g., gray-900) */
+        opacity: 1; /* Full opacity */
+        border-color: #2d3748; /* Tailwind gray-800 for definition */
+      }
+      body.theme-light .entity-card.light-off {
+        background-color: #e2e8f0; /* Tailwind gray-200 (already darker than 'on' cards) */
+        opacity: 1; /* Full opacity */
+        border-color: #cbd5e1; /* Tailwind gray-300 for definition */
+      }
+      body.theme-catppuccin-mocha .entity-card.light-off {
+        background-color: var(
+          --ctp-mocha-mantle
+        ); /* Darker than page background (base) */
+        opacity: 1; /* Full opacity */
+        border-color: var(
+          --ctp-mocha-surface0
+        ); /* surface0 for definition against mantle */
+      }
+      body.theme-catppuccin-latte .entity-card.light-off {
+        background-color: var(
+          --ctp-latte-surface1
+        ); /* Darker than 'on' cards (surface0) */
+        opacity: 1; /* Full opacity */
+        border-color: var(
+          --ctp-latte-surface2
+        ); /* surface2 for definition against surface1 */
+      }
+
+      .entity-card {
+        cursor: pointer; /* Indicate the card is clickable */
+        transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out,
+          border-color 0.2s ease-in-out;
+      }
+
+      /* Toast Notification Styles */
+      #toast-container {
+        position: fixed;
+        top: 80px; /* Adjust if header height changes */
+        right: 20px;
+        z-index: 1050; /* Ensure it's above other content */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: auto;
+        max-width: 350px;
+      }
+
+      .toast-message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out,
+          background-color 0.3s, color 0.3s, border-color 0.3s;
+        font-size: 0.9rem;
+        border-width: 1px;
+        border-style: solid;
+        min-width: 250px;
+      }
+
+      .toast-message.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .toast-message .toast-close-btn {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font-size: 1.2rem;
+        margin-left: 15px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        opacity: 0.7;
+      }
+      .toast-message .toast-close-btn:hover {
+        opacity: 1;
+      }
+
+      /* Default Theme Toasts */
+      .theme-default .toast-info {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border-color: #4a5568;
+      }
+      .theme-default .toast-success {
+        background-color: #2f855a;
+        color: #e2e8f0;
+        border-color: #38a169;
+      } /* Dark green */
+      .theme-default .toast-error {
+        background-color: #c53030;
+        color: #e2e8f0;
+        border-color: #e53e3e;
+      } /* Dark red */
+      .theme-default .toast-warning {
+        background-color: #dd6b20;
+        color: #e2e8f0;
+        border-color: #ed8936;
+      } /* Dark orange */
+
+      /* Dark Theme Toasts (similar to default or slightly adjusted) */
+      .theme-dark .toast-info {
+        background-color: #374151;
+        color: #d1d5db;
+        border-color: #4b5563;
+      }
+      .theme-dark .toast-success {
+        background-color: #047857;
+        color: #d1d5db;
+        border-color: #059669;
+      }
+      .theme-dark .toast-error {
+        background-color: #b91c1c;
+        color: #d1d5db;
+        border-color: #dc2626;
+      }
+      .theme-dark .toast-warning {
+        background-color: #c2410c;
+        color: #d1d5db;
+        border-color: #ea580c;
+      }
+
+      /* Light Theme Toasts */
+      .theme-light .toast-info {
+        background-color: #e2e8f0;
+        color: #2d3748;
+        border-color: #cbd5e1;
+      }
+      .theme-light .toast-success {
+        background-color: #c6f6d5;
+        color: #22543d;
+        border-color: #9ae6b4;
+      } /* Light green */
+      .theme-light .toast-error {
+        background-color: #fed7d7;
+        color: #742a2a;
+        border-color: #fbb6b6;
+      } /* Light red */
+      .theme-light .toast-warning {
+        background-color: #feebc8;
+        color: #9c4221;
+        border-color: #fbd38d;
+      } /* Light orange */
+
+      /* Catppuccin Mocha Toasts */
+      .theme-catppuccin-mocha .toast-info {
+        background-color: var(--ctp-mocha-surface1);
+        color: var(--ctp-mocha-text);
+        border-color: var(--ctp-mocha-surface2);
+      }
+      .theme-catppuccin-mocha .toast-success {
+        background-color: var(--ctp-mocha-green);
+        color: var(--ctp-mocha-base);
+        border-color: var(--ctp-mocha-green);
+      }
+      .theme-catppuccin-mocha .toast-error {
+        background-color: var(--ctp-mocha-red);
+        color: var(--ctp-mocha-base);
+        border-color: var(--ctp-mocha-red);
+      }
+      .theme-catppuccin-mocha .toast-warning {
+        background-color: var(--ctp-mocha-peach);
+        color: var(--ctp-mocha-base);
+        border-color: var(--ctp-mocha-peach);
+      }
+
+      /* Catppuccin Latte Toasts */
+      .theme-catppuccin-latte .toast-info {
+        background-color: var(--ctp-latte-surface1);
+        color: var(--ctp-latte-text);
+        border-color: var(--ctp-latte-surface2);
+      }
+      .theme-catppuccin-latte .toast-success {
+        background-color: var(--ctp-latte-green);
+        color: var(--ctp-latte-base);
+        border-color: var(--ctp-latte-green);
+      }
+      .theme-catppuccin-latte .toast-error {
+        background-color: var(--ctp-latte-red);
+        color: var(--ctp-latte-base);
+        border-color: var(--ctp-latte-red);
+      }
+      .theme-catppuccin-latte .toast-warning {
+        background-color: var(--ctp-latte-peach);
+        color: var(--ctp-latte-base);
+        border-color: var(--ctp-latte-peach);
+      }
+    </style>
+  </head>
+  <body
+    class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased"
+  >
+    <div id="toast-container"></div>
+    <!-- Toast messages will appear here -->
+
+    <header
+      class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50"
+    >
+      <div class="flex items-center">
+        <button
+          id="mobileMenuButton"
+          class="md:hidden text-gray-300 hover:text-white mr-4"
+        >
+          <i class="mdi mdi-menu text-2xl"></i>
+        </button>
+        <span>rvc2api Dashboard</span>
+      </div>
+      <div class="relative">
+        <select
+          id="themeSwitcher"
+          class="bg-gray-700 text-gray-200 text-sm rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="default">Default Theme</option>
+          <option value="dark">Dark Theme</option>
+          <option value="light">Light Theme</option>
+          <option value="catppuccin-mocha">Catppuccin Mocha</option>
+          <option value="catppuccin-latte">Catppuccin Latte</option>
+          <!-- Add more themes here -->
+        </select>
+      </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sidebar Navigation -->
+      <aside
+        id="sidebar"
+        class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between"
+      >
+        <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-lg font-semibold">Navigation</span>
+            <button
+              id="closeSidebarButton"
+              class="md:hidden text-gray-400 hover:text-white"
+            >
+              <i class="mdi mdi-close text-2xl"></i>
+            </button>
+          </div>
+          <nav class="space-y-2">
+            <button
+              data-view="home"
+              class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav"
+            >
+              Home
+            </button>
+            <button
+              data-view="lights"
+              class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+            >
+              Lights
+            </button>
+            <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
+
+            <!-- Configuration Section -->
+            <div class="pt-2">
+              <h3
+                class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider"
+              >
+                Configuration Files
+              </h3>
+              <div class="space-y-1">
+                <button
+                  data-view="mapping"
+                  class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                >
+                  device_mapping.yml
+                </button>
+                <button
+                  data-view="spec"
+                  class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                >
+                  rvc.json
+                </button>
+              </div>
+            </div>
+            <!-- Unmapped Entries Link -->
+            <div class="pt-2">
+              <h3
+                class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider"
+              >
+                Troubleshooting
+              </h3>
+              <div class="space-y-1">
+                <button
+                  data-view="unmapped"
+                  class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                >
+                  Unmapped Entries
+                </button>
+              </div>
+            </div>
+          </nav>
+        </div>
+        <div class="border-t border-gray-700 pt-4 text-center">
+          <button
+            id="toggleSidebarDesktop"
+            class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700"
+          >
+            <i class="mdi mdi-chevron-left text-xl"></i>
+            <span class="ml-2">Collapse</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main content area -->
+      <main
+        id="mainContent"
+        class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-0 mt-16 md:mt-0"
+      >
+        <!-- Removed md:h-[calc(100vh-4rem)] -->
+        <!-- Home View / Dashboard -->
+        <section id="home-view" class="view-section">
+          <h1 class="text-3xl font-bold mb-8 text-gray-100">Dashboard</h1>
+
+          <div class="mb-10">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-300">
+              Quick Light Controls
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+              <!-- Column 1: All Lights -->
+              <div class="space-y-4">
+                <button
+                  id="btn-all-on"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-lightbulb-group-outline mr-2"></i>All Lights
+                  On
+                </button>
+                <button
+                  id="btn-all-off"
+                  class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-lightbulb-group-off-outline mr-2"></i>All
+                  Lights Off
+                </button>
+              </div>
+
+              <!-- Column 2: Exterior Lights -->
+              <div class="space-y-4">
+                <button
+                  id="btn-exterior-on"
+                  class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-outdoor-lamp mr-2"></i>Exterior On
+                </button>
+                <button
+                  id="btn-exterior-off"
+                  class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-dome-light mr-2"></i>Exterior Off
+                </button>
+              </div>
+
+              <!-- Column 3: Interior Lights -->
+              <div class="space-y-4">
+                <button
+                  id="btn-interior-on"
+                  class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-home-lightbulb-outline mr-2"></i>Interior On
+                </button>
+                <button
+                  id="btn-interior-off"
+                  class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:shadow-md transition-transform transform hover:scale-105 flex items-center justify-center"
+                >
+                  <i class="mdi mdi-home-lightbulb-off-outline mr-2"></i
+                  >Interior Off
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Scenes</h2>
+            <div class="bg-gray-800 p-6 rounded-lg shadow">
+              <p class="text-gray-400">
+                Scene management and definition coming soon.
+              </p>
+              <p class="text-gray-500 text-sm mt-2">
+                This section will allow you to define and trigger custom scenes
+                involving multiple devices (lights, locks, etc.).
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="lights-view" class="view-section hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-3xl font-bold">RV-C Lights</h1>
+            <div>
+              <label class="block mb-1 text-sm text-gray-300">
+                <i class="mdi mdi-filter-variant mr-1"></i>Filter by Area:
+              </label>
+              <select
+                id="area-filter"
+                class="bg-gray-900 text-gray-100 border border-gray-700 rounded p-2"
+              >
+                <option value="All">All</option>
+              </select>
+            </div>
+          </div>
+          <div id="light-grid" class="space-y-8">
+            <p id="lights-loading-message">Loading lights...</p>
+          </div>
+        </section>
+
+        <section id="mapping-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
+          <pre
+            id="mapping-content"
+            class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"
+          ></pre>
+        </section>
+
+        <section id="spec-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
+          <div id="spec-metadata" class="mb-4 text-sm text-gray-400">
+            Loading spec metadata...
+          </div>
+          <pre
+            id="spec-content"
+            class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap"
+          ></pre>
+        </section>
+
+        <!-- Unmapped Entries View -->
+        <section id="unmapped-view" class="view-section hidden">
+          <h1 class="text-3xl font-bold mb-6">Unmapped CAN Bus Entries</h1>
+          <p class="mb-4 text-gray-400">
+            These are CAN messages received by the system that could not be
+            mapped to a known device based on your
+            <code>device_mapping.yml</code>. Use this information to help build
+            out your configuration.
+          </p>
+          <div id="unmapped-entries-container" class="space-y-6">
+            <p id="unmapped-loading-message">Loading unmapped entries...</p>
+            <!-- Unmapped entries will be loaded here -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Pinned Logs Container -->
+    <div
+      id="pinnedLogsContainer"
+      class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out"
+      style="height: 3rem"
+    >
+      <!-- Initial height for collapsed header -->
+      <div
+        id="pinnedLogsResizeHandle"
+        class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize"
+        style="z-index: 61"
+      ></div>
+      <!-- Draggable Resize Handle -->
+      <div
+        id="pinnedLogsHeader"
+        class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700"
+      >
+        <span class="font-semibold text-gray-300 ml-2">Logs</span>
+        <button
+          id="togglePinnedLogsBtn"
+          class="text-gray-300 hover:text-white p-1"
+        >
+          <i class="mdi mdi-chevron-up text-2xl"></i>
+        </button>
+      </div>
+      <div
+        id="pinnedLogsContent"
+        class="hidden bg-gray-800 px-4 pb-4 pt-2 flex flex-col"
+        style="height: calc(30vh - 3rem)"
+      >
+        <!-- Removed max-height: 400px -->
+        <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
+          <select
+            id="log-level"
+            class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO" selected>INFO</option>
+            <option value="WARNING">WARNING</option>
+            <option value="ERROR">ERROR</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+          <input
+            id="log-search"
+            type="text"
+            placeholder="Search logs..."
+            class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500"
+          />
+          <div class="flex gap-2">
+            <button
+              id="log-pause"
+              class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm"
+            >
+              Pause
+            </button>
+            <button
+              id="log-resume"
+              class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm"
+              disabled
+            >
+              Resume
+            </button>
+            <button
+              id="log-clear"
+              class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm"
+            >
+              Clear
+            </button>
+            <!-- Added Clear button -->
+          </div>
+        </div>
+        <pre
+          id="log-stream"
+          class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"
+        ></pre>
+        <!-- Removed h-full, added flex-1 min-h-0 -->
+        <p
+          id="logs-waiting-message"
+          class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+        >
+          Waiting for logs...
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const socket = new WebSocket(`ws://${location.host}/ws`);
+      const grid = document.getElementById("light-grid");
+      const filter = document.getElementById("area-filter");
+      const lightStates = {};
+      const lightsLoadingMessage = document.getElementById(
+        "lights-loading-message"
+      );
+      const apiBasePath = "/api"; // Define base path for API calls
+
+      // Pinned Logs Elements
+      const pinnedLogsContainer = document.getElementById(
+        "pinnedLogsContainer"
+      );
+      const pinnedLogsHeader = document.getElementById("pinnedLogsHeader");
+      const togglePinnedLogsBtn = document.getElementById(
+        "togglePinnedLogsBtn"
+      );
+      const pinnedLogsChevronIcon = togglePinnedLogsBtn.querySelector("i");
+      const pinnedLogsContent = document.getElementById("pinnedLogsContent");
+      const mainContent = document.getElementById("mainContent"); // Already defined, ensure it is
+
+      // Log stream elements (now part of pinnedLogsContent)
+      let logSocket = null;
+      let isLogPaused = false;
+      const logStream = document.getElementById("log-stream");
+      const logLevelFilter = document.getElementById("log-level");
+      const logSearchInput = document.getElementById("log-search");
+      const logsWaitingMessage = document.getElementById(
+        "logs-waiting-message"
+      );
+      const logPauseBtn = document.getElementById("log-pause");
+      const logResumeBtn = document.getElementById("log-resume");
+      const logClearBtn = document.getElementById("log-clear"); // Get clear button
+
+      const PINNED_LOGS_OPEN_KEY = "pinnedLogsOpen";
+      const PINNED_LOGS_HEIGHT_KEY = "pinnedLogsHeight";
+      const COLLAPSED_LOGS_HEIGHT = "3rem"; // Height of the header bar
+      const DEFAULT_EXPANDED_LOGS_HEIGHT_VH = 30; // Default expanded height in vh
+      const MIN_LOGS_PANEL_HEIGHT_PX = 80; // Minimum height in pixels (e.g., header + a bit of content)
+      const MAX_LOGS_PANEL_HEIGHT_VH_PERCENT = 80; // Max height as % of viewport height
+      let currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`; // Store as string like '30vh'
+      let isResizingLogs = false;
+      let resizeRafId = null; // For requestAnimationFrame
+      let pendingResizeHeightPx = 0; // To store height for RAF update
+      let originalContainerTransition = ""; // To store original transition style
+
+      // Constants for sidebar widths
+      const SIDEBAR_EXPANDED_WIDTH_DESKTOP = "16rem"; // Corresponds to md:w-64
+      const SIDEBAR_COLLAPSED_WIDTH_DESKTOP = "4rem"; // Corresponds to md:w-16
+
+      function adjustPinnedLogsLayout() {
+        if (!pinnedLogsContainer || !sidebar) return;
+
+        if (window.innerWidth < 768) {
+          // Tailwind 'md' breakpoint (768px)
+          // On mobile, sidebar is an overlay or hidden. Logs bar spans full width.
+          pinnedLogsContainer.style.left = "0px";
+        } else {
+          // Desktop view: sidebar is fixed on the left
+          const isSidebarCollapsedDesktop =
+            sidebar.classList.contains("md:w-16");
+          if (isSidebarCollapsedDesktop) {
+            pinnedLogsContainer.style.left = SIDEBAR_COLLAPSED_WIDTH_DESKTOP;
+          } else {
+            // Sidebar is expanded (should have md:w-64)
+            pinnedLogsContainer.style.left = SIDEBAR_EXPANDED_WIDTH_DESKTOP;
+          }
+        }
+      }
+
+      function setPinnedLogsState(isOpen, height) {
+        localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
+        if (isOpen && height) {
+          localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
+          currentExpandedLogsHeight = height;
+        }
+
+        if (isOpen) {
+          pinnedLogsContent.classList.remove("hidden");
+          pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+          pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+          mainContent.style.paddingBottom = currentExpandedLogsHeight;
+          pinnedLogsChevronIcon.classList.remove("mdi-chevron-up");
+          pinnedLogsChevronIcon.classList.add("mdi-chevron-down");
+          connectLogSocket();
+          if (
+            logStream.childElementCount === 0 &&
+            logSocket &&
+            logSocket.readyState === WebSocket.OPEN
+          ) {
+            logsWaitingMessage.classList.remove("hidden");
+          }
+        } else {
+          pinnedLogsContent.classList.add("hidden");
+          pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
+          mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT; // Adjust padding for collapsed bar
+          pinnedLogsChevronIcon.classList.remove("mdi-chevron-down");
+          pinnedLogsChevronIcon.classList.add("mdi-chevron-up");
+          // Consider disconnecting log socket if not needed by any other view,
+          // but for a pinned pane, usually keep it connected if user might reopen.
+          // For now, let's keep it simple and not disconnect immediately on collapse.
+          // disconnectLogSocket(); // Optional: if you want to save resources
+          logsWaitingMessage.classList.add("hidden");
+        }
+      }
+
+      togglePinnedLogsBtn.addEventListener("click", () => {
+        const isOpen = !pinnedLogsContent.classList.contains("hidden");
+        setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+      });
+      pinnedLogsHeader.addEventListener("click", (e) => {
+        if (
+          e.target === pinnedLogsHeader ||
+          e.target === pinnedLogsHeader.querySelector("span")
+        ) {
+          const isOpen = !pinnedLogsContent.classList.contains("hidden");
+          setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
+        }
+      });
+
+      // Initialize pinned logs state from localStorage
+      const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === "true";
+      const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
+      if (savedHeight) {
+        // Validate saved height against min/max before applying
+        let heightNum = parseFloat(savedHeight);
+        const unit = savedHeight.replace(/[\d.-]/g, "");
+        if (unit === "px") {
+          heightNum = Math.max(
+            MIN_LOGS_PANEL_HEIGHT_PX,
+            Math.min(
+              heightNum,
+              window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100)
+            )
+          );
+          currentExpandedLogsHeight = `${heightNum}px`;
+        } else if (unit === "vh") {
+          heightNum = Math.max(
+            (MIN_LOGS_PANEL_HEIGHT_PX / window.innerHeight) * 100,
+            Math.min(heightNum, MAX_LOGS_PANEL_HEIGHT_VH_PERCENT)
+          );
+          currentExpandedLogsHeight = `${heightNum}vh`;
+        } else {
+          // default to vh if unit is unknown or invalid
+          currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+        }
+      } else {
+        currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
+      }
+      // Set initial state without animation for page load
+      const originalTransition = pinnedLogsContainer.style.transition;
+      pinnedLogsContainer.style.transition = "none";
+      setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
+      // Restore transition after initial setup
+      // Use a timeout to ensure the no-transition style is applied before restoring it
+      setTimeout(() => {
+        pinnedLogsContainer.style.transition =
+          originalTransition || "height 0.3s ease-in-out";
+      }, 50);
+
+      // Pinned Logs Resizing Logic
+      const pinnedLogsResizeHandle = document.getElementById(
+        "pinnedLogsResizeHandle"
+      );
+
+      function applyResizeStyles() {
+        if (!isResizingLogs) return; // Check if still resizing
+
+        currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
+        pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+        pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+        mainContent.style.paddingBottom = currentExpandedLogsHeight;
+
+        resizeRafId = null; // Reset RAF ID
+      }
+
+      pinnedLogsResizeHandle.addEventListener("mousedown", (e) => {
+        if (!pinnedLogsContent.classList.contains("hidden")) {
+          // Only allow resize if panel is open
+          e.preventDefault(); // Prevent text selection or other default actions
+          isResizingLogs = true;
+          const startY = e.clientY;
+          const startHeight = pinnedLogsContainer.offsetHeight; // Get height in pixels
+
+          originalContainerTransition = pinnedLogsContainer.style.transition;
+          pinnedLogsContainer.style.transition = "none"; // Disable transitions during drag
+
+          document.body.style.userSelect = "none";
+          document.body.style.cursor = "ns-resize";
+
+          const onMouseMove = (moveEvent) => {
+            if (!isResizingLogs) return;
+            const dy = startY - moveEvent.clientY;
+            let newHeightPx = startHeight + dy;
+
+            const maxHeightPx =
+              window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
+            newHeightPx = Math.max(
+              MIN_LOGS_PANEL_HEIGHT_PX,
+              Math.min(newHeightPx, maxHeightPx)
+            );
+
+            pendingResizeHeightPx = newHeightPx;
+
+            if (resizeRafId === null) {
+              resizeRafId = requestAnimationFrame(applyResizeStyles);
+            }
+          };
+
+          const onMouseUp = () => {
+            if (isResizingLogs) {
+              isResizingLogs = false;
+              document.removeEventListener("mousemove", onMouseMove);
+              document.removeEventListener("mouseup", onMouseUp);
+
+              if (resizeRafId !== null) {
+                cancelAnimationFrame(resizeRafId);
+                resizeRafId = null;
+              }
+
+              // Apply the final height directly to ensure it's set before saving
+              // This uses the last value of pendingResizeHeightPx calculated in onMouseMove
+              currentExpandedLogsHeight = `${pendingResizeHeightPx}px`;
+              pinnedLogsContainer.style.height = currentExpandedLogsHeight;
+              pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
+              mainContent.style.paddingBottom = currentExpandedLogsHeight;
+
+              localStorage.setItem(
+                PINNED_LOGS_HEIGHT_KEY,
+                currentExpandedLogsHeight
+              );
+
+              document.body.style.userSelect = "";
+              document.body.style.cursor = "";
+              pinnedLogsContainer.style.transition =
+                originalContainerTransition || "height 0.3s ease-in-out"; // Restore transitions
+            }
+          };
+
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+        }
+      });
+
+      // WebSocket for entity updates
+      const entitySocket = new WebSocket(`ws://${location.host}/api/ws`);
+
+      // Helper function to call light services (or any entity control)
+      function callLightService(entityId, command, data = {}) {
+        const path = `${apiBasePath}/entities/${entityId}/control`;
+        let body = { command: command };
+
+        if (command === "set") {
+          if (data.state !== undefined) {
+            body.state = data.state;
+          }
+          if (data.brightness !== undefined) {
+            // Brightness is 0-100 for the API
+            body.brightness = data.brightness;
+          }
+        } else if (command === "toggle") {
+          // No additional body params needed for toggle
+        } else if (
+          command === "brightness_up" ||
+          command === "brightness_down"
+        ) {
+          // No additional body params needed for these specific commands if your API supports them directly
+          // If not, these would need to be translated to a 'set' with calculated brightness here.
+          // For now, assuming the API handles these command strings directly if they are used.
+        } else {
+          console.error("Unknown command for service call:", command);
+          return Promise.reject("Unknown command");
+        }
+
+        return fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((err) => {
+                const errorMsg = `HTTP error ${response.status}: ${
+                  err.detail || response.statusText
+                }`;
+                console.error(
+                  `Service call for ${entityId} (${command}) failed:`,
+                  errorMsg,
+                  err
+                );
+                throw new Error(errorMsg);
+              });
+            }
+            return response.json();
+          })
+          .then((responseData) => {
+            console.log(
+              `Command ${command} for ${entityId} successful:`,
+              responseData
+            );
+            // UI should update via WebSocket message triggering renderGroupedLights()
+            // Or, if optimistic updates are desired, handle here.
+          })
+          .catch((error) => {
+            console.error(`Command ${command} for ${entityId} failed:`, error);
+            showToast(
+              `Failed to control ${entityId}: ${error.message}`,
+              "error"
+            );
+          });
+      }
+
+      // Function to render a single light card
+      function renderCard(entity) {
+        const card = document.createElement("div");
+        card.className = "p-4 rounded-lg shadow-md space-y-3 entity-card"; // Base classes
+        card.dataset.entityId = entity.entity_id;
+
+        const friendlyName = entity.friendly_name || entity.entity_id;
+        let state = entity.state || "unknown"; // 'on' or 'off'
+        const raw_attrs = entity.raw || {}; // Use entity.raw for raw CAN values
+        const capabilities = entity.capabilities || [];
+
+        // Apply on/off class for styling
+        if (state.toLowerCase() === "on") {
+          card.classList.add("light-on");
+          card.classList.remove("light-off");
+        } else {
+          card.classList.add("light-off");
+          card.classList.remove("light-on");
+        }
+
+        let cardContent = `<h3 class="text-lg font-semibold">${friendlyName}</h3>`;
+
+        // const hasOnOff = capabilities.includes('on_off'); // Not needed for separate buttons anymore
+        const hasBrightness = capabilities.includes("brightness");
+
+        if (hasBrightness) {
+          // Brightness is determined from entity.raw.operating_status (typically 0-200 from CAN).
+          // This needs to be converted to a 0-100% scale for the UI slider.
+          let currentBrightnessPercent = 0;
+          if (state.toLowerCase() === "on") {
+            if (raw_attrs.operating_status !== undefined) {
+              // raw_attrs.operating_status is the CAN level (e.g. 0-200 where 200 is 100%)
+              // Map this to a 0-100 scale for the slider.
+              // Max CAN brightness for 100% is 0xC8 (200).
+              currentBrightnessPercent = Math.min(
+                Math.round(
+                  (parseInt(raw_attrs.operating_status, 10) / 200) * 100
+                ),
+                100
+              );
+            } else {
+              currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
+            }
+          }
+
+          cardContent += `
+            <div class="brightness-control space-y-1 pt-2">
+              <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
+              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}"
+                     class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider"
+                     min="0" max="100" value="${currentBrightnessPercent}">
+            </div>
+          `;
+        }
+
+        card.innerHTML = cardContent;
+
+        // Make the entire card clickable to toggle on/off
+        card.addEventListener("click", (e) => {
+          // Prevent toggle if the click was on the slider itself or its label
+          if (e.target.closest(".brightness-control")) {
+            return;
+          }
+          const entityId = card.dataset.entityId;
+          // Determine current state for toggle logic if needed, or just send 'toggle'
+          // const currentLightState = lightStates[entityId]?.state || 'off';
+          // callLightService(entityId, 'set', { state: currentLightState === 'on' ? 'off' : 'on' });
+          callLightService(entityId, "toggle");
+        });
+
+        if (hasBrightness) {
+          const slider = card.querySelector(".brightness-slider");
+          const brightnessValueDisplay = card.querySelector(
+            `#br-val-${entity.entity_id}`
+          );
+          if (slider) {
+            slider.addEventListener("input", (e) => {
+              const brightness = parseInt(e.target.value, 10); // 0-100
+              if (brightnessValueDisplay)
+                brightnessValueDisplay.textContent = `${brightness}%`;
+            });
+            slider.addEventListener("change", (e) => {
+              // 'change' event fires when user releases mouse
+              const entityId = e.target.dataset.entityId;
+              const brightness = parseInt(e.target.value, 10); // 0-100
+              // When setting brightness, the light should be 'on'.
+              // The API's /control endpoint handles this: if brightness is set, state 'on' is implied or can be sent.
+              callLightService(entityId, "set", {
+                state: "on",
+                brightness: brightness,
+              });
+            });
+          }
+        }
+        return card;
+      }
+
+      entitySocket.onmessage = (event) => {
+        const entityData = JSON.parse(event.data);
+        const entity_id = entityData.entity_id;
+
+        if (entity_id) {
+          // If the entity is already in lightStates (i.e., it's a light we are displaying), update it.
+          if (lightStates.hasOwnProperty(entity_id)) {
+            lightStates[entity_id] = entityData;
+            renderGroupedLights();
+          }
+          // If it's a new entity that is a light (e.g., identified after initial load),
+          // add it to lightStates and render.
+          else if (entityData.device_type === "light") {
+            lightStates[entity_id] = entityData;
+            // Check if its area needs to be added to the filter
+            const area = entityData.suggested_area || "Unknown";
+            const areaFilter = document.getElementById("area-filter");
+            if (areaFilter) {
+              const existingOptions = Array.from(areaFilter.options).map(
+                (opt) => opt.value
+              );
+              if (!existingOptions.includes(area)) {
+                const opt = document.createElement("option");
+                opt.value = area;
+                opt.textContent = area;
+                areaFilter.appendChild(opt);
+                // Consider sorting filter options if many areas are dynamically added
+              }
+            }
+            renderGroupedLights();
+          }
+        }
+      };
+
+      function renderGroupedLights() {
+        grid.innerHTML = "";
+        const selected = filter.value;
+        const grouped = {};
+
+        for (const entity of Object.values(lightStates)) {
+          if (entity.device_type !== "light") {
+            // Explicitly check if the entity is a light
+            continue;
+          }
+          const area = entity?.suggested_area || "Unknown";
+          if (selected !== "All" && selected !== area) continue;
+
+          if (!grouped[area]) grouped[area] = [];
+          grouped[area].push(entity);
+        }
+
+        for (const area of Object.keys(grouped).sort()) {
+          const section = document.createElement("div");
+          section.innerHTML = `
+            <h2 class="text-2xl font-bold mb-1">${area}</h2>
+            <div class="border-t border-gray-600 my-2"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+          `;
+          const sectionGrid = section.querySelector("div.grid");
+
+          grouped[area].forEach((entity) => {
+            sectionGrid.appendChild(renderCard(entity));
+          });
+
+          grid.appendChild(section);
+        }
+      }
+
+      filter.addEventListener("change", renderGroupedLights);
+
+      // WebSocket for logs - to be initialized when log view is active
+      // This section needs to be adapted for the pinned logs.
+      // connectLogSocket() and disconnectLogSocket() will be used by setPinnedLogsState.
+
+      // Original log control event listeners (pause, resume, filter changes)
+      // Ensure these are correctly scoped if they were inside a view-specific block before.
+      logPauseBtn.addEventListener("click", () => {
+        isLogPaused = true;
+        logPauseBtn.disabled = true;
+        logResumeBtn.disabled = false;
+      });
+
+      logResumeBtn.addEventListener("click", () => {
+        isLogPaused = false;
+        logPauseBtn.disabled = false;
+        logResumeBtn.disabled = true;
+        logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom on resume
+      });
+
+      // Event listener for the Clear Logs button
+      logClearBtn.addEventListener("click", () => {
+        logStream.innerHTML = ""; // Clear the log display
+        // If the log socket is connected and the panel is open, show "Waiting for logs..."
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          !pinnedLogsContent.classList.contains("hidden")
+        ) {
+          logsWaitingMessage.classList.remove("hidden");
+        }
+        // No need to pause or resume, just clear the current display
+      });
+
+      logLevelFilter.addEventListener("change", () => {
+        logStream.innerHTML = "";
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          logStream.childElementCount === 0
+        ) {
+          logsWaitingMessage.classList.remove("hidden");
+        }
+      });
+      logSearchInput.addEventListener("input", () => {
+        logStream.innerHTML = "";
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          logStream.childElementCount === 0
+        ) {
+          logsWaitingMessage.classList.remove("hidden");
+        }
+      });
+
+      // connectLogSocket function (ensure it's defined correctly)
+      function connectLogSocket() {
+        if (logSocket && logSocket.readyState === WebSocket.OPEN) {
+          return;
+        }
+        logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
+        // logsWaitingMessage.classList.remove('hidden'); // Managed by setPinnedLogsState
+
+        logSocket.onopen = () => {
+          console.log("Log WebSocket connected");
+          // logStream.innerHTML = ''; // Clearing is now handled by filter changes or explicit actions
+          if (
+            pinnedLogsContent.classList.contains("hidden") === false &&
+            logStream.childElementCount === 0
+          ) {
+            logsWaitingMessage.classList.remove("hidden");
+          }
+        };
+
+        logSocket.onmessage = (event) => {
+          if (isLogPaused) return;
+          logsWaitingMessage.classList.add("hidden");
+
+          const logEntry = event.data;
+          const currentLogLevel = logLevelFilter.value.toUpperCase();
+          const searchTerm = logSearchInput.value.toLowerCase();
+
+          const levelMatch = logEntry.match(/^\S+\s+\S+\s+(\w+)/);
+          const entryLogLevel = levelMatch
+            ? levelMatch[1].toUpperCase()
+            : "UNKNOWN";
+
+          const logLevels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"];
+          const currentFilterIndex = logLevels.indexOf(currentLogLevel);
+          const entryLevelIndex = logLevels.indexOf(entryLogLevel);
+
+          if (entryLevelIndex < currentFilterIndex) return;
+          if (searchTerm && !logEntry.toLowerCase().includes(searchTerm))
+            return;
+
+          const logLine = document.createElement("div");
+          logLine.textContent = logEntry;
+          logStream.appendChild(logLine);
+          // Optimized scroll: only scroll if user is already near the bottom
+          const scrollThreshold = 20; // Pixels from bottom
+          if (
+            logStream.scrollHeight -
+              logStream.scrollTop -
+              logStream.clientHeight <
+            scrollThreshold
+          ) {
+            logStream.scrollTop = logStream.scrollHeight;
+          }
+        };
+
+        logSocket.onerror = (error) => {
+          console.error("Log WebSocket error:", error);
+          logStream.innerHTML +=
+            '<div class="text-red-500">Log WebSocket error. See console.</div>';
+        };
+
+        logSocket.onclose = () => {
+          console.log("Log WebSocket disconnected");
+          // logsWaitingMessage.classList.remove('hidden'); // Show waiting if it was open
+          // logsWaitingMessage.textContent = 'Log stream disconnected. Attempting to reconnect...';
+          // Basic auto-reconnect could be added here if desired
+        };
+      }
+
+      function disconnectLogSocket() {
+        if (logSocket) {
+          logSocket.close();
+          logSocket = null;
+          console.log("Log WebSocket intentionally disconnected");
+        }
+      }
+
+      // Function to handle bulk light control button clicks
+      function setupBulkControlButtons() {
+        const controls = [
+          {
+            id: "btn-all-on",
+            path: `${apiBasePath}/lights/all/on`,
+            method: "POST",
+            name: "All Lights On",
+          },
+          {
+            id: "btn-all-off",
+            path: `${apiBasePath}/lights/all/off`,
+            method: "POST",
+            name: "All Lights Off",
+          },
+          {
+            id: "btn-interior-on",
+            path: `${apiBasePath}/lights/interior/on`,
+            method: "POST",
+            name: "Interior Lights On",
+          },
+          {
+            id: "btn-interior-off",
+            path: `${apiBasePath}/lights/interior/off`,
+            method: "POST",
+            name: "Interior Lights Off",
+          },
+          {
+            id: "btn-exterior-on",
+            path: `${apiBasePath}/lights/exterior/on`,
+            method: "POST",
+            name: "Exterior Lights On",
+          },
+          {
+            id: "btn-exterior-off",
+            path: `${apiBasePath}/lights/exterior/off`,
+            method: "POST",
+            name: "Exterior Lights Off",
+          },
+        ];
+
+        controls.forEach((control) => {
+          const button = document.getElementById(control.id);
+          if (button) {
+            button.addEventListener("click", () => {
+              const originalText = button.innerHTML;
+              button.disabled = true;
+              button.innerHTML =
+                '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+
+              fetch(control.path, { method: control.method })
+                .then((response) => {
+                  if (!response.ok) {
+                    return response.json().then((err) => {
+                      throw new Error(
+                        `HTTP error ${response.status}: ${
+                          err.detail || response.statusText
+                        }`
+                      );
+                    });
+                  }
+                  return response.json();
+                })
+                .then((data) => {
+                  console.log(`Command ${control.name} successful:`, data);
+                  if (data.errors && data.errors.length > 0) {
+                    showToast(
+                      `${control.name}: ${data.lights_commanded} commanded with ${data.errors.length} errors. Check console.`,
+                      "warning"
+                    );
+                    console.warn(
+                      `Bulk action '${control.name}' errors:`,
+                      data.errors
+                    );
+                  } else {
+                    showToast(
+                      `${control.name}: ${data.lights_commanded} lights commanded.`,
+                      "success"
+                    );
+                  }
+                  console.info(
+                    `Bulk Action Details - ${control.name}:\nAction: ${data.action}\nStatus: ${data.status}\nProcessed: ${data.lights_processed}\nCommanded: ${data.lights_commanded}`
+                  );
+                })
+                .catch((error) => {
+                  console.error(`Command ${control.name} failed:`, error);
+                  showToast(
+                    `Failed to execute ${control.name}. Error: ${error.message}`,
+                    "error"
+                  );
+                })
+                .finally(() => {
+                  button.disabled = false;
+                  button.innerHTML = originalText;
+                });
+            });
+          } else {
+            console.warn(
+              `Button with ID ${control.id} not found for bulk control setup.`
+            );
+          }
+        });
+      }
+
+      fetch("/api/lights")
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          lightsLoadingMessage.classList.add("hidden");
+          for (const entity of Object.values(data)) {
+            lightStates[entity.entity_id] = entity;
+          }
+
+          const areas = new Set(
+            Object.values(lightStates).map(
+              (e) => e?.suggested_area || "Unknown"
+            )
+          );
+          for (const area of [...areas].sort()) {
+            const opt = document.createElement("option");
+            opt.value = area;
+            opt.textContent = area;
+            filter.appendChild(opt);
+          }
+
+          renderGroupedLights();
+        })
+        .catch((error) => {
+          console.error("Failed to fetch lights:", error);
+          lightsLoadingMessage.textContent =
+            "Error loading lights. Please check console.";
+          lightsLoadingMessage.classList.remove("hidden");
+          lightsLoadingMessage.classList.add("text-red-500");
+        });
+
+      document.querySelectorAll(".nav-link").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const view = btn.getAttribute("data-view");
+
+          // If a main view navigation occurs, and logs are open, ensure logs remain visible
+          // The pinned log pane is independent of view sections now.
+
+          document
+            .querySelectorAll(".view-section")
+            .forEach((sec) => sec.classList.add("hidden"));
+          const targetView = document.getElementById(`${view}-view`);
+          if (targetView) {
+            targetView.classList.remove("hidden");
+          } else {
+            console.error(`View section not found: ${view}-view`);
+            const homeViewFallback = document.getElementById("home-view");
+            if (homeViewFallback) homeViewFallback.classList.remove("hidden");
+            // If home is fallback, ensure its nav link is active
+            const homeNavLinkFallback = document.querySelector(
+              '.nav-link[data-view="home"]'
+            );
+            if (homeNavLinkFallback) {
+              document
+                .querySelectorAll(".nav-link")
+                .forEach((b) => b.classList.remove("active-nav"));
+              homeNavLinkFallback.classList.add("active-nav");
+            }
+            return;
+          }
+
+          document
+            .querySelectorAll(".nav-link")
+            .forEach((b) => b.classList.remove("active-nav"));
+          btn.classList.add("active-nav");
+
+          // Remove specific logic for 'logs' view as it's now pinned
+          // if (view === 'logs') { ... } else { disconnectLogSocket(); ... }
+
+          if (view === "mapping") {
+            fetch("/api/config/device_mapping")
+              .then((res) => {
+                if (!res.ok)
+                  throw new Error(
+                    `HTTP error! status: ${res.status} - ${res.statusText}`
+                  );
+                return res.text();
+              })
+              .then((text) => {
+                document.getElementById("mapping-content").textContent = text;
+              })
+              .catch((err) => {
+                console.error("Failed to fetch device_mapping.yml:", err);
+                document.getElementById(
+                  "mapping-content"
+                ).textContent = `Error: Could not load device_mapping.yml.\n${err.message}`;
+              });
+          } else if (view === "spec") {
+            fetch("/api/config/rvc_spec")
+              .then((res) => {
+                if (!res.ok)
+                  throw new Error(
+                    `HTTP error! status: ${res.status} - ${res.statusText}`
+                  );
+                return res.text();
+              })
+              .then((text) => {
+                document.getElementById("spec-content").textContent = text;
+              })
+              .catch((err) => {
+                console.error("Failed to fetch rvc.json:", err);
+                document.getElementById(
+                  "spec-content"
+                ).textContent = `Error: Could not load rvc.json.\n${err.message}`;
+              });
+            fetch("/api/config/rvc_spec_metadata")
+              .then((res) => {
+                if (!res.ok)
+                  throw new Error(
+                    `HTTP error! status: ${res.status} - ${res.statusText}`
+                  );
+                return res.json();
+              })
+              .then((data) => {
+                const metadataDiv = document.getElementById("spec-metadata");
+                if (data.version && data.spec_document) {
+                  metadataDiv.innerHTML = `
+                    <p><strong>Version:</strong> ${data.version}</p>
+                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
+                  `;
+                } else {
+                  metadataDiv.textContent = "Could not load spec metadata.";
+                }
+              })
+              .catch((err) => {
+                console.error("Failed to fetch rvc.json metadata:", err);
+                document.getElementById(
+                  "spec-metadata"
+                ).textContent = `Error: Could not load spec metadata. ${err.message}`;
+              });
+          } else if (view === "unmapped") {
+            const container = document.getElementById(
+              "unmapped-entries-container"
+            );
+            const loadingMsg = document.getElementById(
+              "unmapped-loading-message"
+            );
+            loadingMsg.classList.remove("hidden");
+            container.innerHTML = ""; // Clear previous entries
+            container.appendChild(loadingMsg);
+
+            fetch("/api/unmapped_entries")
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error(
+                    `HTTP error! status: ${response.status} - ${response.statusText}`
+                  );
+                }
+                return response.json();
+              })
+              .then((data) => {
+                loadingMsg.classList.add("hidden");
+                if (Object.keys(data).length === 0) {
+                  container.innerHTML =
+                    '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
+                  return;
+                }
+
+                for (const [key, entry] of Object.entries(data)) {
+                  const entryDiv = document.createElement("div");
+                  entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow";
+
+                  let decodedSignalsHtml = "N/A";
+                  if (
+                    entry.decoded_signals &&
+                    Object.keys(entry.decoded_signals).length > 0
+                  ) {
+                    decodedSignalsHtml =
+                      '<ul class="list-disc list-inside pl-4 text-sm">';
+                    for (const [sigKey, sigValue] of Object.entries(
+                      entry.decoded_signals
+                    )) {
+                      decodedSignalsHtml += `<li><strong>${sigKey}:</strong> ${sigValue}</li>`;
+                    }
+                    decodedSignalsHtml += "</ul>";
+                  } else if (entry.decoded_signals) {
+                    decodedSignalsHtml =
+                      '<span class="text-gray-500">No signals decoded (PGN might be complex or data invalid).</span>';
+                  }
+
+                  let suggestionsHtml = "";
+                  if (entry.suggestions && entry.suggestions.length > 0) {
+                    suggestionsHtml =
+                      '<div class="mt-3"><p class="font-semibold mb-1 text-blue-300">Mapping Suggestions (other instances of this DGN):</p><ul class="list-disc list-inside pl-4 text-sm">';
+                    entry.suggestions.forEach((sugg) => {
+                      suggestionsHtml += `<li>Instance <strong>${
+                        sugg.instance
+                      }</strong> mapped to: <strong>${
+                        sugg.name
+                      }</strong> (Area: ${sugg.suggested_area || "N/A"})</li>`;
+                    });
+                    suggestionsHtml += "</ul></div>";
+                  }
+
+                  const yamlSuggestion = generateYamlSuggestion(entry);
+
+                  entryDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
+                      <p><strong>PGN (from ArbID):</strong> ${entry.pgn_hex} ${
+                    entry.pgn_name ? `(${entry.pgn_name})` : ""
+                  }</p>
+                      <p><strong>DGN (for mapping):</strong> ${entry.dgn_hex} ${
+                    entry.dgn_name ? `(${entry.dgn_name})` : ""
+                  }</p>
+                      <p><strong>Instance:</strong> ${entry.instance}</p>
+                      <p><strong>Count:</strong> ${entry.count}</p>
+                      <p><strong>First Seen:</strong> ${new Date(
+                        entry.first_seen_timestamp * 1000
+                      ).toLocaleString()}</p>
+                      <p><strong>Last Seen:</strong> ${new Date(
+                        entry.last_seen_timestamp * 1000
+                      ).toLocaleString()}</p>
+                      <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${
+                        entry.last_data_hex
+                      }</code></p>
+                    </div>
+                    <div class="mb-3">
+                      <p class="font-semibold mb-1">Decoded Signals (from PGN ${
+                        entry.pgn_hex
+                      }):</p>
+                      ${decodedSignalsHtml}
+                    </div>
+                    ${suggestionsHtml}
+                    <div>
+                      <p class="font-semibold mt-3 mb-1">Suggested device_mapping.yml entry:</p>
+                      <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
+                      <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
+                    </div>
+                  `;
+                  container.appendChild(entryDiv);
+                }
+                // Add event listeners to new copy buttons
+                container
+                  .querySelectorAll(".copy-yaml-btn")
+                  .forEach((button) => {
+                    button.addEventListener("click", (event) => {
+                      const yamlText =
+                        event.target.previousElementSibling.querySelector(
+                          "code"
+                        ).innerText;
+                      navigator.clipboard
+                        .writeText(yamlText)
+                        .then(() => {
+                          event.target.textContent = "Copied!";
+                          showToast("YAML copied to clipboard!", "success");
+                          setTimeout(() => {
+                            event.target.textContent = "Copy YAML";
+                          }, 2000);
+                        })
+                        .catch((err) => {
+                          console.error("Failed to copy YAML: ", err);
+                          showToast("Failed to copy YAML.", "error");
+                          event.target.textContent = "Failed to copy";
+                          setTimeout(() => {
+                            event.target.textContent = "Copy YAML";
+                          }, 2000);
+                        });
+                    });
+                  });
+              })
+              .catch((error) => {
+                console.error("Error fetching unmapped entries:", error);
+                loadingMsg.classList.add("hidden");
+                container.innerHTML = `<p class="text-red-500">Error loading unmapped entries: ${error.message}</p>`;
+              });
+          }
+        });
+      });
+
+      // Function to generate YAML suggestion
+      function generateYamlSuggestion(entry) {
+        const dgnKey = entry.dgn_hex; // Use DGN for the mapping file key
+        const instanceKey = String(entry.instance); // Instance ID
+
+        // Create a sanitized entity_id suggestion
+        const dgnForId = dgnKey.toLowerCase();
+        const instanceForId = instanceKey
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, ""); // Basic sanitize
+        let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
+
+        let yaml = `# Suggested entry for DGN: ${dgnKey}${
+          entry.dgn_name ? " (" + entry.dgn_name + ")" : ""
+        }, Instance: ${instanceKey}\n`;
+        if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
+          yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${
+            entry.pgn_name ? " (" + entry.pgn_name + ")" : ""
+          }\n`;
+        }
+        yaml += `# First seen: ${new Date(
+          entry.first_seen_timestamp * 1000
+        ).toLocaleString()}\n`;
+        yaml += `# Last seen: ${new Date(
+          entry.last_seen_timestamp * 1000
+        ).toLocaleString()}\n`;
+        yaml += `# Count: ${entry.count}\n`;
+        yaml += `# Last Data: ${entry.last_data_hex}\n`;
+
+        if (
+          entry.decoded_signals &&
+          Object.keys(entry.decoded_signals).length > 0
+        ) {
+          yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
+          for (const [key, value] of Object.entries(entry.decoded_signals)) {
+            yaml += `#   ${key}: ${value}\n`;
+          }
+        }
+        if (entry.spec_entry && entry.spec_entry.name) {
+          yaml += `# Matched Spec Entry Name (for DGN): ${entry.spec_entry.name}\n`;
+        }
+        yaml += `\n`; // Blank line for readability before the YAML structure
+
+        // Start of the structured YAML suggestion
+        yaml += `${dgnKey}:\n`;
+        yaml += `  ${instanceKey}:\n`; // Instance ID as a key (e.g., 255: or "default":)
+        yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
+        yaml += `      friendly_name: "Unmapped ${
+          entry.dgn_name || dgnKey
+        } Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
+        yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
+        yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
+        yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
+        yaml += `      # --- Optional fields based on device_type and system needs ---\n`;
+        yaml += `      # interface: canX # TODO: Specify CAN interface if known (e.g., can0, can1)\n`;
+        yaml += `      # status_dgn: '${dgnKey}' # Status DGN is typically this DGN key\n`;
+        yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status DGN, specify command PGN\n`;
+        yaml += `      # group_mask: '0xXX' # TODO: If part of a command/status group\n`;
+        yaml += `      # --- Example for using a YAML template (if defined in your mapping file) ---\n`;
+        yaml += `      # <<: *switchable_light  # For on/off lights, if &switchable_light template exists\n`;
+        yaml += `      # <<: *dimmable_light   # For dimmable lights, if &dimmable_light template exists\n`;
+
+        return yaml;
+      }
+
+      // Sidebar toggle logic
+      const sidebar = document.getElementById("sidebar");
+      const mobileMenuButton = document.getElementById("mobileMenuButton");
+      const closeSidebarButton = document.getElementById("closeSidebarButton");
+      const toggleSidebarDesktopButton = document.getElementById(
+        "toggleSidebarDesktop"
+      );
+      const desktopSidebarVisibleKey = "desktopSidebarVisible";
+      const sidebarNavContent = document.getElementById("sidebarNavContent");
+
+      function setDesktopSidebarVisible(visible) {
+        localStorage.setItem(desktopSidebarVisibleKey, visible);
+        if (visible) {
+          // EXPANDING
+          sidebar.classList.remove("md:w-16"); // Remove collapsed width
+          sidebar.classList.add("md:w-64"); // Add expanded width
+          mainContent.classList.remove("md:ml-16");
+          mainContent.classList.add("md:ml-64");
+          toggleSidebarDesktopButton.innerHTML =
+            '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
+          if (sidebarNavContent) sidebarNavContent.classList.remove("hidden");
+          sidebar.classList.remove("sidebar-collapsed-hoverable"); // Remove hover indication class
+        } else {
+          // COLLAPSING
+          sidebar.classList.remove("md:w-64"); // Remove expanded width
+          sidebar.classList.add("md:w-16"); // Add collapsed width (e.g., 4rem)
+          mainContent.classList.remove("md:ml-64");
+          mainContent.classList.add("md:ml-16"); // Adjust main content margin to collapsed width
+          toggleSidebarDesktopButton.innerHTML =
+            '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
+          if (sidebarNavContent) sidebarNavContent.classList.add("hidden");
+          sidebar.classList.add("sidebar-collapsed-hoverable"); // Add hover indication class
+        }
+        adjustPinnedLogsLayout(); // Adjust logs bar layout after sidebar change
+      }
+
+      // Mobile sidebar toggle
+      mobileMenuButton.addEventListener("click", () => {
+        sidebar.classList.remove("-translate-x-full");
+        sidebar.classList.add("translate-x-0");
+        // Optionally add an overlay for mobile
+        // const overlay = document.createElement('div');
+        // overlay.id = 'sidebar-overlay';
+        // overlay.className = 'fixed inset-0 bg-black opacity-50 z-30 md:hidden';
+        // document.body.appendChild(overlay);
+        // overlay.addEventListener('click', () => toggleMobileSidebar(false));
+      });
+
+      closeSidebarButton.addEventListener("click", () => {
+        sidebar.classList.add("-translate-x-full");
+        sidebar.classList.remove("translate-x-0");
+        // const overlay = document.getElementById('sidebar-overlay');
+        // if (overlay) overlay remove();
+      });
+
+      // Desktop sidebar toggle
+      toggleSidebarDesktopButton.addEventListener("click", (event) => {
+        event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
+        const isVisible = sidebar.classList.contains("md:w-64"); // Check if expanded
+        setDesktopSidebarVisible(!isVisible);
+      });
+
+      // Allow clicking the entire collapsed sidebar pane to expand it on desktop
+      sidebar.addEventListener("click", () => {
+        const isCollapsedDesktop =
+          window.innerWidth >= 768 && sidebar.classList.contains("md:w-16");
+        if (isCollapsedDesktop) {
+          // If the sidebar is collapsed in desktop view, clicking on it should expand it.
+          // The toggleSidebarDesktopButton also calls setDesktopSidebarVisible(true) when clicked in this state.
+          // Calling setDesktopSidebarVisible(true) multiple times is handled gracefully by the function.
+          setDesktopSidebarVisible(true);
+        }
+      });
+
+      // Initialize sidebar state from localStorage for desktop
+      const storedState = localStorage.getItem(desktopSidebarVisibleKey);
+      if (storedState === "false") {
+        setDesktopSidebarVisible(false);
+      } else {
+        // null, 'true', or any other value defaults to visible
+        setDesktopSidebarVisible(true);
+      }
+
+      // Close mobile sidebar when a nav link is clicked
+      document.querySelectorAll("#sidebar .nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.innerWidth < 768) {
+            // Tailwind's 'md' breakpoint
+            sidebar.classList.add("-translate-x-full");
+            sidebar.classList.remove("translate-x-0");
+            // const overlay = document.getElementById('sidebar-overlay');
+            // if (overlay) overlay remove();
+          }
+        });
+      });
+
+      // Set default view and initialize components
+      document.addEventListener("DOMContentLoaded", () => {
+        // Set "Home" as the default view
+        document
+          .querySelectorAll(".view-section")
+          .forEach((sec) => sec.classList.add("hidden"));
+        const homeView = document.getElementById("home-view");
+        const homeNavLink = document.querySelector(
+          '.nav-link[data-view="home"]'
+        );
+
+        if (homeView) {
+          homeView.classList.remove("hidden");
+          document
+            .querySelectorAll(".nav-link")
+            .forEach((b) => b.classList.remove("active-nav"));
+          if (homeNavLink) homeNavLink.classList.add("active-nav");
+        } else {
+          // Fallback if home-view is not found, show the first available view (e.g. lights)
+          const lightsView = document.getElementById("lights-view");
+          const lightsNavLink = document.querySelector(
+            '.nav-link[data-view="lights"]'
+          );
+          if (lightsView) lightsView.classList.remove("hidden");
+          if (lightsNavLink) lightsNavLink.classList.add("active-nav");
+        }
+
+        setupBulkControlButtons(); // Setup event listeners for the new buttons
+
+        // Any other initializations that need to happen after DOM is ready
+        // For example, if you still need to fetch initial data for other views:
+        // fetchInitialDataForOtherViews();
+      });
+
+      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+      window.addEventListener("resize", adjustPinnedLogsLayout);
+
+      const themeSwitcher = document.getElementById("themeSwitcher");
+      const THEME_KEY = "selectedTheme";
+
+      // Toast Notification Function
+      function showToast(message, type = "info", duration = 5000) {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+
+        const toast = document.createElement("div");
+        toast.className = `toast-message toast-${type}`;
+
+        const messageSpan = document.createElement("span");
+        messageSpan.textContent = message;
+        toast.appendChild(messageSpan);
+
+        const closeButton = document.createElement("button");
+        closeButton.className = "toast-close-btn";
+        closeButton.innerHTML = "&times;"; // MDI icon could be used here too e.g. <i class="mdi mdi-close"></i>
+        closeButton.onclick = () => {
+          toast.classList.remove("show");
+          setTimeout(() => toast.remove(), 300); // Remove after transition
+        };
+        toast.appendChild(closeButton);
+
+        container.appendChild(toast);
+
+        // Trigger the animation
+        setTimeout(() => {
+          toast.classList.add("show");
+        }, 10); // Small delay to ensure transition is applied
+
+        // Auto-remove toast
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => toast.remove(), 300); // Remove from DOM after transition
+        }, duration);
+      }
+
+      function applyTheme(theme) {
+        document.body.classList.remove(
+          "theme-default",
+          "theme-dark",
+          "theme-light",
+          "theme-catppuccin-mocha",
+          "theme-catppuccin-latte"
+        );
+        document.body.classList.add(`theme-${theme}`);
+        localStorage.setItem(THEME_KEY, theme);
+        themeSwitcher.value = theme; // Ensure dropdown reflects the current theme
+      }
+
+      themeSwitcher.addEventListener("change", (event) => {
+        applyTheme(event.target.value);
+      });
+
+      // Load saved theme on page load
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme) {
+        applyTheme(savedTheme);
+      } else {
+        applyTheme("default"); // Default to 'default' theme if nothing is saved
+      }
+
+      // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
+      window.addEventListener("resize", adjustPinnedLogsLayout);
+    </script>
+  </body>
+</html>
