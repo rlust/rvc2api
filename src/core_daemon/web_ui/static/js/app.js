@@ -1143,8 +1143,7 @@
       sidebarNavContent.classList.add(CLASS_HIDDEN); // Hide nav text when collapsed
       sidebar.classList.add("sidebar-collapsed-hoverable");
     }
-    // Adjust pinned logs layout if it's visible
-    // adjustPinnedLogsLayout(); // This function would need to be defined if used
+    adjustPinnedLogsLayout(); // Adjust pinned logs layout if it's visible
   }
 
   /**
@@ -1323,6 +1322,7 @@
         }
         disconnectLogSocket();
       }
+      adjustPinnedLogsLayout();
     }
 
     // Initial state (no animation)
@@ -1419,6 +1419,7 @@
         pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
         mainContent.style.paddingBottom = currentExpandedLogsHeight;
       }
+      adjustPinnedLogsLayout();
     });
   }
 
@@ -1531,6 +1532,28 @@
       areaFilter.value = currentValue;
     } else {
       areaFilter.value = "All";
+    }
+  }
+
+  /**
+   * Adjusts the pinned logs drawer position so it does not cover the sidebar.
+   * Sets the left offset to match the sidebar width (expanded/collapsed) on desktop.
+   * On mobile, sets left to 0.
+   * Should be called on sidebar expand/collapse, window resize, and after toggling logs.
+   */
+  function adjustPinnedLogsLayout() {
+    if (!pinnedLogsContainer || !sidebar) return;
+    if (window.innerWidth < MD_BREAKPOINT_PX) {
+      // Mobile: logs bar spans full width
+      pinnedLogsContainer.style.left = "0px";
+    } else {
+      // Desktop: align with sidebar
+      const isSidebarCollapsedDesktop = sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
+      if (isSidebarCollapsedDesktop) {
+        pinnedLogsContainer.style.left = "4rem"; // Collapsed width
+      } else {
+        pinnedLogsContainer.style.left = "16rem"; // Expanded width
+      }
     }
   }
 
@@ -1678,6 +1701,7 @@
         }
         isPinnedLogsVisible = !isOpen;
         // TODO: Save pinned logs state (open/closed, height) to localStorage
+        adjustPinnedLogsLayout();
       };
       togglePinnedLogsButton.addEventListener("click", toggleLogs);
       pinnedLogsHeader.addEventListener("click", (e) => {
