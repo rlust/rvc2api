@@ -12,12 +12,16 @@
               href="{{ url_for('static', path='css/custom.css') }}" />
     </head>
     <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
+        <a href="#mainContent"
+           class="sr-only focus:not-sr-only focus:fixed focus:z-[9999] focus:top-0 focus:left-0 focus:bg-blue-600 focus:text-white focus:p-3">Skip to main content</a>
         <div id="toast-container" role="status" aria-live="polite"></div>
         <!-- Added ARIA roles -->
         <!-- Toast messages will appear here -->
         <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
             <div class="flex items-center">
                 <button id="mobileMenuButton"
+                        aria-expanded="false"
+                        aria-controls="sidebar"
                         class="md:hidden text-gray-300 hover:text-white mr-4">
                     <i class="mdi mdi-menu text-2xl" aria-hidden="true"></i>
                 </button>
@@ -43,13 +47,16 @@
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-lg font-semibold">Navigation</span>
                         <button id="closeSidebarButton"
+                                aria-expanded="true"
+                                aria-controls="sidebar"
                                 class="md:hidden text-gray-400 hover:text-white">
                             <i class="mdi mdi-close text-2xl" aria-hidden="true"></i>
                         </button>
                     </div>
                     <nav class="space-y-2">
                         <button data-view="home"
-                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
+                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav"
+                                aria-current="page">
                             <i class="mdi mdi-home-outline mr-2" aria-hidden="true"></i>Home
                         </button>
                         <button data-view="lights"
@@ -89,6 +96,8 @@
                 </div>
                 <div class="border-t border-gray-700 pt-4 text-center">
                     <button id="toggleSidebarDesktop"
+                            aria-expanded="true"
+                            aria-controls="sidebar"
                             class="text-gray-400 hover:text-gray-100 w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
                         <i class="mdi mdi-chevron-left text-xl" aria-hidden="true"></i>
                         <span class="ml-2">Collapse</span>
@@ -97,6 +106,7 @@
             </aside>
             <!-- Main content area -->
             <main id="mainContent"
+                  role="main"
                   class="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out md:ml-64">
                 <!-- Removed md:h-[calc(100vh-4rem)] -->
                 <!-- Home View / Dashboard -->
@@ -196,7 +206,7 @@
                             </select>
                         </div>
                     </div>
-                    <div id="light-grid" class="space-y-8">
+                    <div id="lights-content" class="space-y-8">
                         <p id="lights-loading-message">Loading lights...</p>
                     </div>
                 </section>
@@ -254,7 +264,10 @@ Loading rvc.json...</pre>
             <div id="pinnedLogsHeader"
                  class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
                 <span class="font-semibold text-gray-300 ml-2">Logs</span>
-                <button id="togglePinnedLogsBtn" class="text-gray-300 hover:text-white p-1">
+                <button id="togglePinnedLogsBtn"
+                        aria-expanded="false"
+                        aria-controls="pinnedLogsContent"
+                        class="text-gray-300 hover:text-white p-1">
                     <i class="mdi mdi-chevron-up text-2xl" aria-hidden="true"></i>
                 </button>
             </div>
@@ -337,13 +350,12 @@ Loading rvc.json...</pre>
         const CLASS_TEXT_YELLOW_400 = "text-yellow-400";
 
         // DOM Element Cache
+        const mainContent = document.getElementById("mainContent");
         const sidebar = document.getElementById("sidebar");
-        const toggleSidebarDesktop = document.getElementById(
+        const toggleSidebarDesktopButton = document.getElementById(
           "toggleSidebarDesktop"
         );
-        const toggleSidebarMobile = document.getElementById(
-          "toggleSidebarMobile"
-        );
+        const mobileMenuButton = document.getElementById("mobileMenuButton");
         const navLinks = document.querySelectorAll(".nav-link");
         const views = document.querySelectorAll(".view-section");
         const homeView = document.getElementById("home-view");
@@ -354,40 +366,37 @@ Loading rvc.json...</pre>
         const specView = document.getElementById("spec-view");
         const specContent = document.getElementById("spec-content");
         const specMetadataDiv = document.getElementById("spec-metadata");
-        const unmappedEntriesView = document.getElementById(
-          "unmapped-entries-view"
-        );
+        const unmappedEntriesView = document.getElementById("unmapped-view"); // Corrected ID
         const unmappedEntriesContent = document.getElementById(
-          "unmapped-entries-content"
-        );
+          "unmapped-entries-container"
+        ); // Corrected ID
         const unknownPgnsView = document.getElementById("unknown-pgns-view");
         const unknownPgnsContent = document.getElementById(
-          "unknown-pgns-content"
-        );
-        const apiStatusView = document.getElementById("api-status-view");
-        const apiStatusContent = document.getElementById("api-status-content");
-        const appHealthView = document.getElementById("app-health-view");
-        const appHealthContent = document.getElementById("app-health-content");
-        const canStatusView = document.getElementById("can-status-view");
-        const canStatusContent = document.getElementById("can-status-content");
+          "unknown-pgns-container"
+        ); // Corrected ID
+        const apiStatusContent = document.getElementById(
+          "api-status-container"
+        ); // Corrected ID
+        const appHealthContent = document.getElementById(
+          "app-health-container"
+        ); // Corrected ID
+        const canStatusContent = document.getElementById(
+          "can-status-container"
+        ); // Corrected ID
         const logStream = document.getElementById("log-stream");
-        const logFilterInput = document.getElementById("log-filter");
         const logLevelSelect = document.getElementById("log-level");
-        const clearLogButton = document.getElementById("clear-log");
-        const logAutoScrollCheckbox =
-          document.getElementById("log-auto-scroll");
-        const themeSelector = document.getElementById("theme-selector");
+        const logPauseButton = document.getElementById("log-pause"); // Added
+        const logResumeButton = document.getElementById("log-resume"); // Added
+        const logClearButton = document.getElementById("log-clear"); // Corrected ID
+        const themeSwitcher = document.getElementById("themeSwitcher"); // Corrected ID
         const pinnedLogsContainer = document.getElementById(
           "pinnedLogsContainer"
         );
         const pinnedLogsContent = document.getElementById("pinnedLogsContent");
         const pinnedLogsHeader = document.getElementById("pinnedLogsHeader");
-        const togglePinnedLogsButton =
-          document.getElementById("togglePinnedLogs");
-        const clearPinnedLogsButton = document.getElementById(
-          "clearPinnedLogsButton"
-        );
-        const appVersionSpan = document.getElementById("appVersion");
+        const togglePinnedLogsButton = document.getElementById(
+          "togglePinnedLogsBtn"
+        ); // Corrected ID
         const toastContainer = document.getElementById("toast-container");
 
         let logSocket;
@@ -398,6 +407,8 @@ Loading rvc.json...</pre>
         let isResizingPinnedLogs = false;
         let originalContainerTransition;
         let currentLogLevel = LOG_LEVELS.INFO;
+        let isLogPaused = false; // Added
+        let entitySocket; // Added
 
         // Helper Functions
         const createDomElement = (tag, options = {}) => {
@@ -453,6 +464,7 @@ Loading rvc.json...</pre>
         };
 
         function updateApiServerView(data) {
+          if (!apiStatusContent) return;
           apiStatusContent.innerHTML = ""; // Clear previous content
           if (data && data.status) {
             const ul = createDomElement("ul", {
@@ -482,6 +494,7 @@ Loading rvc.json...</pre>
         }
 
         function updateApplicationHealthView(data) {
+          if (!appHealthContent) return;
           appHealthContent.innerHTML = ""; // Clear previous content
           if (data && Object.keys(data).length > 0) {
             const ul = createDomElement("ul", {
@@ -511,6 +524,7 @@ Loading rvc.json...</pre>
         }
 
         function updateCanStatusView(data) {
+          if (!canStatusContent) return;
           canStatusContent.innerHTML = ""; // Clear previous content
           if (data && Object.keys(data).length > 0) {
             const ul = createDomElement("ul", { className: "space-y-4" });
@@ -597,13 +611,15 @@ Loading rvc.json...</pre>
             successCallback: updateCanStatusView,
             errorCallback: (error) => {
               console.error("Failed to fetch CAN status:", error);
-              canStatusContent.textContent = `Error loading CAN status: ${error.message}`;
+              if (canStatusContent)
+                canStatusContent.textContent = `Error loading CAN status: ${error.message}`;
             },
             loadingElement: canStatusContent,
           });
         }
 
         function renderGroupedLights(areas, entities) {
+          if (!lightsContent) return;
           lightsContent.innerHTML = ""; // Clear previous content
 
           if (Object.keys(areas).length === 0 && entities.length > 0) {
@@ -752,12 +768,20 @@ Loading rvc.json...</pre>
             }
             const result = await response.json();
             // console.log(`Light service call successful for ${entityId}:`, result);
+            showToast(
+              result.message || `${service} call for ${entityId} successful.`,
+              "success"
+            ); // Added toast
             return result;
           } catch (error) {
             console.error(
               `Failed to call light service for ${entityId}:`,
               error
             );
+            showToast(
+              `Error calling ${service} for ${entityId}: ${error.message}`,
+              "error"
+            ); // Added toast
             throw error;
           }
         }
@@ -770,9 +794,11 @@ Loading rvc.json...</pre>
             // Mobile: close sidebar on nav
             if (
               window.innerWidth < MD_BREAKPOINT_PX &&
-              !sidebar.classList.contains(CLASS_HIDDEN)
+              sidebar && // Added null check
+              !sidebar.classList.contains("-translate-x-full") // Corrected class check
             ) {
-              sidebar.classList.add(CLASS_HIDDEN);
+              sidebar.classList.add("-translate-x-full");
+              sidebar.classList.remove("translate-x-0");
             }
 
             // console.log('Navigating to view:', view); // REMOVED
@@ -787,6 +813,9 @@ Loading rvc.json...</pre>
             if (activeView) {
               activeView.classList.remove(CLASS_HIDDEN);
               currentView = view;
+              // Update aria-current for navigation links
+              navLinks.forEach((l) => l.removeAttribute("aria-current"));
+              this.setAttribute("aria-current", "page");
               // console.log(`Current view set to: ${currentView}`);
 
               // Specific fetch logic for views that need it
@@ -798,13 +827,15 @@ Loading rvc.json...</pre>
                       if (data.areas && data.entities) {
                         renderGroupedLights(data.areas, data.entities);
                       } else {
-                        lightsContent.textContent =
-                          "Error: Invalid lights data structure.";
+                        if (lightsContent)
+                          lightsContent.textContent =
+                            "Error: Invalid lights data structure.";
                       }
                     },
                     errorCallback: (error) => {
                       console.error("Failed to fetch lights:", error);
-                      lightsContent.textContent = `Error loading lights: ${error.message}`;
+                      if (lightsContent)
+                        lightsContent.textContent = `Error loading lights: ${error.message}`;
                     },
                     loadingElement: lightsContent, // Optional: show loading state in lightsContent
                   });
@@ -813,12 +844,13 @@ Loading rvc.json...</pre>
                   fetchData("/api/mapping/content", {
                     responseType: "text",
                     successCallback: (data) => {
-                      mappingContent.textContent = data;
-                      specMetadataDiv.innerHTML = ""; // Clear spec metadata when viewing mapping
+                      if (mappingContent) mappingContent.textContent = data;
+                      if (specMetadataDiv) specMetadataDiv.innerHTML = ""; // Clear spec metadata when viewing mapping
                     },
                     errorCallback: (error) => {
                       console.error("Failed to fetch mapping data:", error);
-                      mappingContent.textContent = `Error loading mapping: ${error.message}`;
+                      if (mappingContent)
+                        mappingContent.textContent = `Error loading mapping: ${error.message}`;
                     },
                     loadingElement: mappingContent,
                   });
@@ -827,16 +859,18 @@ Loading rvc.json...</pre>
                   fetchData("/api/specification/content", {
                     responseType: "text",
                     successCallback: (data) => {
-                      specContent.textContent = data;
+                      if (specContent) specContent.textContent = data;
                     },
                     errorCallback: (error) => {
                       console.error("Failed to fetch spec data:", error);
-                      specContent.textContent = `Error loading specification: ${error.message}`;
+                      if (specContent)
+                        specContent.textContent = `Error loading specification: ${error.message}`;
                     },
                     loadingElement: specContent,
                   });
                   fetchData("/api/specification/metadata", {
                     successCallback: (data) => {
+                      if (!specMetadataDiv) return;
                       specMetadataDiv.innerHTML = ""; // Clear previous content
 
                       if (data.version || data.spec_document) {
@@ -887,6 +921,7 @@ Loading rvc.json...</pre>
                 case "unmapped":
                   fetchData("/api/mapping/unmapped", {
                     successCallback: (data) => {
+                      if (!unmappedEntriesContent) return;
                       unmappedEntriesContent.innerHTML = ""; // Clear
                       if (data && data.length > 0) {
                         data.forEach((entry) => {
@@ -989,7 +1024,8 @@ Loading rvc.json...</pre>
                     },
                     errorCallback: (error) => {
                       console.error("Failed to fetch unmapped entries:", error);
-                      unmappedEntriesContent.textContent = `Error loading unmapped entries: ${error.message}`;
+                      if (unmappedEntriesContent)
+                        unmappedEntriesContent.textContent = `Error loading unmapped entries: ${error.message}`;
                     },
                     loadingElement: unmappedEntriesContent,
                   });
@@ -997,6 +1033,7 @@ Loading rvc.json...</pre>
                 case "unknown-pgns":
                   fetchData("/api/mapping/unknown_pgns", {
                     successCallback: (data) => {
+                      if (!unknownPgnsContent) return;
                       unknownPgnsContent.innerHTML = ""; // Clear
                       if (data && data.length > 0) {
                         data.forEach((entry) => {
@@ -1050,7 +1087,8 @@ Loading rvc.json...</pre>
                     },
                     errorCallback: (error) => {
                       console.error("Failed to fetch unknown PGNs:", error);
-                      unknownPgnsContent.textContent = `Error loading unknown PGNs: ${error.message}`;
+                      if (unknownPgnsContent)
+                        unknownPgnsContent.textContent = `Error loading unknown PGNs: ${error.message}`;
                     },
                     loadingElement: unknownPgnsContent,
                   });
@@ -1060,7 +1098,8 @@ Loading rvc.json...</pre>
                     successCallback: updateApiServerView,
                     errorCallback: (error) => {
                       console.error("Failed to fetch API status:", error);
-                      apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+                      if (apiStatusContent)
+                        apiStatusContent.textContent = `Error loading API status: ${error.message}`;
                     },
                     loadingElement: apiStatusContent,
                   });
@@ -1073,7 +1112,8 @@ Loading rvc.json...</pre>
                         "Failed to fetch application health:",
                         error
                       );
-                      appHealthContent.textContent = `Error loading application health: ${error.message}`;
+                      if (appHealthContent)
+                        appHealthContent.textContent = `Error loading application health: ${error.message}`;
                     },
                     loadingElement: appHealthContent,
                   });
@@ -1107,13 +1147,19 @@ Loading rvc.json...</pre>
         }
 
         // Sidebar Toggle Logic
-        const mobileMenuButton = document.getElementById("mobileMenuButton");
         const closeSidebarButton =
           document.getElementById("closeSidebarButton");
         const desktopSidebarVisibleKey = "desktopSidebarVisible";
-        const sidebarNavContent = document.getElementById("sidebarNavContent");
+        const sidebarNavContent = document.getElementById("sidebarNavContent"); // Already cached, but ensure it's used if needed here
 
         function setDesktopSidebarVisible(visible) {
+          if (!sidebar || !mainContent || !toggleSidebarDesktopButton) {
+            // Added null checks
+            console.warn(
+              "Sidebar, main content, or toggle button not found. Cannot set visibility."
+            );
+            return;
+          }
           console.log(
             "[setDesktopSidebarVisible] Called with visible:",
             visible
@@ -1128,6 +1174,7 @@ Loading rvc.json...</pre>
             mainContent.classList.add("md:ml-64");
             toggleSidebarDesktopButton.innerHTML =
               '<i class="mdi mdi-chevron-left text-xl"></i> <span class="ml-2">Collapse</span>';
+            toggleSidebarDesktopButton.setAttribute("aria-expanded", "true");
             if (sidebarNavContent) sidebarNavContent.classList.remove("hidden");
             sidebar.classList.remove("sidebar-collapsed-hoverable"); // Remove hover indication class
           } else {
@@ -1139,6 +1186,7 @@ Loading rvc.json...</pre>
             mainContent.classList.add("md:ml-16"); // Adjust main content margin to collapsed width
             toggleSidebarDesktopButton.innerHTML =
               '<i class="mdi mdi-chevron-right text-xl"></i>'; // Icon only for collapsed state
+            toggleSidebarDesktopButton.setAttribute("aria-expanded", "false");
             if (sidebarNavContent) sidebarNavContent.classList.add("hidden");
             sidebar.classList.add("sidebar-collapsed-hoverable"); // Add hover indication class
           }
@@ -1154,64 +1202,90 @@ Loading rvc.json...</pre>
         }
 
         // Mobile sidebar toggle
-        mobileMenuButton.addEventListener("click", () => {
-          sidebar.classList.remove("-translate-x-full");
-          sidebar.classList.add("translate-x-0");
-          // Optionally add an overlay for mobile
-          // const overlay = document.createElement('div');
-          // overlay.id = 'sidebar-overlay';
-          // overlay.className = 'fixed inset-0 bg-black opacity-50 z-30 md:hidden';
-          // document.body.appendChild(overlay);
-          // overlay.addEventListener('click', () => toggleMobileSidebar(false));
-        });
+        if (mobileMenuButton && sidebar) {
+          // Added null checks
+          mobileMenuButton.addEventListener("click", () => {
+            sidebar.classList.remove("-translate-x-full");
+            sidebar.classList.add("translate-x-0");
+            mobileMenuButton.setAttribute("aria-expanded", "true"); // ARIA update
+          });
+        }
 
-        closeSidebarButton.addEventListener("click", () => {
-          sidebar.classList.add("-translate-x-full");
-          sidebar.classList.remove("translate-x-0");
-          // const overlay = document.getElementById('sidebar-overlay');
-          // if (overlay) overlay remove();
-        });
+        if (closeSidebarButton && sidebar) {
+          // Added null checks
+          closeSidebarButton.addEventListener("click", () => {
+            sidebar.classList.add("-translate-x-full");
+            sidebar.classList.remove("translate-x-0");
+            if (mobileMenuButton)
+              mobileMenuButton.setAttribute("aria-expanded", "false"); // ARIA update
+          });
+        }
 
         // Desktop sidebar toggle
-        toggleSidebarDesktopButton.addEventListener("click", (event) => {
-          event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
-          const isVisible = sidebar.classList.contains("md:w-64"); // Check if expanded
-          console.log(
-            "[SidebarToggle] Button clicked. Currently isVisible (expanded):",
-            isVisible
-          );
-          setDesktopSidebarVisible(!isVisible);
-        });
+        if (toggleSidebarDesktopButton && sidebar) {
+          // Added null checks
+          toggleSidebarDesktopButton.addEventListener("click", (event) => {
+            event.stopPropagation(); // Prevent click from bubbling to the parent sidebar element
+            const isVisible = sidebar.classList.contains("md:w-64"); // Check if expanded
+            console.log(
+              "[SidebarToggle] Button clicked. Currently isVisible (expanded):",
+              isVisible
+            );
+            setDesktopSidebarVisible(!isVisible);
+            toggleSidebarDesktopButton.setAttribute(
+              "aria-expanded",
+              String(!isVisible)
+            ); // ARIA update
+          });
+        }
 
         // Allow clicking the entire collapsed sidebar pane to expand it on desktop
-        sidebar.addEventListener("click", () => {
-          const isCollapsedDesktop =
-            window.innerWidth >= 768 && sidebar.classList.contains("md:w-16");
-          console.log(
-            "[SidebarClick] Sidebar area clicked. isCollapsedDesktop:",
-            isCollapsedDesktop
-          );
-          if (isCollapsedDesktop) {
-            setDesktopSidebarVisible(true);
-          }
-        });
+        if (sidebar) {
+          // Added null check
+          sidebar.addEventListener("click", () => {
+            const isCollapsedDesktop =
+              window.innerWidth >= MD_BREAKPOINT_PX &&
+              sidebar.classList.contains("md:w-16");
+            console.log(
+              "[SidebarClick] Sidebar area clicked. isCollapsedDesktop:",
+              isCollapsedDesktop
+            );
+            if (isCollapsedDesktop) {
+              setDesktopSidebarVisible(true);
+              if (toggleSidebarDesktopButton)
+                toggleSidebarDesktopButton.setAttribute(
+                  "aria-expanded",
+                  "true"
+                ); // ARIA update
+            }
+          });
+        }
 
         // Initialize sidebar state from localStorage for desktop
         const storedState = localStorage.getItem(desktopSidebarVisibleKey);
-        if (storedState === "false") {
-          setDesktopSidebarVisible(false);
-        } else {
-          // null, 'true', or any other value defaults to visible
-          setDesktopSidebarVisible(true);
+        const initialDesktopSidebarVisible = storedState !== "false"; // Default to true if not 'false'
+        setDesktopSidebarVisible(initialDesktopSidebarVisible);
+        if (toggleSidebarDesktopButton) {
+          // Added null check
+          toggleSidebarDesktopButton.setAttribute(
+            "aria-expanded",
+            String(initialDesktopSidebarVisible)
+          ); // ARIA update
         }
 
         // Close mobile sidebar when a nav link is clicked
         document.querySelectorAll("#sidebar .nav-link").forEach((link) => {
           link.addEventListener("click", () => {
-            if (window.innerWidth < 768) {
+            if (
+              window.innerWidth < MD_BREAKPOINT_PX &&
+              sidebar &&
+              mobileMenuButton
+            ) {
+              // Added null checks
               // Tailwind's 'md' breakpoint
               sidebar.classList.add("-translate-x-full");
               sidebar.classList.remove("translate-x-0");
+              mobileMenuButton.setAttribute("aria-expanded", "false"); // ARIA update
               // const overlay = document.getElementById('sidebar-overlay');
               // if (overlay) overlay remove();
             }
@@ -1224,26 +1298,37 @@ Loading rvc.json...</pre>
           document
             .querySelectorAll(".view-section")
             .forEach((sec) => sec.classList.add("hidden"));
-          const homeView = document.getElementById("home-view");
+          const homeViewElement = document.getElementById("home-view"); // Renamed to avoid conflict
           const homeNavLink = document.querySelector(
             '.nav-link[data-view="home"]'
           );
 
-          if (homeView) {
-            homeView.classList.remove("hidden");
-            document
-              .querySelectorAll(".nav-link")
-              .forEach((b) => b.classList.remove("active-nav"));
-            if (homeNavLink) homeNavLink.classList.add("active-nav");
+          if (homeViewElement) {
+            // Use renamed variable
+            homeViewElement.classList.remove("hidden"); // Use renamed variable
+            document.querySelectorAll(".nav-link").forEach((b) => {
+              b.classList.remove("active-nav");
+              b.removeAttribute("aria-current"); // Clear aria-current
+            });
+            if (homeNavLink) {
+              homeNavLink.classList.add("active-nav");
+              homeNavLink.setAttribute("aria-current", "page"); // Set aria-current
+            }
           } else {
             // Fallback if home-view is not found, show the first available view (e.g. lights)
-            const lightsView = document.getElementById("lights-view");
+            const lightsViewElement = document.getElementById("lights-view"); // Renamed
             const lightsNavLink = document.querySelector(
               '.nav-link[data-view="lights"]'
             );
-            if (lightsView) lightsView.classList.remove("hidden");
-            if (lightsNavLink) lightsNavLink.classList.add("active-nav");
+            if (lightsViewElement) lightsViewElement.classList.remove("hidden"); // Renamed
+            if (lightsNavLink) {
+              lightsNavLink.classList.add("active-nav");
+              lightsNavLink.setAttribute("aria-current", "page"); // Set aria-current
+            }
           }
+          // Connect WebSockets
+          connectLogSocket();
+          connectEntitySocket();
 
           // Any other initializations that need to happen after DOM is ready
           // For example, if you still need to fetch initial data for other views:
@@ -1352,7 +1437,8 @@ Loading rvc.json...</pre>
             successCallback: updateApiServerView,
             errorCallback: (error) => {
               console.error("Failed to fetch API status:", error);
-              apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+              if (apiStatusContent)
+                apiStatusContent.textContent = `Error loading API status: ${error.message}`;
             },
             loadingElement: apiStatusContent,
           });
@@ -1360,91 +1446,86 @@ Loading rvc.json...</pre>
             successCallback: updateApplicationHealthView,
             errorCallback: (error) => {
               console.error("Failed to fetch application health:", error);
-              appHealthContent.textContent = `Error loading application health: ${error.message}`;
+              if (appHealthContent)
+                appHealthContent.textContent = `Error loading application health: ${error.message}`;
             },
             loadingElement: appHealthContent,
           });
 
           // Setup periodic refresh for status sections (optional, adjust intervals as needed)
-          setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
+          setInterval(fetchCanStatus, CAN_STATUS_REFRESH_INTERVAL); // Refresh CAN status every 10 seconds
           setInterval(() => {
             fetchData("/api/status", {
               successCallback: updateApiServerView,
               errorCallback: (error) => {
                 console.error("Failed to fetch API status:", error);
-                apiStatusContent.textContent = `Error loading API status: ${error.message}`;
+                if (apiStatusContent)
+                  apiStatusContent.textContent = `Error loading API status: ${error.message}`;
               },
-              loadingElement: apiStatusContent,
+              loadingElement: apiStatusContent, // Loading element can be null if not needed for silent refresh
             });
-          }, 30000); // Refresh API status every 30 seconds
+          }, API_STATUS_REFRESH_INTERVAL); // Refresh API status every 30 seconds
           setInterval(() => {
             fetchData("/api/health", {
               successCallback: updateApplicationHealthView,
               errorCallback: (error) => {
                 console.error("Failed to fetch application health:", error);
-                appHealthContent.textContent = `Error loading application health: ${error.message}`;
+                if (appHealthContent)
+                  appHealthContent.textContent = `Error loading application health: ${error.message}`;
               },
-              loadingElement: appHealthContent,
+              loadingElement: appHealthContent, // Loading element can be null
             });
-          }, 30000); // Refresh App health every 30 seconds
+          }, APP_HEALTH_REFRESH_INTERVAL); // Refresh App health every 30 seconds
 
           // Add event listeners for log control buttons
-          const logPauseBtn = document.getElementById("log-pause");
-          const logResumeBtn = document.getElementById("log-resume");
-          const logClearBtn = document.getElementById("log-clear"); // Get clear button
+          // const logPauseBtn = document.getElementById("log-pause"); // Already cached as logPauseButton
+          // const logResumeBtn = document.getElementById("log-resume"); // Already cached as logResumeButton
+          // const logClearBtn = document.getElementById("log-clear"); // Already cached as logClearButton
 
-          if (logPauseBtn) {
-            logPauseBtn.addEventListener("click", () => {
+          if (logPauseButton) {
+            logPauseButton.addEventListener("click", () => {
               isLogPaused = true;
-              logPauseBtn.disabled = true;
-              logResumeBtn.disabled = false;
+              logPauseButton.disabled = true;
+              if (logResumeButton) logResumeButton.disabled = false;
               showToast("Log streaming paused.", "info");
             });
           }
 
-          if (logResumeBtn) {
-            logResumeBtn.addEventListener("click", () => {
+          if (logResumeButton) {
+            logResumeButton.addEventListener("click", () => {
               isLogPaused = false;
-              logPauseBtn.disabled = false;
-              logResumeBtn.disabled = true;
+              if (logPauseButton) logPauseButton.disabled = false;
+              logResumeButton.disabled = true;
               showToast("Log streaming resumed.", "info");
-              // If connection was closed and we are resuming, try to reconnect
               if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
                 connectLogSocket();
               }
             });
           }
 
-          if (logClearBtn) {
-            logClearBtn.addEventListener("click", () => {
-              logStream.innerHTML = "";
+          if (logClearButton) {
+            logClearButton.addEventListener("click", () => {
+              if (logStream) logStream.innerHTML = "";
               showToast("Logs cleared.", "info");
             });
           }
 
           // Add event listeners for log filters
-          const logLevelFilter = document.getElementById("log-level");
-          const logSearchInput = document.getElementById("log-search");
+          // const logLevelFilter = document.getElementById("log-level"); // Already cached as logLevelSelect
+          // const logSearchInput = document.getElementById("log-search"); // Already cached as logFilterInput
 
-          if (logLevelFilter) {
-            logLevelFilter.addEventListener("change", () => {
-              logStream.innerHTML = ""; // Clear logs when filter changes, as past logs might not match
-              // Or, re-filter existing logs if desired (more complex)
-              if (
-                logSocket &&
-                logSocket.readyState === WebSocket.OPEN &&
-                !isLogPaused
-              ) {
-                // If connected and not paused, new logs will adhere to the filter.
-                // Consider if a re-fetch or re-display of buffered/past logs is needed.
-              }
+          if (logLevelSelect) {
+            logLevelSelect.addEventListener("change", (event) => {
+              // Added event param
+              currentLogLevel = LOG_LEVELS[event.target.value]; // Update global log level
+              if (logStream) logStream.innerHTML = ""; // Clear logs when filter changes
+              // New logs will adhere. If past logs need re-filtering, it's more complex.
             });
           }
-          if (logSearchInput) {
-            logSearchInput.addEventListener("input", () => {
-              // Similar to level filter, might want to clear or re-filter existing logs.
-              // For simplicity, new logs will be filtered. Real-time re-filtering is more complex.
-              // Throttling this event might be good for performance if re-filtering live.
+          if (logFilterInput) {
+            logFilterInput.addEventListener("input", () => {
+              if (logStream) logStream.innerHTML = ""; // Clear logs when search term changes
+              // New logs will adhere. Real-time re-filtering is more complex.
             });
           }
 
@@ -1460,39 +1541,32 @@ Loading rvc.json...</pre>
           // --- END: Create New Scene Button Listener ---
 
           // Theme switcher
-          const themeSwitcher = document.getElementById("themeSwitcher");
+          // const themeSwitcher = document.getElementById("themeSwitcher"); // Already cached
           const THEME_KEY = "selectedTheme";
-          const VALID_THEMES = [
-            "default",
-            "dark",
-            "light",
-            "catppuccin-mocha",
-            "catppuccin-latte",
-          ];
+          // const VALID_THEMES = [...] // Already defined globally
 
           function applyTheme(theme) {
-            let currentTheme = theme;
+            let newTheme = theme; // Renamed to avoid conflict with global currentTheme
             if (
-              typeof currentTheme !== "string" ||
-              !VALID_THEMES.includes(currentTheme)
+              typeof newTheme !== "string" ||
+              !VALID_THEMES.includes(newTheme)
             ) {
               console.warn(
-                `Invalid theme value received: "${currentTheme}". Defaulting to 'default'.`
+                `Invalid theme value received: "${newTheme}". Defaulting to '${DEFAULT_THEME}'.`
               );
-              currentTheme = "default";
+              newTheme = DEFAULT_THEME;
             }
 
             document.body.classList.remove(
-              ...VALID_THEMES.map((t) => `theme-${t}`)
+              ...THEME_CLASSES // Use global THEME_CLASSES
             );
-            document.body.classList.add(`theme-${currentTheme}`);
-            localStorage.setItem(THEME_KEY, currentTheme);
+            document.body.classList.add(`theme-${newTheme}`);
+            localStorage.setItem(THEME_KEY, newTheme);
+            currentTheme = newTheme; // Update global currentTheme
 
             if (themeSwitcher) {
-              themeSwitcher.value = currentTheme;
+              themeSwitcher.value = newTheme;
             } else {
-              // This case should ideally be caught by the check below before calling applyTheme initially
-              // or before adding the event listener.
               console.warn(
                 "applyTheme called but themeSwitcher element not found when trying to set its value."
               );
@@ -1504,22 +1578,18 @@ Loading rvc.json...</pre>
               applyTheme(event.target.value);
             });
 
-            // Load saved theme on page load
             const savedTheme = localStorage.getItem(THEME_KEY);
-            // applyTheme will validate and default if savedTheme is null or invalid
-            applyTheme(savedTheme);
+            applyTheme(savedTheme || DEFAULT_THEME); // Apply saved or default
           } else {
             console.error(
               "Theme switcher element 'themeSwitcher' not found! Theme functionality will be impaired."
             );
-            // Fallback to default theme if switcher is missing, so the page is at least styled consistently.
-            // This call to applyTheme won't be able to set themeSwitcher.value, but will set body class and localStorage.
-            applyTheme("default");
+            applyTheme(DEFAULT_THEME); // Fallback to default
           }
         });
 
         // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
-        window.addEventListener("resize", adjustPinnedLogsLayout);
+        // window.addEventListener("resize", adjustPinnedLogsLayout); // adjustPinnedLogsLayout is not defined
 
         // --- START: WebSocket Cleanup on Page Unload ---
         window.addEventListener("beforeunload", () => {
@@ -1534,6 +1604,236 @@ Loading rvc.json...</pre>
           }
         });
         // --- END: WebSocket Cleanup on Page Unload ---
+
+        // --- START: Toast Notification System ---
+        // Ensure toastContainer is defined
+        // const toastContainer = document.getElementById("toast-container"); // Already defined above
+
+        function showToast(message, type = "info", duration = 3000) {
+          if (!toastContainer) {
+            console.error("Toast container not found!");
+            return;
+          }
+
+          const toast = createDomElement("div", {
+            className: `toast toast-${type}`, // Base class + type class
+            textContent: message,
+            attributes: {
+              role: "alert",
+              "aria-live": "assertive",
+            },
+          });
+
+          toastContainer.appendChild(toast);
+
+          // Trigger reflow to enable animation
+          toast.offsetHeight;
+
+          toast.classList.add("show");
+
+          setTimeout(() => {
+            toast.classList.remove("show");
+            setTimeout(() => {
+              if (toast.parentNode === toastContainer) {
+                toastContainer.removeChild(toast);
+              }
+            }, 500); // Allow fade out animation to complete
+          }, duration);
+        }
+        // --- END: Toast Notification System ---
+
+        // --- START: WebSocket Connection for Logs ---
+        const logsWaitingMessage = document.getElementById(
+          "logs-waiting-message"
+        );
+
+        function connectLogSocket() {
+          if (logSocket && logSocket.readyState === WebSocket.OPEN) {
+            console.log("Log WebSocket already open.");
+            return;
+          }
+
+          const protocol =
+            window.location.protocol === "https:" ? "wss:" : "ws:";
+          const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+
+          logSocket = new WebSocket(wsUrl);
+
+          if (logsWaitingMessage) logsWaitingMessage.classList.remove("hidden");
+
+          logSocket.onopen = () => {
+            console.log("Log WebSocket connection established.");
+            showToast("Log stream connected.", "success");
+            if (logsWaitingMessage) logsWaitingMessage.classList.add("hidden");
+            if (logPauseButton) logPauseButton.disabled = false;
+            if (logResumeButton) logResumeButton.disabled = true; // Resume is not applicable when just connected
+          };
+
+          logSocket.onmessage = (event) => {
+            if (isLogPaused) return; // Don't process if paused
+
+            const logEntry = JSON.parse(event.data);
+            const currentSearchTerm = logFilterInput
+              ? logFilterInput.value.toLowerCase()
+              : "";
+            const selectedLevelName = logLevelSelect
+              ? logLevelSelect.value
+              : "INFO";
+            const selectedLevel = LOG_LEVELS[selectedLevelName];
+
+            // Filter by level
+            if (LOG_LEVELS[logEntry.level.toUpperCase()] < selectedLevel) {
+              return;
+            }
+
+            // Filter by search term (case-insensitive)
+            if (
+              currentSearchTerm &&
+              !logEntry.message.toLowerCase().includes(currentSearchTerm)
+            ) {
+              return;
+            }
+
+            const logLine = createDomElement("div", {
+              className: `log-line log-level-${logEntry.level.toLowerCase()}`,
+            });
+
+            const timestampSpan = createDomElement("span", {
+              className: "log-timestamp",
+              textContent: `${new Date(
+                logEntry.timestamp * 1000
+              ).toLocaleTimeString()} `,
+            });
+            logLine.appendChild(timestampSpan);
+
+            const levelSpan = createDomElement("span", {
+              className: `log-level-tag log-level-${logEntry.level.toLowerCase()}`,
+              textContent: `${logEntry.level} `,
+            });
+            logLine.appendChild(levelSpan);
+
+            const messageSpan = createDomElement("span", {
+              className: "log-message",
+              textContent: logEntry.message,
+            });
+            logLine.appendChild(messageSpan);
+
+            if (logStream) {
+              logStream.appendChild(logLine);
+              // Auto-scroll if checkbox is checked (implement checkbox later if needed)
+              // For now, always autoscroll or use a simple flag
+              logStream.scrollTop = logStream.scrollHeight;
+            }
+          };
+
+          logSocket.onclose = (event) => {
+            console.log("Log WebSocket connection closed.", event);
+            showToast(
+              "Log stream disconnected. Attempting to reconnect...",
+              "warning"
+            );
+            if (logsWaitingMessage)
+              logsWaitingMessage.classList.remove("hidden");
+            if (logPauseButton) logPauseButton.disabled = true;
+            if (logResumeButton) logResumeButton.disabled = true;
+            setTimeout(connectLogSocket, LOG_WEBSOCKET_RECONNECT_INTERVAL);
+          };
+
+          logSocket.onerror = (error) => {
+            console.error("Log WebSocket error:", error);
+            showToast("Log stream error.", "error");
+            // onclose will likely be called next, which handles reconnection.
+          };
+        }
+        // --- END: WebSocket Connection for Logs ---
+
+        // --- START: WebSocket Connection for Entities ---
+        function connectEntitySocket() {
+          if (entitySocket && entitySocket.readyState === WebSocket.OPEN) {
+            console.log("Entity WebSocket already open.");
+            return;
+          }
+
+          const protocol =
+            window.location.protocol === "https:" ? "wss:" : "ws:";
+          const wsUrl = `${protocol}//${window.location.host}/ws/entities`;
+          entitySocket = new WebSocket(wsUrl);
+
+          entitySocket.onopen = () => {
+            console.log("Entity WebSocket connection established.");
+            showToast("Real-time entity updates connected.", "success");
+          };
+
+          entitySocket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            // console.log("Entity update received:", message);
+
+            if (message.type === "state_update" && message.data) {
+              const entity = message.data;
+              // Update UI for the specific entity
+              const card = document.querySelector(
+                `.entity-card[data-entity-id="${entity.id}"]`
+              );
+              if (card) {
+                // Update state text
+                const stateP = card.querySelector("p"); // Assuming state is in the first <p>
+                if (stateP) stateP.textContent = `State: ${entity.state}`;
+
+                // Update card class for on/off visual
+                card.classList.remove(CLASS_LIGHT_ON, CLASS_LIGHT_OFF);
+                card.classList.add(
+                  entity.state === "on" ? CLASS_LIGHT_ON : CLASS_LIGHT_OFF
+                );
+
+                // Update brightness slider and value if present
+                if (entity.attributes.hasOwnProperty("brightness")) {
+                  const brightnessValueSpan = card.querySelector(
+                    `#brightness-value-${entity.id}`
+                  );
+                  const slider = card.querySelector(`#brightness-${entity.id}`);
+                  const newBrightnessPercent = entity.attributes.brightness
+                    ? Math.round(entity.attributes.brightness / 2.55)
+                    : 0;
+
+                  if (brightnessValueSpan) {
+                    brightnessValueSpan.textContent =
+                      newBrightnessPercent + "%";
+                  }
+                  if (slider && document.activeElement !== slider) {
+                    // Avoid updating if user is interacting
+                    slider.value = newBrightnessPercent;
+                  }
+                }
+              }
+            } else if (message.type === "full_update" && message.data) {
+              // If the current view is lights, re-render them
+              if (
+                currentView === "lights" &&
+                message.data.areas &&
+                message.data.entities
+              ) {
+                renderGroupedLights(message.data.areas, message.data.entities);
+              }
+            } else if (message.type === "error") {
+              showToast(`Entity update error: ${message.message}`, "error");
+            }
+          };
+
+          entitySocket.onclose = (event) => {
+            console.log("Entity WebSocket connection closed.", event);
+            showToast(
+              "Real-time entity updates disconnected. Attempting to reconnect...",
+              "warning"
+            );
+            setTimeout(connectEntitySocket, LOG_WEBSOCKET_RECONNECT_INTERVAL); // Use same reconnect interval
+          };
+
+          entitySocket.onerror = (error) => {
+            console.error("Entity WebSocket error:", error);
+            showToast("Error with real-time entity updates.", "error");
+          };
+        }
+        // --- END: WebSocket Connection for Entities ---
       })();
         </script>
     </body>
