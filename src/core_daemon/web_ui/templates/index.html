@@ -292,6 +292,7 @@
             </div>
         </div>
         <script>
+    (function() { // START IIFE
       // const socket = new WebSocket(`ws://${location.host}/ws`); // This line will be removed
       const grid = document.getElementById('light-grid');
       const filter = document.getElementById('area-filter');
@@ -796,14 +797,27 @@
 
       function updateApiServerView(statusData) {
         if (!apiStatusContainer) return;
-        apiStatusContainer.innerHTML = `
-          <ul class="space-y-2 text-sm">
-            <li><strong>Version:</strong> ${statusData.version || 'N/A'}</li>
-            <li><strong>Uptime:</strong> ${statusData.uptime || 'N/A'}</li>
-            <li><strong>Requests Processed:</strong> ${statusData.requests_processed || 'N/A'}</li>
-            <li><strong>Error Rate:</strong> ${statusData.error_rate || 'N/A'}</li>
-          </ul>
-        `;
+        apiStatusContainer.innerHTML = ''; // Clear previous content
+
+        const ul = document.createElement('ul');
+        ul.className = 'space-y-2 text-sm';
+
+        const items = {
+          "Version": statusData.version,
+          "Uptime": statusData.uptime,
+          "Requests Processed": statusData.requests_processed,
+          "Error Rate": statusData.error_rate
+        };
+
+        for (const [key, value] of Object.entries(items)) {
+          const li = document.createElement('li');
+          const strong = document.createElement('strong');
+          strong.textContent = `${key}: `;
+          li.appendChild(strong);
+          li.appendChild(document.createTextNode(value || 'N/A'));
+          ul.appendChild(li);
+        }
+        apiStatusContainer.appendChild(ul);
       }
 
       // --- Fetch and Display Application Health (NEW) ---
@@ -831,14 +845,37 @@
 
       function updateApplicationHealthView(healthData) {
         if (!appHealthContainer) return;
-        appHealthContainer.innerHTML = `
-          <ul class="space-y-2 text-sm">
-            <li><strong>Configuration Files Loaded:</strong> <span class="${healthData.config_files_loaded ? 'text-green-400' : 'text-red-400'}">${healthData.config_files_loaded ? 'Yes' : 'No'}</span></li>
-            <li><strong>Active WebSocket Clients:</strong> ${healthData.websocket_clients === undefined ? 'N/A' : healthData.websocket_clients}</li>
-            <li><strong>Last Critical Error:</strong> ${healthData.last_error || 'N/A'}</li>
-            <!-- Add more application-specific health indicators here -->
-          </ul>
-        `;
+        appHealthContainer.innerHTML = ''; // Clear previous content
+
+        const ul = document.createElement('ul');
+        ul.className = 'space-y-2 text-sm';
+
+        const healthItems = [
+          { label: "Configuration Files Loaded", value: healthData.config_files_loaded ? 'Yes' : 'No', isGood: healthData.config_files_loaded },
+          { label: "Active WebSocket Clients", value: healthData.websocket_clients === undefined ? 'N/A' : healthData.websocket_clients },
+          { label: "Last Critical Error", value: healthData.last_error || 'N/A' }
+          // Add more application-specific health indicators here by pushing to healthItems
+        ];
+
+        healthItems.forEach(item => {
+          const li = document.createElement('li');
+          const strong = document.createElement('strong');
+          strong.textContent = `${item.label}: `;
+          li.appendChild(strong);
+
+          if (item.value !== undefined) {
+            const span = document.createElement('span');
+            span.textContent = String(item.value);
+            if (typeof item.isGood === 'boolean') {
+              span.className = item.isGood ? 'text-green-400' : 'text-red-400';
+            }
+            li.appendChild(span);
+          } else {
+            li.appendChild(document.createTextNode('N/A'));
+          }
+          ul.appendChild(li);
+        });
+        appHealthContainer.appendChild(ul);
       }
 
       // Helper function to call light services (or any entity control)
@@ -1618,6 +1655,8 @@
           }
         });
 
+        // --- End of Added Event Listeners for Quick Light Controls ---
+
         // Initial data fetches
         fetchCanStatus(); // Existing
         fetchApiServerStatus(); // New
@@ -1677,6 +1716,17 @@
           });
         }
 
+        // --- START: Create New Scene Button Listener ---
+        const createSceneButton = document.getElementById('btn-create-scene');
+        if (createSceneButton) {
+          createSceneButton.addEventListener('click', () => {
+            alert('Create New Scene button clicked! Feature coming soon.');
+            // Potentially call showToast here instead of alert
+            // showToast('Scene creation functionality is under development.', 'info', 4000);
+          });
+        }
+        // --- END: Create New Scene Button Listener ---
+
         // Theme switcher
         const themeSwitcher = document.getElementById('themeSwitcher');
         const THEME_KEY = 'selectedTheme';
@@ -1721,6 +1771,22 @@
 
       // Adjust logs layout on window resize (e.g., crossing mobile/desktop breakpoint)
       window.addEventListener('resize', adjustPinnedLogsLayout);
+
+      // --- START: WebSocket Cleanup on Page Unload ---
+      window.addEventListener('beforeunload', () => {
+        console.log('Closing WebSockets before page unload...');
+        if (logSocket) {
+          logSocket.close();
+          console.log('Log WebSocket closed.');
+        }
+        if (entitySocket) {
+          entitySocket.close();
+          console.log('Entity WebSocket closed.');
+        }
+      });
+      // --- END: WebSocket Cleanup on Page Unload ---
+
+    })(); // END IIFE
         </script>
     </body>
 </html>
