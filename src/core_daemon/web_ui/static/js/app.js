@@ -1,4 +1,21 @@
+/**
+ * app.js - Main JavaScript for the rvc2api Web UI
+ *
+ * Handles:
+ * - Theme management and sidebar state
+ * - Fetching and rendering API status, health, CAN status, and entity data
+ * - WebSocket connections for logs and entity updates
+ * - UI event handling for navigation, controls, and user feedback
+ * - Utility functions for DOM manipulation and notifications
+ *
+ * Author: rvc2api contributors
+ * Last updated: 2025-05-10
+ */
+
 (function () {
+  // =====================
+  // CONSTANTS & SETTINGS
+  // =====================
   /**
    * @type {string | null} The application version, read from a data attribute on the body.
    */
@@ -53,7 +70,9 @@
   const CLASS_TEXT_RED_400 = "text-red-400";
   const CLASS_TEXT_YELLOW_400 = "text-yellow-400";
 
-  // DOM Element Cache
+  // =====================
+  // DOM ELEMENT CACHE
+  // =====================
   // ... existing cached elements ...
   const appHeader = document.getElementById("appHeader"); // For app version display
   const appVersionDisplay = document.getElementById("appVersionDisplay"); // Span to show APP_VERSION
@@ -120,6 +139,9 @@
   const currentLightStates = {}; // Store current states of all lights
   const entitySocketUrl = `ws://${window.location.host}/api/ws/entities`;
 
+  // =====================
+  // UTILITY FUNCTIONS
+  // =====================
   /**
    * Creates a DOM element with specified options.
    * @param {string} tag - The HTML tag for the element.
@@ -230,6 +252,9 @@
     }, duration);
   }
 
+  // =====================
+  // API FETCH & RENDERING
+  // =====================
   /**
    * Updates the API server status view.
    * Fetches from /api/status/server and displays status, message, and version.
@@ -839,6 +864,9 @@
     });
   }
 
+  // =====================
+  // WEBSOCKET HANDLERS
+  // =====================
   /**
    * Appends a log message to the log stream.
    * @param {string} message - The raw log message string.
@@ -1081,6 +1109,9 @@
     }
   }
 
+  // =====================
+  // UI EVENT HANDLERS & INIT
+  // =====================
   /**
    * Navigates to the specified view.
    * @param {string} viewName - The name of the view to navigate to (e.g., "home", "lights").
@@ -1598,6 +1629,9 @@
     }
   }
 
+  // =====================
+  // APP INITIALIZATION
+  // =====================
   /**
    * Initializes the application.
    * Sets up event listeners, loads initial state, and fetches data for the default view.
