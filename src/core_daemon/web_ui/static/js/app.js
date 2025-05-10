@@ -1089,6 +1089,91 @@
   }
 
   /**
+   * Sets up event listeners for bulk light control buttons (All/Interior/Exterior On/Off).
+   * Each button sends a POST to the appropriate API endpoint and shows feedback.
+   */
+  function setupBulkLightControlButtons() {
+    const controls = [
+      {
+        id: "btn-all-on",
+        path: "/api/lights/all/on",
+        name: "All Lights On",
+      },
+      {
+        id: "btn-all-off",
+        path: "/api/lights/all/off",
+        name: "All Lights Off",
+      },
+      {
+        id: "btn-interior-on",
+        path: "/api/lights/interior/on",
+        name: "Interior Lights On",
+      },
+      {
+        id: "btn-interior-off",
+        path: "/api/lights/interior/off",
+        name: "Interior Lights Off",
+      },
+      {
+        id: "btn-exterior-on",
+        path: "/api/lights/exterior/on",
+        name: "Exterior Lights On",
+      },
+      {
+        id: "btn-exterior-off",
+        path: "/api/lights/exterior/off",
+        name: "Exterior Lights Off",
+      },
+    ];
+    controls.forEach((control) => {
+      const button = document.getElementById(control.id);
+      if (!button) return;
+      button.addEventListener("click", () => {
+        const originalHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML =
+          '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+        fetch(control.path, { method: "POST" })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((err) => {
+                throw new Error(
+                  `HTTP error ${response.status}: ${err.detail || response.statusText}`
+                );
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.errors && data.errors.length > 0) {
+              showToast(
+                `${control.name}: ${data.lights_commanded} commanded with ${data.errors.length} errors. Check console.`,
+                "warning"
+              );
+              console.warn(`Bulk action '${control.name}' errors:`, data.errors);
+            } else {
+              showToast(
+                `${control.name}: ${data.lights_commanded} lights commanded.`,
+                "success"
+              );
+            }
+          })
+          .catch((error) => {
+            showToast(
+              `Failed to execute ${control.name}. Error: ${error.message}`,
+              "error"
+            );
+            console.error(`Command ${control.name} failed:`, error);
+          })
+          .finally(() => {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+          });
+      });
+    });
+  }
+
+  /**
    * Initializes the application.
    * Sets up event listeners, loads initial state, and fetches data for the default view.
    */
@@ -1238,6 +1323,8 @@
     // setInterval(fetchCanStatus, CAN_STATUS_REFRESH_INTERVAL); // Example, if always needed
     // setInterval(fetchApiStatus, API_STATUS_REFRESH_INTERVAL);
     // setInterval(fetchAppHealth, APP_HEALTH_REFRESH_INTERVAL);
+
+    setupBulkLightControlButtons();
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
   }
