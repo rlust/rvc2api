@@ -49,7 +49,6 @@ templates:
     device_type: lock
     capabilities: [lock_unlock]
 
-# Door Locks (DGN 1FEDB likely corresponds to RVC_LOCK_COMMAND)
 # ADDING LIGHTS HERE FOR SENDING COMMANDS
 1FEDB:
   default:
