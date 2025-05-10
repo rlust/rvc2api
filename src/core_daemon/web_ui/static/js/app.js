@@ -802,6 +802,8 @@
     ) {
       logStream.scrollTop = logStream.scrollHeight;
     }
+
+    setLogsWaitingMessage(false); // Hide waiting message on new log
   }
 
   /**
@@ -823,8 +825,13 @@
     logSocket.onopen = () => {
       console.log("Log WebSocket connected.");
       showToast("Log stream connected.", "info", 2000);
-      if (logStream.children.length === 0) {
-        // Show "waiting for logs" if empty
+      if (
+        logStream &&
+        logStream.children.length === 0 &&
+        pinnedLogsContent &&
+        !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+      ) {
+        setLogsWaitingMessage(true);
       }
     };
 
@@ -1345,6 +1352,58 @@
   }
 
   /**
+   * Shows or hides the "Waiting for logs..." message in the pinned logs panel.
+   * @param {boolean} show - Whether to show the waiting message.
+   */
+  function setLogsWaitingMessage(show) {
+    const logsWaitingMessage = document.getElementById("logs-waiting-message");
+    if (!logsWaitingMessage) return;
+    if (show) {
+      logsWaitingMessage.classList.remove(CLASS_HIDDEN);
+    } else {
+      logsWaitingMessage.classList.add(CLASS_HIDDEN);
+    }
+  }
+
+  // Patch log controls to show/hide waiting message on clear/filter/search
+  if (logClearButton)
+    logClearButton.addEventListener("click", () => {
+      if (logStream) logStream.innerHTML = "";
+      if (
+        logSocket &&
+        logSocket.readyState === WebSocket.OPEN &&
+        pinnedLogsContent &&
+        !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+      ) {
+        setLogsWaitingMessage(true);
+      }
+    });
+  if (logLevelSelect)
+    logLevelSelect.addEventListener("change", () => {
+      if (logStream) logStream.innerHTML = "";
+      if (
+        logSocket &&
+        logSocket.readyState === WebSocket.OPEN &&
+        pinnedLogsContent &&
+        !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+      ) {
+        setLogsWaitingMessage(true);
+      }
+    });
+  if (logSearchInput)
+    logSearchInput.addEventListener("input", () => {
+      if (logStream) logStream.innerHTML = "";
+      if (
+        logSocket &&
+        logSocket.readyState === WebSocket.OPEN &&
+        pinnedLogsContent &&
+        !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+      ) {
+        setLogsWaitingMessage(true);
+      }
+    });
+
+  /**
    * Initializes the application.
    * Sets up event listeners, loads initial state, and fetches data for the default view.
    */
@@ -1428,16 +1487,38 @@
     if (logClearButton)
       logClearButton.addEventListener("click", () => {
         if (logStream) logStream.innerHTML = "";
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          pinnedLogsContent &&
+          !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+        ) {
+          setLogsWaitingMessage(true);
+        }
       });
     if (logLevelSelect)
       logLevelSelect.addEventListener("change", () => {
-        if (logStream)
-          logStream.innerHTML =
-            ""; /* Consider re-filtering existing messages or just clearing */
+        if (logStream) logStream.innerHTML = "";
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          pinnedLogsContent &&
+          !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+        ) {
+          setLogsWaitingMessage(true);
+        }
       });
     if (logSearchInput)
       logSearchInput.addEventListener("input", () => {
-        if (logStream) logStream.innerHTML = ""; /* Same as above */
+        if (logStream) logStream.innerHTML = "";
+        if (
+          logSocket &&
+          logSocket.readyState === WebSocket.OPEN &&
+          pinnedLogsContent &&
+          !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
+        ) {
+          setLogsWaitingMessage(true);
+        }
       });
 
     // Pinned logs toggle and initial state
