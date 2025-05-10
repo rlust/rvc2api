@@ -1300,23 +1300,47 @@
               })
               .then(data => {
                 const metadataDiv = document.getElementById('spec-metadata');
-                if (data.version && data.spec_document) {
-                  metadataDiv.innerHTML = `
-                    <p><strong>Version:</strong> ${data.version}</p>
-                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
-                  `;
-                } else if (data.spec_document) { // Case where only document is present
-                  metadataDiv.innerHTML = `
-                    <p><strong>Document:</strong> <a href="${data.spec_document}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">${data.spec_document}</a></p>
-                  `;
-                }
-                else {
-                  metadataDiv.textContent = 'Could not load spec metadata.';
+                metadataDiv.innerHTML = ''; // Clear previous content
+
+                if (data.version || data.spec_document) {
+                  if (data.version) {
+                    const pVersion = document.createElement('p');
+                    const strongVersion = document.createElement('strong');
+                    strongVersion.textContent = 'Version: ';
+                    pVersion.appendChild(strongVersion);
+                    pVersion.appendChild(document.createTextNode(data.version));
+                    metadataDiv.appendChild(pVersion);
+                  }
+                  if (data.spec_document) {
+                    const pDoc = document.createElement('p');
+                    const strongDoc = document.createElement('strong');
+                    strongDoc.textContent = 'Document: ';
+                    pDoc.appendChild(strongDoc);
+
+                    const aDoc = document.createElement('a');
+                    aDoc.href = data.spec_document;
+                    aDoc.target = '_blank';
+                    aDoc.rel = 'noopener noreferrer'; // Ensured this is present
+                    aDoc.className = 'text-blue-400 hover:text-blue-300 underline';
+                    aDoc.textContent = data.spec_document;
+                    pDoc.appendChild(aDoc);
+                    metadataDiv.appendChild(pDoc);
+                  }
+                } else {
+                  // If neither version nor spec_document is present, display a message.
+                  const p = document.createElement('p');
+                  p.textContent = 'Spec metadata (version or document link) not available.';
+                  metadataDiv.appendChild(p);
                 }
               })
               .catch(err => {
                 console.error("Failed to fetch rvc.json metadata:", err);
-                document.getElementById('spec-metadata').textContent = `Error: Could not load spec metadata. ${err.message}`;
+                const metadataDiv = document.getElementById('spec-metadata');
+                metadataDiv.innerHTML = ''; // Clear previous content
+                const p = document.createElement('p');
+                p.className = 'text-red-400'; // Style error messages
+                p.textContent = `Error: Could not load spec metadata. ${err.message}`;
+                metadataDiv.appendChild(p);
               });
           } else if (view === 'unmapped') {
             const container = document.getElementById('unmapped-entries-container');
