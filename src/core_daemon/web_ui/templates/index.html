@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>rvc2api UI</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.tailwindcss.com" defer></script>
         <!-- Moved here and deferred -->
         <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
               rel="stylesheet" />
@@ -48,47 +48,41 @@
                         </button>
                     </div>
                     <nav class="space-y-2">
-                        <a href="#"
-                           data-view="home"
-                           class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
+                        <button data-view="home"
+                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 active-nav">
                             <i class="mdi mdi-home-outline mr-2" aria-hidden="true"></i>Home
-                        </a>
-                        <a href="#"
-                           data-view="lights"
-                           class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                        </button>
+                        <button data-view="lights"
+                                class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                             <i class="mdi mdi-lightbulb-outline mr-2" aria-hidden="true"></i>Lights
-                        </a>
+                        </button>
                         <!-- Removed Logs button from main navigation, will be controlled by pinned bar -->
                         <!-- Configuration Section -->
                         <div class="pt-2">
                             <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Configuration Files</h3>
                             <div class="space-y-1">
-                                <a href="#"
-                                   data-view="mapping"
-                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                <button data-view="mapping"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-file-settings-outline mr-2" aria-hidden="true"></i>device_mapping.yml
-                                </a>
-                                <a href="#"
-                                   data-view="spec"
-                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                </button>
+                                <button data-view="spec"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-code-json mr-2" aria-hidden="true"></i>rvc.json
-                                </a>
+                                </button>
                             </div>
                         </div>
                         <!-- Unmapped Entries Link -->
                         <div class="pt-2">
                             <h3 class="px-2 py-1 text-xs uppercase text-gray-500 font-semibold tracking-wider">Troubleshooting</h3>
                             <div class="space-y-1">
-                                <a href="#"
-                                   data-view="unmapped"
-                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                <button data-view="unmapped"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-alert-circle-outline mr-2" aria-hidden="true"></i>Unmapped Entries
-                                </a>
-                                <a href="#"
-                                   data-view="unknown-pgns"
-                                   class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                </button>
+                                <button data-view="unknown-pgns"
+                                        class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                     <i class="mdi mdi-help-rhombus-outline mr-2" aria-hidden="true"></i>Unknown PGNs
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </nav>
@@ -297,8 +291,6 @@ Loading rvc.json...</pre>
                     </div>
                 </div>
                 <pre id="log-stream"
-                     role="log"
-                     aria-live="polite"
                      class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre>
                 <!-- Removed h-full, added flex-1 min-h-0 -->
                 <p id="logs-waiting-message"
@@ -384,6 +376,7 @@ Loading rvc.json...</pre>
         const clearLogButton = document.getElementById("clear-log");
         const logAutoScrollCheckbox =
           document.getElementById("log-auto-scroll");
+        const themeSelector = document.getElementById("theme-selector");
         const pinnedLogsContainer = document.getElementById(
           "pinnedLogsContainer"
         );
@@ -397,7 +390,6 @@ Loading rvc.json...</pre>
         const appVersionSpan = document.getElementById("appVersion");
         const toastContainer = document.getElementById("toast-container");
 
-        // const themeSelector = document.getElementById("theme-selector"); // Removed unused variable
         let logSocket;
         let currentView = "home";
         let currentTheme = DEFAULT_THEME;
@@ -849,54 +841,46 @@ Loading rvc.json...</pre>
 
                       if (data.version || data.spec_document) {
                         if (data.version) {
-                          const strongVersion = createDomElement("strong", {
-                            textContent: "Version: ",
-                          });
-                          const pVersion = createDomElement("p", {
-                            children: [
-                              strongVersion,
-                              document.createTextNode(data.version),
-                            ],
-                          });
+                          const pVersion = document.createElement("p");
+                          const strongVersion =
+                            document.createElement("strong");
+                          strongVersion.textContent = "Version: ";
+                          pVersion.appendChild(strongVersion);
+                          pVersion.appendChild(
+                            document.createTextNode(data.version)
+                          );
                           specMetadataDiv.appendChild(pVersion);
                         }
                         if (data.spec_document) {
-                          const strongDoc = createDomElement("strong", {
-                            textContent: "Document: ",
-                          });
-                          const aDoc = createDomElement("a", {
-                            attributes: {
-                              href: data.spec_document,
-                              target: "_blank",
-                              rel: "noopener noreferrer",
-                            },
-                            className:
-                              "text-blue-400 hover:text-blue-300 underline",
-                            textContent: data.spec_document,
-                          });
-                          const pDoc = createDomElement("p", {
-                            children: [strongDoc, aDoc],
-                          });
+                          const pDoc = document.createElement("p");
+                          const strongDoc = document.createElement("strong");
+                          strongDoc.textContent = "Document: ";
+                          pDoc.appendChild(strongDoc);
+
+                          const aDoc = document.createElement("a");
+                          aDoc.href = data.spec_document;
+                          aDoc.target = "_blank";
+                          aDoc.rel = "noopener noreferrer";
+                          aDoc.className =
+                            "text-blue-400 hover:text-blue-300 underline"; // Theme: text-blue-400
+                          aDoc.textContent = data.spec_document;
+                          pDoc.appendChild(aDoc);
                           specMetadataDiv.appendChild(pDoc);
                         }
                       } else {
-                        specMetadataDiv.appendChild(
-                          createDomElement("p", {
-                            textContent:
-                              "Spec metadata (version or document link) not available.",
-                          })
-                        );
+                        const p = document.createElement("p");
+                        p.textContent =
+                          "Spec metadata (version or document link) not available.";
+                        specMetadataDiv.appendChild(p);
                       }
                     },
                     errorCallback: (err) => {
                       console.error("Failed to fetch rvc.json metadata:", err);
                       specMetadataDiv.innerHTML = ""; // Clear previous content
-                      specMetadataDiv.appendChild(
-                        createDomElement("p", {
-                          className: CLASS_TEXT_RED_400,
-                          textContent: `Error: Could not load spec metadata. ${err.message}`,
-                        })
-                      );
+                      const p = document.createElement("p");
+                      p.className = CLASS_TEXT_RED_400;
+                      p.textContent = `Error: Could not load spec metadata. ${err.message}`;
+                      specMetadataDiv.appendChild(p);
                     },
                   });
                   break;
