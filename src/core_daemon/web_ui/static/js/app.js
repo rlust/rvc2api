@@ -135,19 +135,69 @@
   // ... existing createDomElement ...
 
   /**
-   * Fetches data from a URL with specified options.
-   * @param {string} url - The URL to fetch data from.
+   * Universal fetch utility for API calls with flexible options and error handling.
+   *
+   * @param {string} url - The endpoint URL to fetch.
    * @param {object} [options={}] - Options for the fetch request.
    * @param {'GET'|'POST'|'PUT'|'DELETE'} [options.method='GET'] - HTTP method.
-   * @param {object} [options.headers={'Content-Type':'application/json'}] - Request headers.
-   * @param {object|string|null} [options.body=null] - Request body.
+   * @param {object} [options.headers] - Request headers (default: JSON for POST/PUT, none for GET).
+   * @param {object|string|null} [options.body=null] - Request body (object will be JSON.stringified).
    * @param {'json'|'text'} [options.responseType='json'] - Expected response type.
-   * @param {function} [options.successCallback=()=>{}] - Callback for successful fetch.
-   * @param {function} [options.errorCallback] - Callback for fetch errors.
+   * @param {function} [options.successCallback] - Called with response data on success.
+   * @param {function} [options.errorCallback] - Called with error object on failure.
    * @param {HTMLElement|null} [options.loadingElement=null] - Element to show loading/error message.
-   * @param {boolean} [options.showToastOnError=true] - Whether to show a toast notification on error.
+   * @param {boolean} [options.showToastOnError=true] - Show toast on error.
    */
-  // ... existing fetchData ...
+  function fetchData(url, options = {}) {
+    const {
+      method = 'GET',
+      headers = method === 'GET' ? {} : { 'Content-Type': 'application/json' },
+      body = null,
+      responseType = 'json',
+      successCallback = () => {},
+      errorCallback = null,
+      loadingElement = null,
+      showToastOnError = true,
+    } = options;
+
+    if (loadingElement) {
+      loadingElement.textContent = 'Loading...';
+      loadingElement.classList.remove('text-red-500');
+      loadingElement.classList.add('text-gray-400');
+    }
+
+    fetch(url, {
+      method,
+      headers,
+      body: body && method !== 'GET' ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          // Try to parse error JSON, fallback to status text
+          return response[responseType]()
+            .then((err) => {
+              throw { message: err.message || response.statusText, status: response.status };
+            })
+            .catch(() => {
+              throw { message: response.statusText, status: response.status };
+            });
+        }
+        return responseType === 'text' ? response.text() : response.json();
+      })
+      .then((data) => {
+        if (loadingElement) loadingElement.textContent = '';
+        successCallback(data);
+      })
+      .catch((error) => {
+        if (loadingElement) {
+          loadingElement.textContent = `Error: ${error.message || error}`;
+          loadingElement.classList.remove('text-gray-400');
+          loadingElement.classList.add('text-red-500');
+        }
+        if (showToastOnError) showToast(`Error: ${error.message || error}`, 'error');
+        if (typeof errorCallback === 'function') errorCallback(error);
+      });
+  }
 
   /**
    * Shows a toast notification.
