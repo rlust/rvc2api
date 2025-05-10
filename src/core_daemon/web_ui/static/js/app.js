@@ -646,35 +646,106 @@
   }
 
   /**
-   * Fetches and displays unmapped CAN bus entries.
+   * Renders unmapped CAN entries with YAML suggestion and copy-to-clipboard button.
+   * @param {object} data - The unmapped entries data from the API.
    */
+  function renderUnmappedEntries(data) {
+    if (!unmappedEntriesContent) return;
+    unmappedEntriesContent.innerHTML = "";
+    if (Object.keys(data).length === 0) {
+      unmappedEntriesContent.innerHTML = '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
+      return;
+    }
+    for (const [key, entry] of Object.entries(data)) {
+      const entryDiv = document.createElement("div");
+      entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow mb-4";
+      // YAML suggestion (reuse original logic or a simplified version)
+      const yamlSuggestion = generateYamlSuggestion(entry);
+      entryDiv.innerHTML = `
+        <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
+        <div class="mb-3">
+          <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
+          <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
+          <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
+        </div>
+      `;
+      unmappedEntriesContent.appendChild(entryDiv);
+    }
+    // Add event listeners to copy buttons
+    unmappedEntriesContent.querySelectorAll(".copy-yaml-btn").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const yamlText = event.target.previousElementSibling.querySelector("code").innerText;
+        navigator.clipboard.writeText(yamlText)
+          .then(() => {
+            event.target.textContent = "Copied!";
+            showToast("YAML copied to clipboard!", "success");
+            setTimeout(() => {
+              event.target.textContent = "Copy YAML";
+            }, 2000);
+          })
+          .catch((err) => {
+            showToast("Failed to copy YAML.", "error");
+            event.target.textContent = "Failed to copy";
+            setTimeout(() => {
+              event.target.textContent = "Copy YAML";
+            }, 2000);
+          });
+      });
+    });
+  }
+
+  /**
+   * Generates a YAML suggestion for an unmapped CAN entry.
+   * @param {object} entry - The unmapped entry object.
+   * @returns {string} YAML suggestion string.
+   */
+  function generateYamlSuggestion(entry) {
+    const dgnKey = entry.dgn_hex;
+    const instanceKey = String(entry.instance);
+    const dgnForId = dgnKey.toLowerCase();
+    const instanceForId = instanceKey.replace(/[^a-z0-9_]/g, "");
+    let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
+    let yaml = `# Suggested entry for DGN: ${dgnKey}${entry.dgn_name ? " (" + entry.dgn_name + ")" : ""}, Instance: ${instanceKey}\n`;
+    if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
+      yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${entry.pgn_name ? " (" + entry.pgn_name + ")" : ""}\n`;
+    }
+    yaml += `# First seen: ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}\n`;
+    yaml += `# Last seen: ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}\n`;
+    yaml += `# Count: ${entry.count}\n`;
+    yaml += `# Last Data: ${entry.last_data_hex}\n`;
+    if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
+      yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
+      for (const [key, value] of Object.entries(entry.decoded_signals)) {
+        yaml += `#   ${key}: ${value}\n`;
+      }
+    }
+    if (entry.spec_entry && entry.spec_entry.name) {
+      yaml += `# Matched Spec Entry Name (for DGN): ${entry.spec_entry.name}\n`;
+    }
+    yaml += `\n`;
+    yaml += `${dgnKey}:\n`;
+    yaml += `  ${instanceKey}:\n`;
+    yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
+    yaml += `      friendly_name: "Unmapped ${entry.dgn_name || dgnKey} Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
+    yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
+    yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
+    yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
+    yaml += `      # --- Optional fields based on device_type and system needs ---\n`;
+    yaml += `      # interface: canX # TODO: Specify CAN interface if known (e.g., can0, can1)\n`;
+    yaml += `      # status_dgn: '${dgnKey}' # Status DGN is typically this DGN key\n`;
+    yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status DGN, specify command PGN\n`;
+    yaml += `      # group_mask: '0xXX' # TODO: If part of a command/status group\n`;
+    yaml += `      # --- Example for using a YAML template (if defined in your mapping file) ---\n`;
+    yaml += `      # <<: *switchable_light  # For on/off lights, if &switchable_light template exists\n`;
+    yaml += `      # <<: *dimmable_light   # For dimmable lights, if &dimmable_light template exists\n`;
+    return yaml;
+  }
+
+  // Patch fetchUnmappedEntries to use the new renderer
   function fetchUnmappedEntries() {
     fetchData("/api/unmapped_entries", {
-      // Assuming this endpoint is still valid
-      successCallback: (data) => {
-        if (!unmappedEntriesContent) return;
-        unmappedEntriesContent.innerHTML = ""; // Clear previous
-        if (Object.keys(data).length === 0) {
-          unmappedEntriesContent.innerHTML =
-            "<p>No unmapped entries found.</p>";
-          return;
-        }
-        // ... (Logic from index-original.html to render unmapped entries) ...
-        // This rendering logic is complex and should be ported carefully.
-        // For now, a placeholder:
-        const ul = createDomElement("ul");
-        for (const key in data) {
-          const item = data[key];
-          ul.appendChild(
-            createDomElement("li", {
-              textContent: `ID: ${key}, Count: ${item.count}, Last Data: ${item.last_data_hex}`,
-            })
-          );
-        }
-        unmappedEntriesContent.appendChild(ul);
-      },
+      successCallback: renderUnmappedEntries,
       errorCallback: (error) => {
-        console.error("Failed to fetch unmapped entries:", error);
         if (unmappedEntriesContent)
           unmappedEntriesContent.textContent = `Error loading unmapped entries: ${error.message}`;
         showToast("Failed to load unmapped entries.", "error");
@@ -1428,6 +1499,39 @@
       sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
       toggleSidebarDesktopButton.setAttribute("aria-expanded", isDesktopSidebarExpanded ? "true" : "false");
     });
+  }
+
+  /**
+   * Updates the area filter dropdown for lights based on the current light entities.
+   * Ensures all unique areas are present as options, sorted alphabetically.
+   * @param {object} lightEntities - Object of light entities keyed by entity_id.
+   */
+  function updateAreaFilterForLights(lightEntities) {
+    if (!areaFilter) return;
+    const currentValue = areaFilter.value;
+    const areas = new Set(["All"]);
+    Object.values(lightEntities).forEach((e) => {
+      if (e.device_type === "light") {
+        areas.add(e.suggested_area || "Unknown Area");
+      }
+    });
+    // Remove all options
+    while (areaFilter.firstChild) areaFilter.removeChild(areaFilter.firstChild);
+    // Add sorted options
+    Array.from(areas)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((area) => {
+        const opt = document.createElement("option");
+        opt.value = area;
+        opt.textContent = area;
+        areaFilter.appendChild(opt);
+      });
+    // Restore previous selection if possible
+    if ([...areas].includes(currentValue)) {
+      areaFilter.value = currentValue;
+    } else {
+      areaFilter.value = "All";
+    }
   }
 
   /**
