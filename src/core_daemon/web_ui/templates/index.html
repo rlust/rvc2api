@@ -342,6 +342,102 @@
       let pendingResizeHeightPx = 0; // To store height for RAF update
       let originalContainerTransition = ''; // To store original transition style
 
+      // --- START: Log WebSocket Connection Functions ---
+      const LOG_LEVELS = {
+        DEBUG: 0,
+        INFO: 1,
+        WARNING: 2,
+        ERROR: 3,
+        CRITICAL: 4
+      };
+
+      function connectLogSocket() {
+        if (logSocket && (logSocket.readyState === WebSocket.OPEN || logSocket.readyState === WebSocket.CONNECTING)) {
+          console.log('[connectLogSocket] WebSocket already open or connecting.');
+          return;
+        }
+
+        const logWebSocketUrl = `ws://${location.host}${apiBasePath}/ws/logs`;
+        console.log(`[connectLogSocket] Connecting to log WebSocket: ${logWebSocketUrl}`);
+        logSocket = new WebSocket(logWebSocketUrl);
+
+        logSocket.onopen = () => {
+          console.log('[connectLogSocket] Log WebSocket connected.');
+          logsWaitingMessage.classList.add('hidden');
+          logPauseBtn.disabled = false;
+          logResumeBtn.disabled = true; // Resume is disabled when connected and not paused
+          isLogPaused = false; // Reset pause state on new connection
+        };
+
+        logSocket.onmessage = (event) => {
+          if (isLogPaused) return;
+
+          let logEntry;
+          try {
+            logEntry = JSON.parse(event.data);
+          } catch (e) {
+            console.warn('[connectLogSocket] Received non-JSON log message:', event.data);
+            // Fallback for plain text logs if necessary, though JSON is expected for filtering
+            logEntry = { level: 'INFO', message: event.data, timestamp: new Date().toISOString() };
+          }
+
+          const currentLogLevel = LOG_LEVELS[logLevelFilter.value.toUpperCase()] || 0;
+          const messageLogLevel = LOG_LEVELS[logEntry.level.toUpperCase()] === undefined ? LOG_LEVELS.INFO : LOG_LEVELS[logEntry.level.toUpperCase()];
+
+          if (messageLogLevel < currentLogLevel) {
+            return; // Skip if message level is below selected filter level
+          }
+
+          const searchTerm = logSearchInput.value.toLowerCase();
+          // Ensure logEntry.message is a string before calling toLowerCase()
+          const messageText = String(logEntry.message || '').toLowerCase();
+
+          if (searchTerm && !messageText.includes(searchTerm)) {
+            return; // Skip if search term is present and not found in message
+          }
+
+          const logLine = document.createElement('div');
+          // Basic styling, can be enhanced with colors per level
+          logLine.textContent = `[${logEntry.timestamp || new Date().toISOString()}] [${logEntry.level || 'INFO'}] ${logEntry.message}`;
+          logStream.appendChild(logLine);
+
+          // Auto-scroll to bottom
+          logStream.scrollTop = logStream.scrollHeight;
+        };
+
+        logSocket.onerror = (error) => {
+          console.error('[connectLogSocket] Log WebSocket error:', error);
+          showToast('Log connection error.', 'error');
+          logsWaitingMessage.textContent = 'Log connection error. Retrying...';
+          logsWaitingMessage.classList.remove('hidden');
+        };
+
+        logSocket.onclose = () => {
+          console.log('[connectLogSocket] Log WebSocket disconnected.');
+          logSocket = null;
+          if (!pinnedLogsContent.classList.contains('hidden')) { // Only show if panel is open
+            logsWaitingMessage.textContent = 'Log connection closed. Will attempt to reconnect if panel is open.';
+            logsWaitingMessage.classList.remove('hidden');
+            // Optional: implement a retry mechanism with backoff
+            setTimeout(connectLogSocket, 5000); // Retry connection after 5 seconds
+          }
+          logPauseBtn.disabled = true;
+          logResumeBtn.disabled = true;
+        };
+      }
+
+      function disconnectLogSocket() {
+        if (logSocket) {
+          console.log('[disconnectLogSocket] Closing Log WebSocket.');
+          logSocket.close();
+          logSocket = null;
+        }
+        logsWaitingMessage.classList.add('hidden'); // Hide message when explicitly disconnecting
+        logPauseBtn.disabled = true;
+        logResumeBtn.disabled = true;
+      }
+      // --- END: Log WebSocket Connection Functions ---
+
       // --- START: Add showToast function ---
       function showToast(message, type = 'info', duration = 3000) {
         const toastContainer = document.getElementById('toast-container') || createToastContainer();
@@ -1609,6 +1705,55 @@
       setInterval(fetchCanStatus, 10000); // Refresh CAN status every 10 seconds
       setInterval(fetchApiServerStatus, 30000); // Refresh API status every 30 seconds
       setInterval(fetchApplicationHealth, 30000); // Refresh App health every 30 seconds
+
+      // Add event listeners for log control buttons
+      if (logPauseBtn) {
+        logPauseBtn.addEventListener('click', () => {
+          isLogPaused = true;
+          logPauseBtn.disabled = true;
+          logResumeBtn.disabled = false;
+          showToast('Log streaming paused.', 'info');
+        });
+      }
+
+      if (logResumeBtn) {
+        logResumeBtn.addEventListener('click', () => {
+          isLogPaused = false;
+          logPauseBtn.disabled = false;
+          logResumeBtn.disabled = true;
+          showToast('Log streaming resumed.', 'info');
+          // If connection was closed and we are resuming, try to reconnect
+          if (!logSocket || logSocket.readyState === WebSocket.CLOSED) {
+            connectLogSocket();
+          }
+        });
+      }
+
+      if (logClearBtn) {
+        logClearBtn.addEventListener('click', () => {
+          logStream.innerHTML = '';
+          showToast('Logs cleared.', 'info');
+        });
+      }
+
+      // Add event listeners for log filters
+      if (logLevelFilter) {
+        logLevelFilter.addEventListener('change', () => {
+            logStream.innerHTML = ''; // Clear logs when filter changes, as past logs might not match
+            // Or, re-filter existing logs if desired (more complex)
+            if (logSocket && logSocket.readyState === WebSocket.OPEN && !isLogPaused) {
+                // If connected and not paused, new logs will adhere to the filter.
+                // Consider if a re-fetch or re-display of buffered/past logs is needed.
+            }
+        });
+      }
+      if (logSearchInput) {
+        logSearchInput.addEventListener('input', () => {
+            // Similar to level filter, might want to clear or re-filter existing logs.
+            // For simplicity, new logs will be filtered. Real-time re-filtering is more complex.
+            // Throttling this event might be good for performance if re-filtering live.
+        });
+      }
 
       // Theme switcher
         </script>
