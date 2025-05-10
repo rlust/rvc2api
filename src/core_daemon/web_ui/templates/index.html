@@ -8,16 +8,22 @@
         <!-- Moved here and deferred -->
         <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
               rel="stylesheet" />
-        <link rel="stylesheet"
-              href="{{ url_for('static', path='css/custom.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}" />
+        <!-- <link rel="stylesheet"
+       href="{{ url_for('static', path='css/custom.css') }}" /> -->
     </head>
-    <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased">
+    <body class="theme-default bg-gray-900 text-gray-100 min-h-screen flex flex-col antialiased"
+          data-app-version="{{ app_version }}">
         <a href="#mainContent"
            class="sr-only focus:not-sr-only focus:fixed focus:z-[9999] focus:top-0 focus:left-0 focus:bg-blue-600 focus:text-white focus:p-3">Skip to main content</a>
-        <div id="toast-container" role="status" aria-live="polite"></div>
+        <div id="toast-container"
+             role="status"
+             aria-live="polite"
+             class="fixed bottom-4 right-4 z-[100] w-80 space-y-2"></div>
         <!-- Added ARIA roles -->
         <!-- Toast messages will appear here -->
-        <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50">
+        <header class="bg-gray-800 shadow p-4 text-xl font-semibold flex items-center justify-between sticky top-0 z-50"
+                id="appHeader">
             <div class="flex items-center">
                 <button id="mobileMenuButton"
                         aria-expanded="false"
@@ -26,6 +32,7 @@
                     <i class="mdi mdi-menu text-2xl" aria-hidden="true"></i>
                 </button>
                 <span>rvc2api Dashboard</span>
+                <span id="appVersionDisplay" class="text-xs text-gray-400 ml-2"></span>
             </div>
             <div class="relative">
                 <select id="themeSwitcher"
@@ -46,7 +53,7 @@
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar Navigation -->
             <aside id="sidebar"
-                   class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none md:w-64 bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between">
+                   class="fixed inset-y-0 left-0 z-40 transform -translate-x-full mt-16 md:mt-0 md:fixed md:left-0 md:top-16 md:h-[calc(100vh-4rem)] md:transform-none bg-gray-800 p-4 border-r border-gray-700 transition-all duration-300 ease-in-out flex flex-col justify-between md:w-64">
                 <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-lg font-semibold">Navigation</span>
@@ -213,7 +220,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-3xl font-bold">RV-C Lights</h1>
                         <div>
-                            <label class="block mb-1 text-sm text-gray-300">
+                            <label for="area-filter" class="block mb-1 text-sm text-gray-300">
                                 <i class="mdi mdi-filter-variant mr-1" aria-hidden="true"></i>Filter by Area:
                             </label>
                             <select id="area-filter"
@@ -251,18 +258,16 @@ Loading rvc.json...</pre>
                         <!-- Unmapped entries will be loaded here -->
                     </div>
                 </section>
-                <!-- Unknown PGNs View -->
                 <section id="unknown-pgns-view" class="view-section hidden">
-                    <h1 class="text-3xl font-bold mb-6">Unknown PGNs (Not in rvc.json)</h1>
-                    <p class="mb-4 text-gray-400">
-                        These are CAN messages received by the system where the PGN
-                        (extracted from the arbitration ID) was
-                        <strong>not found</strong> in your
-                        <code>rvc.json</code> specification file. This means the system does
-                        not know how to interpret these messages at a fundamental PGN level.
+                    <h1 class="text-3xl font-bold mb-6">Unknown PGNs</h1>
+                    <p class="mb-4">
+                        These are PGNs (Parameter Group Numbers) observed on the CAN bus
+                        that are not defined in the loaded RVC specification
+                        (<code>rvc.json</code>). This might indicate a newer or custom
+                        device.
                     </p>
                     <div id="unknown-pgns-container" class="space-y-6">
-                        <p id="unknown-pgns-loading-message">Loading unknown PGNs...</p>
+                        <p id="unknown-pgns-loading-message" class="text-lg">Loading unknown PGNs...</p>
                         <!-- Unknown PGNs will be loaded here -->
                     </div>
                 </section>
@@ -273,11 +278,11 @@ Loading rvc.json...</pre>
              class="fixed bottom-0 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out"
              style="height: 3rem">
             <!-- Initial height for collapsed header -->
-            <div id="pinnedLogsResizeHandle" tabindex="0" <!-- Added tabindex -->
-                class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize"
-                style="z-index: 61"
-                aria-label="Resize pinned logs panel">
-            </div>
+            <div id="pinnedLogsResizeHandle"
+                 tabindex="0"
+                 class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize"
+                 style="z-index: 61"
+                 aria-label="Resize pinned logs panel"></div>
             <!-- Added aria-label -->
             <!-- Draggable Resize Handle -->
             <div id="pinnedLogsHeader"
@@ -296,7 +301,7 @@ Loading rvc.json...</pre>
                 <!-- Removed max-height: 400px -->
                 <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
                     <select id="log-level"
-                            class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="bg-gray-700 border border-gray-600 text-white p-2 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
                         <option value="DEBUG">DEBUG</option>
                         <option value="INFO" selected>INFO</option>
                         <option value="WARNING">WARNING</option>
@@ -306,17 +311,17 @@ Loading rvc.json...</pre>
                     <input id="log-search"
                            type="text"
                            placeholder="Search logs..."
-                           class="bg-gray-700 border border-gray-600 text-white rounded p-1.5 text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500" />
+                           class="bg-gray-700 border border-gray-600 text-white p-2 rounded-md text-sm flex-grow min-w-[200px] focus:ring-blue-500 focus:border-blue-500" />
                     <div class="flex gap-2">
                         <button id="log-pause"
-                                class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm">
+                                class="bg-gray-600 hover:bg-gray-500 text-white rounded px-3 py-1.5 text-sm font-semibold transition-colors duration-150 ease-in-out">
                             Pause
                         </button>
                         <button id="log-resume"
-                                class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm"
+                                class="bg-gray-500 hover:bg-gray-400 text-white rounded px-3 py-1.5 text-sm font-semibold transition-colors duration-150 ease-in-out"
                                 disabled>Resume</button>
                         <button id="log-clear"
-                                class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm">
+                                class="bg-red-600 hover:bg-red-500 text-white rounded px-3 py-1.5 text-sm font-semibold transition-colors duration-150 ease-in-out">
                             Clear
                         </button>
                         <!-- Added Clear button -->
@@ -331,6 +336,7 @@ Loading rvc.json...</pre>
                 </p>
             </div>
         </div>
-        <script src="{{ url_for('static', path='js/app.js') }}" defer></script> <!-- Changed to external script -->
+        <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+        <!-- Changed to external script -->
     </body>
 </html>
