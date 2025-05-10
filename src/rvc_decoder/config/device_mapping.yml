@@ -20,6 +20,17 @@
 ##
 ## Use the 'default' instance if a specific instance isn't found or isn't relevant.
 ## YAML anchors (&) and aliases (*) can be used for templating common fields.
+##
+## Command and Status DGNs:
+## - The top-level DGN key (e.g., "1FEDB") generally represents the DGN to which
+##   commands are sent for the entities defined under it. This is the "command DGN".
+## - For some entities, such as lights or locks, status updates might be received
+##   on a different DGN. In such cases, the `status_dgn` field (e.g., `status_dgn: '1FEDA'`)
+##   should be specified within the entity's configuration. This `status_dgn` indicates
+##   the DGN from which the application should expect status messages for that entity.
+## - If `status_dgn` is not specified for an entity, its status might be expected on the
+##   same top-level command DGN, or handled by a separate top-level DGN block that maps to the
+##   same `entity_id` (e.g., DGN "1FEDC" for lock statuses, where "1FEDC" itself acts as a status DGN).
 
 # Template section for reusable parameters
 templates:
@@ -46,8 +57,8 @@ templates:
       friendly_name: Entrance Door Lock
       suggested_area: Entrance
       interface: can1
-      status_dgn: '1FEDC'
-      group_mask: '0x7C'
+      status_dgn: "1FEDC"
+      group_mask: "0x7C"
       <<: *lock
 
   # Interior Lights (Moved from 1FEDA)
@@ -56,8 +67,8 @@ templates:
       friendly_name: Ceiling Light
       suggested_area: Bedroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -66,8 +77,8 @@ templates:
       friendly_name: Accent Light
       suggested_area: Bedroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -76,8 +87,8 @@ templates:
       friendly_name: Vanity Light
       suggested_area: Bedroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -86,8 +97,8 @@ templates:
       friendly_name: Reading Light
       suggested_area: Bedroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -96,8 +107,8 @@ templates:
       friendly_name: Ceiling Light
       suggested_area: Master Bathroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -106,8 +117,8 @@ templates:
       friendly_name: Lavatory Light
       suggested_area: Master Bathroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -116,8 +127,8 @@ templates:
       friendly_name: Accent Light
       suggested_area: Master Bathroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -126,8 +137,8 @@ templates:
       friendly_name: Ceiling Light
       suggested_area: Mid Bathroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -136,8 +147,8 @@ templates:
       friendly_name: Accent Light
       suggested_area: Mid Bathroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -146,8 +157,8 @@ templates:
       friendly_name: Ceiling Light
       suggested_area: Entrance
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -156,8 +167,8 @@ templates:
       friendly_name: Ceiling Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -166,8 +177,8 @@ templates:
       friendly_name: Courtesy Light
       suggested_area: Master Bedroom
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -176,8 +187,8 @@ templates:
       friendly_name: Ceiling Accent Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -186,8 +197,8 @@ templates:
       friendly_name: Driver Side Ceiling Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -196,8 +207,8 @@ templates:
       friendly_name: Passenger Side Ceiling Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -206,8 +217,8 @@ templates:
       friendly_name: Driver Side Slide Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -216,8 +227,8 @@ templates:
       friendly_name: Dinette Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -226,8 +237,8 @@ templates:
       friendly_name: Sink Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -236,8 +247,8 @@ templates:
       friendly_name: Midship Light
       suggested_area: Main Living Area
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "interior"
       <<: *dimmable_light
@@ -248,8 +259,8 @@ templates:
       friendly_name: Driver Side Awning Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -258,8 +269,8 @@ templates:
       friendly_name: Passenger Side Awning Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -268,8 +279,8 @@ templates:
       friendly_name: Cargo Light
       suggested_area: Basement
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -278,8 +289,8 @@ templates:
       friendly_name: Under Slide Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -288,8 +299,8 @@ templates:
       friendly_name: Driver Side Security Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -298,8 +309,8 @@ templates:
       friendly_name: Passenger Side Security Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -308,8 +319,8 @@ templates:
       friendly_name: Motion Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
@@ -318,8 +329,8 @@ templates:
       friendly_name: Porch Light
       suggested_area: Exterior
       interface: can1
-      status_dgn: '1FEDA'
-      group_mask: '0x7C'
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
       groups:
         - "exterior"
       <<: *switchable_light
