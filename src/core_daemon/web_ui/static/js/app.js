@@ -137,7 +137,8 @@
   let lightStates = {}; // To store the state of lights for optimistic UI and updates
   let isDesktopSidebarExpanded = true; // Track desktop sidebar state
   const currentLightStates = {}; // Store current states of all lights
-  const entitySocketUrl = `ws://${window.location.host}/api/ws/entities`;
+  // Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
+  const entitySocketUrl = `ws://${window.location.host}/api/ws`;
 
   // =====================
   // UTILITY FUNCTIONS
@@ -982,7 +983,8 @@
       logSocket.close();
     }
 
-    logSocket = new WebSocket(`ws://${location.host}/ws/logs`); // Assuming /ws/logs is the endpoint
+    // FIX: Use /api/ws/logs to match backend router prefix
+    logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
 
     logSocket.onopen = () => {
       console.log("Log WebSocket connected.");
