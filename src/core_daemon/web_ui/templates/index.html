@@ -997,67 +997,71 @@
           card.classList.remove('light-on');
         }
 
-        let cardContent = `<h3 class="text-lg font-semibold">${friendlyName}</h3>`;
+        const h3 = document.createElement('h3');
+        h3.className = 'text-lg font-semibold';
+        h3.textContent = friendlyName;
+        card.appendChild(h3);
 
-        // const hasOnOff = capabilities.includes('on_off'); // Not needed for separate buttons anymore
         const hasBrightness = capabilities.includes('brightness');
 
         if (hasBrightness) {
-          // Brightness is determined from entity.raw.operating_status (typically 0-200 from CAN).
-          // This needs to be converted to a 0-100% scale for the UI slider.
-          // Max CAN brightness for 100% is 0xC8 (200).
           let currentBrightnessPercent = 0;
           if (state.toLowerCase() === 'on') {
             if (raw_attrs.operating_status !== undefined) {
-                // raw_attrs.operating_status is the CAN level (e.g. 0-200 where 200 is 100%)
-                // Map this to a 0-100 scale for the slider.
-                // Max CAN brightness for 100% is 0xC8 (200).
-                currentBrightnessPercent = Math.min(Math.round((parseInt(raw_attrs.operating_status, 10) / 200) * 100), 100);
+              currentBrightnessPercent = Math.min(Math.round((parseInt(raw_attrs.operating_status, 10) / 200) * 100), 100);
             } else {
-                currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
+              currentBrightnessPercent = 100; // Default to 100% if on and no brightness attribute
             }
           }
 
-          cardContent += `
-            <div class="brightness-control space-y-1 pt-2">
-              <label for="br-${entity.entity_id}" class="text-sm">Brightness: <span id="br-val-${entity.entity_id}">${currentBrightnessPercent}%</span></label>
-              <input type="range" id="br-${entity.entity_id}" data-entity-id="${entity.entity_id}" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider" min="0" max="100" value="${currentBrightnessPercent}">
-            </div>
-          `;
-        }
+          const brightnessControlDiv = document.createElement('div');
+          brightnessControlDiv.className = 'brightness-control space-y-1 pt-2';
 
-        card.innerHTML = cardContent;
+          const label = document.createElement('label');
+          label.htmlFor = `br-${entity.entity_id}`;
+          label.className = 'text-sm';
+          label.textContent = 'Brightness: ';
+
+          const brightnessValueSpan = document.createElement('span');
+          brightnessValueSpan.id = `br-val-${entity.entity_id}`;
+          brightnessValueSpan.textContent = `${currentBrightnessPercent}%`;
+          label.appendChild(brightnessValueSpan);
+          brightnessControlDiv.appendChild(label);
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.id = `br-${entity.entity_id}`;
+          slider.dataset.entityId = entity.entity_id;
+          slider.className = 'w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider';
+          slider.min = '0';
+          slider.max = '100';
+          slider.value = String(currentBrightnessPercent);
+          brightnessControlDiv.appendChild(slider);
+
+          card.appendChild(brightnessControlDiv);
+
+          // Add event listeners for the slider
+          slider.addEventListener('input', (e) => {
+            const brightness = parseInt(e.target.value, 10); // 0-100
+            brightnessValueSpan.textContent = `${brightness}%`;
+          });
+          slider.addEventListener('change', (e) => { // 'change' event fires when user releases mouse
+            const entityId = e.target.dataset.entityId;
+            const brightness = parseInt(e.target.value, 10); // 0-100
+            callLightService(entityId, 'set', { state: 'on', brightness: brightness });
+          });
+        }
 
         // Make the entire card clickable to toggle on/off
         card.addEventListener('click', (e) => {
-          // Prevent toggle if the click was on the slider itself or its label
+          // Prevent toggle if the click was on the slider itself or its label or anything within brightness-control
           if (e.target.closest('.brightness-control')) {
             return;
           }
           const entityId = card.dataset.entityId;
-          // Determine current state for toggle logic if needed, or just send 'toggle'
-          // const currentLightState = lightStates[entityId]?.state || 'off';
-          // callLightService(entityId, 'set', { state: currentLightState === 'on' ? 'off' : 'on' });
           callLightService(entityId, 'toggle');
         });
 
-        if (hasBrightness) {
-          const slider = card.querySelector('.brightness-slider');
-          const brightnessValueDisplay = card.querySelector(`#br-val-${entity.entity_id}`);
-          if (slider) {
-            slider.addEventListener('input', (e) => {
-              const brightness = parseInt(e.target.value, 10); // 0-100
-              if (brightnessValueDisplay) brightnessValueDisplay.textContent = `${brightness}%`;
-            });
-            slider.addEventListener('change', (e) => { // 'change' event fires when user releases mouse
-              const entityId = e.target.dataset.entityId;
-              const brightness = parseInt(e.target.value, 10); // 0-100
-              // When setting brightness, the light should be 'on'.
-              // The API's /control endpoint handles this: if brightness is set, state 'on' is implied or can be sent.
-              callLightService(entityId, 'set', { state: 'on', brightness: brightness });
-            });
-          }
-        }
         return card;
       }
 
@@ -1339,76 +1343,96 @@
                   const entryDiv = document.createElement('div');
                   entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
 
-                  let decodedSignalsHtml = 'N/A';
+                  // Header: DGN and Instance
+                  const header = document.createElement('h4');
+                  header.className = 'text-lg font-semibold text-yellow-300 mb-2';
+                  header.textContent = `DGN: ${entry.dgn_hex}${entry.dgn_name ? ' (' + entry.dgn_name + ')' : ''} - Instance: ${entry.instance}`;
+                  entryDiv.appendChild(header);
+
+                  // Details List
+                  const detailsList = document.createElement('ul');
+                  detailsList.className = 'list-disc list-inside space-y-1 text-sm mb-3';
+
+                  function addDetailItem(label, value) {
+                    const item = document.createElement('li');
+                    const strong = document.createElement('strong');
+                    strong.textContent = `${label}: `;
+                    item.appendChild(strong);
+                    item.appendChild(document.createTextNode(value));
+                    detailsList.appendChild(item);
+                  }
+
+                  if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
+                    addDetailItem('Original PGN', `${entry.pgn_hex}${entry.pgn_name ? ' (' + entry.pgn_name + ')' : ''}`);
+                  }
+                  addDetailItem('First Seen', new Date(entry.first_seen_timestamp * 1000).toLocaleString());
+                  addDetailItem('Last Seen', new Date(entry.last_seen_timestamp * 1000).toLocaleString());
+                  addDetailItem('Count', entry.count);
+                  addDetailItem('Last Data', entry.last_data_hex);
+                  if (entry.spec_entry && entry.spec_entry.name) {
+                    addDetailItem('Matched Spec Entry Name (for DGN)', entry.spec_entry.name);
+                  }
+                  entryDiv.appendChild(detailsList);
+
+                  // Decoded Signals (if any)
                   if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-                    decodedSignalsHtml = '<ul>'; // Initialize list
-                    for (const [sigName, sigValue] of Object.entries(entry.decoded_signals)) {
-                      decodedSignalsHtml += `<li class="text-xs"><span class="font-semibold">${sigName}:</span> ${sigValue}</li>`;
+                    const signalsHeader = document.createElement('h5');
+                    signalsHeader.className = 'text-md font-medium text-gray-300 mt-2 mb-1';
+                    signalsHeader.textContent = `Decoded Signals (from PGN ${entry.pgn_hex}):`;
+                    entryDiv.appendChild(signalsHeader);
+                    const signalsList = document.createElement('ul');
+                    signalsList.className = 'list-disc list-inside pl-4 space-y-0.5 text-xs';
+                    for (const [key, value] of Object.entries(entry.decoded_signals)) {
+                      const signalItem = document.createElement('li');
+                      signalItem.innerHTML = `<strong>${key}:</strong> ${value}`; // Using innerHTML here for simplicity, assuming key/value are safe
+                      signalsList.appendChild(signalItem);
                     }
-                    decodedSignalsHtml += '</ul>';
-                  } else if (entry.decoded_signals) { // If exists but empty
-                    decodedSignalsHtml = '<span class="text-xs text-gray-500">No signals decoded for this PGN.</span>';
+                    entryDiv.appendChild(signalsList);
                   }
 
-                  let suggestionsHtml = '';
+                  // Suggestions (if any)
                   if (entry.suggestions && entry.suggestions.length > 0) {
-                    suggestionsHtml = '<h4 class="text-sm font-semibold mt-2 mb-1">Mapping Suggestions:</h4><ul>';
-                    entry.suggestions.forEach(sugg => {
-                      suggestionsHtml += `<li class="text-xs">${sugg.message} (Priority: ${sugg.priority})</li>`;
+                    const suggestionsHeader = document.createElement('h5');
+                    suggestionsHeader.className = 'text-md font-medium text-gray-300 mt-3 mb-1';
+                    suggestionsHeader.textContent = 'Suggestions:';
+                    entryDiv.appendChild(suggestionsHeader);
+                    const suggestionsList = document.createElement('ul');
+                    suggestionsList.className = 'list-disc list-inside pl-4 space-y-0.5 text-xs';
+                    entry.suggestions.forEach(suggestion => {
+                      const suggestionItem = document.createElement('li');
+                      suggestionItem.textContent = suggestion;
+                      suggestionsList.appendChild(suggestionItem);
                     });
-                    suggestionsHtml += '</ul>';
+                    entryDiv.appendChild(suggestionsList);
                   }
 
+                  // YAML Suggestion
                   const yamlSuggestion = generateYamlSuggestion(entry);
+                  const yamlHeader = document.createElement('h5');
+                  yamlHeader.className = 'text-md font-medium text-gray-300 mt-3 mb-1';
+                  yamlHeader.textContent = 'YAML Suggestion for device_mapping.yml:';
+                  entryDiv.appendChild(yamlHeader);
 
-                  entryDiv.innerHTML = `
-                    <div class="flex justify-between items-start">
-                      <div>
-                        <h3 class="text-lg font-semibold text-blue-300">DGN: ${entry.dgn_hex} (Instance: ${entry.instance})</h3>
-                        ${entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex ? `<p class="text-xs text-gray-400">PGN (from ArbID): ${entry.pgn_hex}</p>` : ''}
-                        ${entry.dgn_name ? `<p class="text-sm text-gray-300">DGN Name: ${entry.dgn_name}</p>` : ''}
-                        ${entry.pgn_name && entry.pgn_name !== entry.dgn_name ? `<p class="text-sm text-gray-300">PGN Name: ${entry.pgn_name}</p>` : ''}
-                      </div>
-                      <button class="copy-yaml-btn text-xs bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded" title="Copy YAML to clipboard">
-                        <i class="mdi mdi-content-copy"></i> Copy YAML
-                      </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
-                      <div>
-                        <p><strong>Last Data:</strong> ${entry.last_data_hex}</p>
-                        <p><strong>Count:</strong> ${entry.count}</p>
-                      </div>
-                      <div>
-                        <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
-                        <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div class="mt-2">
-                      <h4 class="text-sm font-semibold mb-1">Decoded Signals (PGN: ${entry.pgn_hex || 'N/A'}):</h4>
-                      <div class="text-gray-400">${decodedSignalsHtml}</div>
-                    </div>
-                    ${suggestionsHtml}
-                    <div class="mt-3">
-                      <h4 class="text-sm font-semibold">Suggested device_mapping.yml entry:</h4>
-                      <pre class="bg-gray-900 text-green-300 p-2 rounded-md overflow-x-auto text-xs whitespace-pre-wrap">${yamlSuggestion}</pre>
-                    </div>
-                  `;
+                  const pre = document.createElement('pre');
+                  pre.className = 'bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs font-mono whitespace-pre-wrap';
+                  pre.textContent = yamlSuggestion;
+                  entryDiv.appendChild(pre);
+
+                  const copyButton = document.createElement('button');
+                  copyButton.className = 'copy-yaml-btn mt-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-3 rounded shadow';
+                  copyButton.innerHTML = '<i class="mdi mdi-content-copy mr-1" aria-hidden="true"></i>Copy YAML'; // Icon added
+                  copyButton.addEventListener('click', () => {
+                    navigator.clipboard.writeText(pre.textContent)
+                      .then(() => showToast('YAML copied to clipboard!', 'success'))
+                      .catch(err => {
+                        console.error('Failed to copy YAML: ', err);
+                        showToast('Failed to copy YAML.', 'error');
+                      });
+                  });
+                  entryDiv.appendChild(copyButton);
                   container.appendChild(entryDiv);
                 }
-                // Add event listeners to new copy buttons
-                container.querySelectorAll('.copy-yaml-btn').forEach(button => {
-                  button.addEventListener('click', (e) => {
-                    const preElement = e.target.closest('.bg-gray-800').querySelector('pre');
-                    if (preElement) {
-                      navigator.clipboard.writeText(preElement.textContent)
-                        .then(() => showToast('YAML copied to clipboard!', 'success'))
-                        .catch(err => {
-                          console.error('Failed to copy YAML: ', err);
-                          showToast('Failed to copy YAML.', 'error');
-                        });
-                    }
-                  });
-                });
+                // Event listeners for copy buttons are now added individually when button is created.
               })
               .catch(error => {
                 console.error('Error fetching unmapped entries:', error);
@@ -1441,20 +1465,31 @@
                 for (const [arbIdHex, entry] of Object.entries(data)) {
                   const entryDiv = document.createElement('div');
                   entryDiv.className = 'bg-gray-800 p-4 rounded-lg shadow';
-                  entryDiv.innerHTML = `
-                    <h3 class="text-lg font-semibold text-orange-300">Arbitration ID: ${arbIdHex}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
-                      <div>
-                        <p><strong>Last Data:</strong> ${entry.last_data_hex}</p>
-                        <p><strong>Count:</strong> ${entry.count}</p>
-                      </div>
-                      <div>
-                        <p><strong>First Seen:</strong> ${new Date(entry.first_seen_timestamp * 1000).toLocaleString()}</p>
-                        <p><strong>Last Seen:</strong> ${new Date(entry.last_seen_timestamp * 1000).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <p class="text-xs mt-2 text-gray-400">This PGN (extracted from the arbitration ID) was not found in the rvc.json specification file.</p>
-                  `;
+
+                  const header = document.createElement('h4');
+                  header.className = 'text-lg font-semibold text-red-300 mb-2';
+                  header.textContent = `Arbitration ID: ${arbIdHex} (PGN: ${entry.pgn_hex || 'N/A'})`;
+                  entryDiv.appendChild(header);
+
+                  const detailsList = document.createElement('ul');
+                  detailsList.className = 'list-disc list-inside space-y-1 text-sm';
+
+                  function addDetailItem(label, value) {
+                    const item = document.createElement('li');
+                    const strong = document.createElement('strong');
+                    strong.textContent = `${label}: `;
+                    item.appendChild(strong);
+                    item.appendChild(document.createTextNode(value));
+                    detailsList.appendChild(item);
+                  }
+
+                  addDetailItem('Source Address', entry.source_address_hex || 'N/A');
+                  addDetailItem('Count', entry.count);
+                  addDetailItem('First Seen', new Date(entry.first_seen_timestamp * 1000).toLocaleString());
+                  addDetailItem('Last Seen', new Date(entry.last_seen_timestamp * 1000).toLocaleString());
+                  addDetailItem('Last Data', entry.last_data_hex);
+
+                  entryDiv.appendChild(detailsList);
                   container.appendChild(entryDiv);
                 }
               })
