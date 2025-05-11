@@ -213,7 +213,9 @@
                         <!-- Application Health -->
                         <div class="mb-6">
                             <h3 class="text-xl font-semibold mb-3 text-gray-200">Application Health</h3>
-                            <div id="app-health-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                            <div id="app-health-container"
+                                 class="bg-gray-800 p-6 rounded-lg shadow"
+                                 aria-live="polite">
                                 <p id="app-health-loading-message" class="text-gray-400">Loading application health...</p>
                                 <!-- Application health details (e.g., config load status, connected clients) will be loaded here -->
                             </div>
@@ -221,7 +223,9 @@
                         <!-- CAN Bus Status Sub-section -->
                         <div>
                             <h3 class="text-xl font-semibold mb-3 text-gray-200">CAN Bus Interfaces</h3>
-                            <div id="can-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
+                            <div id="can-status-container"
+                                 class="bg-gray-800 p-6 rounded-lg shadow"
+                                 aria-live="polite">
                                 <p id="can-status-loading-message" class="text-gray-400">Loading CAN status...</p>
                                 <!-- CAN status will be loaded here by JavaScript -->
                             </div>
@@ -299,8 +303,7 @@ Loading rvc.json...</pre>
                  aria-orientation="vertical"></div>
             <!-- Added aria-label -->
             <!-- Draggable Resize Handle -->
-            <div id="pinnedLogsHeader"
-                 class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
+            <div class="flex justify-between items-center p-2 h-12 hover:bg-gray-700">
                 <span class="font-semibold text-gray-300 ml-2">Logs</span>
                 <button id="togglePinnedLogsBtn"
                         aria-expanded="false"
@@ -312,7 +315,6 @@ Loading rvc.json...</pre>
             <div id="pinnedLogsContent"
                  class="hidden bg-gray-800 px-4 pb-4 pt-2 flex flex-col"
                  style="height: calc(30vh - 3rem)">
-                <!-- Removed max-height: 400px -->
                 <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3 items-center">
                     <select id="log-level"
                             class="bg-gray-700 border border-gray-600 text-white p-2 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">

@@ -1228,6 +1228,12 @@
     if (targetView) {
       targetView.classList.remove(CLASS_HIDDEN);
       currentView = viewName;
+      // Accessibility: focus the first <h1> in the new view
+      const mainHeading = targetView.querySelector("h1");
+      if (mainHeading) {
+        mainHeading.setAttribute("tabindex", "-1");
+        mainHeading.focus();
+      }
     } else {
       console.warn(`View "${viewName}" not found, defaulting to home.`);
       homeView?.classList.remove(CLASS_HIDDEN);
