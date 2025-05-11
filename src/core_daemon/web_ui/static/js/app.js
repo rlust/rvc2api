@@ -1513,6 +1513,7 @@
    * @param {boolean} expanded - True to expand the sidebar, false to collapse.
    */
   function setDesktopSidebarVisible(expanded) {
+    console.log("[DEBUG] setDesktopSidebarVisible called with:", expanded, "Current isDesktopSidebarExpanded before change:", isDesktopSidebarExpanded);
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
 
@@ -1620,16 +1621,25 @@
       return;
     // Only expand when clicking the sidebar background (not any child)
     sidebar.addEventListener("click", (e) => {
+      console.log("[DEBUG] Sidebar area clicked. Current isDesktopSidebarExpanded:", isDesktopSidebarExpanded, "Event target:", e.target, "e.currentTarget:", e.currentTarget);
       if (
         window.innerWidth >= MD_BREAKPOINT_PX &&
         !isDesktopSidebarExpanded &&
         e.target === sidebar
       ) {
+        console.log("[DEBUG] Sidebar area click IS EXPANDING sidebar.");
         setDesktopSidebarVisible(true);
+      } else {
+        console.log("[DEBUG] Sidebar area click conditions NOT MET for expansion. Conditions:", {
+          isDesktop: window.innerWidth >= MD_BREAKPOINT_PX,
+          isCollapsed: !isDesktopSidebarExpanded,
+          targetIsSidebar: e.target === sidebar
+        });
       }
     });
     // Collapse/expand button
     toggleSidebarDesktopButton.addEventListener("click", (e) => {
+      console.log("[DEBUG] Toggle button clicked. Current isDesktopSidebarExpanded:", isDesktopSidebarExpanded, "Event target:", e.target);
       e.stopPropagation();
       setDesktopSidebarVisible(!isDesktopSidebarExpanded);
     });
@@ -2129,24 +2139,35 @@
     const savedSidebarState = localStorage.getItem(
       DESKTOP_SIDEBAR_EXPANDED_KEY
     );
+    // console.log("[DEBUG] Initializing sidebar. Saved state:", savedSidebarState);
     setDesktopSidebarVisible(
       savedSidebarState === null ? true : savedSidebarState === "true"
     );
 
     if (toggleSidebarDesktopButton) {
-      toggleSidebarDesktopButton.addEventListener("click", () => {
+      toggleSidebarDesktopButton.addEventListener("click", (e) => {
+        console.log("[DEBUG] Toggle button clicked. Current isDesktopSidebarExpanded:", isDesktopSidebarExpanded, "Event target:", e.target);
+        e.stopPropagation();
         setDesktopSidebarVisible(!isDesktopSidebarExpanded);
-        // Update ARIA attributes for accessibility
-        sidebar.setAttribute(
-          "aria-expanded",
-          isDesktopSidebarExpanded ? "true" : "false"
-        );
-        toggleSidebarDesktopButton.setAttribute(
-          "aria-expanded",
-          isDesktopSidebarExpanded ? "true" : "false"
-        );
       });
     }
+
+    if (sidebar) {
+      sidebar.addEventListener("click", (e) => {
+        console.log("[DEBUG] Sidebar area clicked. Current isDesktopSidebarExpanded:", isDesktopSidebarExpanded, "Event target:", e.target, "e.currentTarget:", e.currentTarget);
+        if (window.innerWidth >= MD_BREAKPOINT_PX && !isDesktopSidebarExpanded && e.target === sidebar) {
+          console.log("[DEBUG] Sidebar area click IS EXPANDING sidebar.");
+          setDesktopSidebarVisible(true);
+        } else {
+          console.log("[DEBUG] Sidebar area click conditions NOT MET for expansion. Conditions:", {
+            isDesktop: window.innerWidth >= MD_BREAKPOINT_PX,
+            isCollapsed: !isDesktopSidebarExpanded,
+            targetIsSidebar: e.target === sidebar
+          });
+        }
+      });
+    }
+
     if (mobileMenuButton && sidebar && closeSidebarButton) {
       mobileMenuButton.addEventListener("click", () =>
         sidebar.classList.remove("-translate-x-full")
