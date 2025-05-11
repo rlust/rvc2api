@@ -1572,10 +1572,11 @@
       toggleButton: toggleSidebarDesktopButton,
       expanded,
       styles: sidebarStyles,
-      // Pass pinned logs elements and their styles to setPanelExpanded
       pinnedLogsContainer,
       pinnedLogsStyles: pinnedLogsStylesDef,
       onExpand: () => {
+        // Added "relative top-0.5" to the text span for better vertical alignment with log drawer text
+        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.expanded.iconClass} mr-0"></span><span class="ml-2 relative top-0.5">${sidebarStyles.expanded.label}</span>`;
         sidebar.classList.remove("sidebar-collapsed-hoverable");
         sidebarNavContent.classList.remove(CLASS_HIDDEN);
         sidebar
@@ -1589,6 +1590,7 @@
         adjustPinnedLogsLayout();
       },
       onCollapse: () => {
+        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2">${sidebarStyles.collapsed.label}</span>`;
         sidebar.classList.add("sidebar-collapsed-hoverable");
         sidebar
           .querySelectorAll(".nav-link span")
