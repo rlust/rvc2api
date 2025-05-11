@@ -1940,12 +1940,8 @@
           toggleLogs();
         }
       });
-      // Initialize logs collapsed
-      pinnedLogsContent.classList.add(CLASS_HIDDEN);
-      pinnedLogsContainer.style.height = "3rem";
-      mainContent.style.paddingBottom = "3rem";
-      togglePinnedLogsButton.querySelector("i").className =
-        "mdi mdi-chevron-up text-2xl";
+      // --- Removed forced collapse of logs here ---
+      // The initial open/closed state is now set only by setPinnedLogsState in setupPinnedLogsResizablePanel
     } else {
       console.warn(
         "Pinned logs elements not found, functionality may be limited."
