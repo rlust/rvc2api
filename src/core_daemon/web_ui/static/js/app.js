@@ -1689,7 +1689,12 @@
         setDesktopSidebarVisible(true);
       }
     });
-    // Save/restore state on load (already handled in setDesktopSidebarVisible)
+    // Collapse/expand button
+    toggleSidebarDesktopButton.addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent bubbling to sidebar
+      console.log("Sidebar collapse button clicked");
+      setDesktopSidebarVisible(!isDesktopSidebarExpanded);
+    });
     // Add ARIA attributes for accessibility
     sidebar.setAttribute(
       "aria-expanded",
@@ -1699,17 +1704,6 @@
       "aria-expanded",
       isDesktopSidebarExpanded ? "true" : "false"
     );
-    // Update ARIA on toggle
-    toggleSidebarDesktopButton.addEventListener("click", () => {
-      sidebar.setAttribute(
-        "aria-expanded",
-        isDesktopSidebarExpanded ? "true" : "false"
-      );
-      toggleSidebarDesktopButton.setAttribute(
-        "aria-expanded",
-        isDesktopSidebarExpanded ? "true" : "false"
-      );
-    });
   }
 
   /**
