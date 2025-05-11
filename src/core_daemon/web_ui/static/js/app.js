@@ -563,7 +563,7 @@
           showToast(`Error: ${error.message || "Request failed"}`, "error");
           resolve(null);
         },
-        showToastOnError: false
+        showToastOnError: false,
       });
     });
   }
@@ -1499,7 +1499,7 @@
                 showToast("Failed to fetch lights", "error");
                 resolve();
               },
-              showToastOnError: false
+              showToastOnError: false,
             });
           });
           if (!lights) return;
@@ -1515,7 +1515,11 @@
           let successCount = 0;
           let errorCount = 0;
           for (const entity of entities) {
-            const res = await callLightService(entity.entity_id, control.command.command, control.command);
+            const res = await callLightService(
+              entity.entity_id,
+              control.command.command,
+              control.command
+            );
             if (res) successCount++;
             else errorCount++;
           }
@@ -1820,20 +1824,21 @@
       !sidebarNavContent
     )
       return;
-    // Click-to-expand on collapsed sidebar (desktop only)
+    // Only expand when clicking the sidebar background (not any child)
     sidebar.addEventListener("click", (e) => {
-      const isCollapsedDesktop =
+      if (
         window.innerWidth >= MD_BREAKPOINT_PX &&
-        sidebar.classList.contains(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
-      if (isCollapsedDesktop) {
+        sidebar.offsetWidth <= 64 && // collapsed (4rem)
+        e.target === sidebar // only if background, not a child
+      ) {
         setDesktopSidebarVisible(true);
       }
     });
     // Collapse/expand button
     toggleSidebarDesktopButton.addEventListener("click", (e) => {
-      e.stopPropagation(); // Prevent bubbling to sidebar
-      console.log("Sidebar collapse button clicked");
+      e.stopPropagation(); // Prevent double-toggle
       setDesktopSidebarVisible(!isDesktopSidebarExpanded);
+      // ...update ARIA, localStorage, etc. if needed...
     });
     // Add ARIA attributes for accessibility
     sidebar.setAttribute(
