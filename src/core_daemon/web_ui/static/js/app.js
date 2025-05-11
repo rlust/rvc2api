@@ -1444,7 +1444,7 @@
     )
       return;
 
-    // Restore state from localStorage
+    // Restore state from localStorage (only once on page load)
     const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === "true";
     const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
     if (savedHeight) {
@@ -1469,6 +1469,15 @@
         currentExpandedLogsHeight = `${DEFAULT_EXPANDED_LOGS_HEIGHT_VH}vh`;
       }
     }
+
+    // Set initial state ONCE, do not call setPinnedLogsState again unless user toggles
+    const originalTransition = pinnedLogsContainer.style.transition;
+    pinnedLogsContainer.style.transition = "none";
+    setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
+    setTimeout(() => {
+      pinnedLogsContainer.style.transition =
+        originalTransition || "height 0.3s ease-in-out";
+    }, 50);
 
     function setPinnedLogsState(isOpen, height) {
       console.log(`[LOG DRAWER] setPinnedLogsState called. isOpen: ${isOpen}, height: ${height}`);
@@ -1501,15 +1510,6 @@
       }
       adjustPinnedLogsLayout();
     }
-
-    // Initial state (no animation)
-    const originalTransition = pinnedLogsContainer.style.transition;
-    pinnedLogsContainer.style.transition = "none";
-    setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
-    setTimeout(() => {
-      pinnedLogsContainer.style.transition =
-        originalTransition || "height 0.3s ease-in-out";
-    }, 50);
 
     // Drag-to-resize logic
     pinnedLogsResizeHandle.addEventListener("mousedown", (e) => {
@@ -1570,10 +1570,11 @@
       document.addEventListener("mouseup", onMouseUp);
     });
 
-    // Toggle logic (reuse setPinnedLogsState)
+    // --- Toggle logic: only call setPinnedLogsState in response to user actions ---
     if (togglePinnedLogsButton && pinnedLogsHeader) {
       togglePinnedLogsButton.addEventListener("click", () => {
         const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
+        // Only toggle state in response to user click
         setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
       });
       pinnedLogsHeader.addEventListener("click", (e) => {
@@ -1586,6 +1587,7 @@
         }
       });
     }
+
     // Responsive: clamp height on window resize
     window.addEventListener("resize", () => {
       const maxHeightPx =
