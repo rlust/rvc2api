@@ -942,10 +942,9 @@
     const currentFilterLevel = logLevelSelect.value.toUpperCase();
     const searchTerm = logSearchInput.value.toLowerCase();
 
-    // Basic parsing (improve as needed)
-    // Example format: "2023-10-27 10:00:00,123 INFO message content"
+    // Updated regex for log format: 2025-05-10 23:49:28,569 DEBUG core_daemon.can_processing: ...
     const parts = message.match(
-      /^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(\\w+)\\s+(.*)/s
+      /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (\w+) ([^:]+): (.*)/
     );
     let timestamp = "",
       level = "UNKNOWN",
@@ -954,7 +953,7 @@
     if (parts) {
       timestamp = parts[1];
       level = parts[2].toUpperCase();
-      msgContent = parts[3];
+      msgContent = parts[4];
     }
 
     if (LOG_LEVELS[level] < LOG_LEVELS[currentFilterLevel]) {
