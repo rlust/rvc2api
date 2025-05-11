@@ -1381,6 +1381,8 @@
   function setDesktopSidebarVisible(expanded) {
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
+    sidebar.setAttribute("aria-expanded", expanded);
+    toggleSidebarDesktopButton.setAttribute("aria-expanded", expanded);
 
     if (
       !sidebar ||
@@ -1834,26 +1836,29 @@
     sidebar.addEventListener("click", (e) => {
       if (
         window.innerWidth >= MD_BREAKPOINT_PX &&
-        sidebar.offsetWidth <= 64 && // collapsed (4rem)
-        e.target === sidebar // only if background, not a child
+        !isDesktopSidebarExpanded &&
+        e.target === sidebar
       ) {
         setDesktopSidebarVisible(true);
       }
     });
     // Collapse/expand button
     toggleSidebarDesktopButton.addEventListener("click", (e) => {
-      e.stopPropagation(); // Prevent double-toggle
+      e.stopPropagation();
       setDesktopSidebarVisible(!isDesktopSidebarExpanded);
-      // ...update ARIA, localStorage, etc. if needed...
     });
+    // Mobile close button
+    if (closeSidebarButton) {
+      closeSidebarButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setDesktopSidebarVisible(false);
+      });
+    }
     // Add ARIA attributes for accessibility
-    sidebar.setAttribute(
-      "aria-expanded",
-      isDesktopSidebarExpanded ? "true" : "false"
-    );
+    sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded);
     toggleSidebarDesktopButton.setAttribute(
       "aria-expanded",
-      isDesktopSidebarExpanded ? "true" : "false"
+      isDesktopSidebarExpanded
     );
   }
 
@@ -1970,9 +1975,10 @@
       mobileMenuButton.addEventListener("click", () =>
         sidebar.classList.remove("-translate-x-full")
       );
-      closeSidebarButton.addEventListener("click", () =>
-        sidebar.classList.add("-translate-x-full")
-      );
+      closeSidebarButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        sidebar.classList.add("-translate-x-full");
+      });
     }
 
     // Setup navigation
