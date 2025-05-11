@@ -551,38 +551,21 @@
   async function callLightService(entityId, command, data = {}) {
     const path = `${apiBasePath}/entities/${entityId}/control`;
     const body = { command, ...data };
-
-    try {
-      const response = await fetch(path, {
+    return new Promise((resolve) => {
+      fetchData(path, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body,
+        successCallback: (responseData) => {
+          showToast(`${entityId} ${command} command sent.`, "info", 2000);
+          resolve(responseData);
+        },
+        errorCallback: (error) => {
+          showToast(`Error: ${error.message || "Request failed"}`, "error");
+          resolve(null);
+        },
+        showToastOnError: false
       });
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Request failed, unable to parse error." }));
-        console.error(
-          `Error calling service for ${entityId}:`,
-          response.status,
-          errorData
-        );
-        showToast(
-          `Error: ${errorData.message || response.statusText}`,
-          "error"
-        );
-        return null;
-      }
-      const responseData = await response.json();
-      // console.log(`Service call successful for ${entityId}:`, responseData);
-      // Optimistic update handled by WebSocket, or could be done here if no WS
-      showToast(`${entityId} ${command} command sent.`, "info", 2000);
-      return responseData;
-    } catch (error) {
-      console.error(`Network error calling service for ${entityId}:`, error);
-      showToast(`Network error: ${error.message}`, "error");
-      return null;
-    }
+    });
   }
 
   /**
@@ -1505,9 +1488,21 @@
           '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
         try {
           // Fetch all lights
-          const resp = await fetch(`${apiBasePath}/entities?type=light`);
-          if (!resp.ok) throw new Error("Failed to fetch lights");
-          const lights = await resp.json();
+          let lights = null;
+          await new Promise((resolve) => {
+            fetchData(`${apiBasePath}/entities?type=light`, {
+              successCallback: (resp) => {
+                lights = resp;
+                resolve();
+              },
+              errorCallback: (err) => {
+                showToast("Failed to fetch lights", "error");
+                resolve();
+              },
+              showToastOnError: false
+            });
+          });
+          if (!lights) return;
           // Filter lights for this control
           const entities = Object.values(lights).filter(
             (entity) => entity.device_type === "light" && control.filter(entity)
@@ -1520,21 +1515,9 @@
           let successCount = 0;
           let errorCount = 0;
           for (const entity of entities) {
-            try {
-              const res = await fetch(
-                `${apiBasePath}/entities/${entity.entity_id}/control`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(control.command),
-                }
-              );
-              if (!res.ok) throw new Error(await res.text());
-              successCount++;
-            } catch (err) {
-              errorCount++;
-              console.error(`Failed to control ${entity.entity_id}:`, err);
-            }
+            const res = await callLightService(entity.entity_id, control.command.command, control.command);
+            if (res) successCount++;
+            else errorCount++;
           }
           if (errorCount > 0) {
             showToast(
