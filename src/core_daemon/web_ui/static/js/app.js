@@ -1513,7 +1513,12 @@
    * @param {boolean} expanded - True to expand the sidebar, false to collapse.
    */
   function setDesktopSidebarVisible(expanded) {
-    console.log("[DEBUG] setDesktopSidebarVisible called with:", expanded, "Current isDesktopSidebarExpanded before change:", isDesktopSidebarExpanded);
+    console.log(
+      "[DEBUG] setDesktopSidebarVisible called with:",
+      expanded,
+      "Current isDesktopSidebarExpanded before change:",
+      isDesktopSidebarExpanded
+    );
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
 
@@ -1590,7 +1595,8 @@
         adjustPinnedLogsLayout();
       },
       onCollapse: () => {
-        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2">${sidebarStyles.collapsed.label}</span>`;
+        // Added "relative top-0.5" to the text span for better vertical alignment
+        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2 relative top-0.5">${sidebarStyles.collapsed.label}</span>`;
         sidebar.classList.add("sidebar-collapsed-hoverable");
         sidebar
           .querySelectorAll(".nav-link span")
@@ -1642,9 +1648,7 @@
         !isDesktopSidebarExpanded &&
         e.target === sidebar // Ensure the click is on the sidebar itself, not its children
       ) {
-        console.log(
-          "[SIDEBAR_SETUP] Expanding sidebar via area click."
-        );
+        console.log("[SIDEBAR_SETUP] Expanding sidebar via area click.");
         setDesktopSidebarVisible(true);
       } else {
         console.log(
@@ -1698,11 +1702,15 @@
    */
   function adjustPinnedLogsLayout() {
     if (!pinnedLogsContainer || !sidebar || !mainContent) {
-      console.warn("[LOGS] Missing elements for adjustPinnedLogsLayout. Cannot adjust layout.");
+      console.warn(
+        "[LOGS] Missing elements for adjustPinnedLogsLayout. Cannot adjust layout."
+      );
       return;
     }
 
-    const logsHeaderHeight = pinnedLogsHeader ? pinnedLogsHeader.offsetHeight : 0;
+    const logsHeaderHeight = pinnedLogsHeader
+      ? pinnedLogsHeader.offsetHeight
+      : 0;
     // Get the current actual height of the logs container.
     // This height is primarily managed by setPinnedLogsState (within setupPinnedLogsResizablePanel)
     // and reflects user interactions (toggle, resize) or initial load state.
@@ -2167,7 +2175,8 @@
     );
 
     // Event listeners for mobile sidebar controls
-    if (mobileMenuButton && sidebar) { // Removed closeSidebarButton from condition as its listener is in setupSidebarCollapseExpand
+    if (mobileMenuButton && sidebar) {
+      // Removed closeSidebarButton from condition as its listener is in setupSidebarCollapseExpand
       mobileMenuButton.addEventListener("click", () => {
         sidebar.classList.remove("-translate-x-full");
         sidebar.setAttribute(ARIA_HIDDEN, "false"); // Ensure ARIA state is updated
