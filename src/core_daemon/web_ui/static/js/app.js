@@ -922,31 +922,8 @@
   function fetchUnknownPgns() {
     fetchData(`${apiBasePath}/unknown_pgns`, {
       // New endpoint (corrected)
-      successCallback: (data) => {
-        if (!unknownPgnsContent) return;
-        unknownPgnsContent.innerHTML = ""; // Clear previous
-        if (Object.keys(data).length === 0) {
-          unknownPgnsContent.innerHTML = "<p>No unknown PGNs found.</p>";
-          return;
-        }
-        // ... (Render unknown PGNs - similar to unmapped or simpler list) ...
-        const ul = createDomElement("ul");
-        for (const pgn in data) {
-          const item = data[pgn];
-          ul.appendChild(
-            createDomElement("li", {
-              textContent: `PGN: ${pgn}, Count: ${
-                item.count
-              }, Last Seen: ${new Date(
-                item.last_seen_timestamp * 1000
-              ).toLocaleString()}`,
-            })
-          );
-        }
-        unknownPgnsContent.appendChild(ul);
-      },
+      successCallback: renderUnknownPgnsWithToggle,
       errorCallback: (error) => {
-        console.error("Failed to fetch unknown PGNs:", error);
         if (unknownPgnsContent)
           unknownPgnsContent.textContent = `Error loading unknown PGNs: ${error.message}`;
         showToast("Failed to load unknown PGNs.", "error");
@@ -954,6 +931,102 @@
       loadingElement:
         unknownPgnsContent?.querySelector("#unknown-pgns-loading-message") ||
         unknownPgnsContent,
+    });
+  }
+
+  // Add toggle and rendering for Unknown PGNs
+  function renderUnknownPgnsTable(data) {
+    if (!unknownPgnsContent) return;
+    unknownPgnsContent.innerHTML = "";
+    if (Object.keys(data).length === 0) {
+      unknownPgnsContent.innerHTML = "<p>No unknown PGNs found.</p>";
+      return;
+    }
+    const table = document.createElement("table");
+    table.className = "min-w-full bg-gray-800 rounded-lg shadow text-sm";
+    table.innerHTML = `
+      <thead>
+        <tr class="text-gray-300 border-b border-gray-700">
+          <th class="px-4 py-2 text-left">PGN</th>
+          <th class="px-4 py-2 text-left">Count</th>
+          <th class="px-4 py-2 text-left">Last Seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Object.entries(data)
+          .map(
+            ([pgn, item]) => `
+              <tr class="border-b border-gray-700 hover:bg-gray-700">
+                <td class="px-4 py-2 font-mono text-blue-300">${pgn}</td>
+                <td class="px-4 py-2 text-yellow-200 font-bold">${item.count.toLocaleString()}</td>
+                <td class="px-4 py-2 text-gray-400">${new Date(item.last_seen_timestamp * 1000).toLocaleString()}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    `;
+    unknownPgnsContent.appendChild(table);
+  }
+
+  function renderUnknownPgnsCards(data) {
+    if (!unknownPgnsContent) return;
+    unknownPgnsContent.innerHTML = "";
+    if (Object.keys(data).length === 0) {
+      unknownPgnsContent.innerHTML = "<p>No unknown PGNs found.</p>";
+      return;
+    }
+    const container = document.createElement("div");
+    container.className = "space-y-4";
+    Object.entries(data).forEach(([pgn, item]) => {
+      const card = document.createElement("div");
+      card.className = "bg-gray-800 rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between";
+      card.innerHTML = `
+        <div>
+          <span class="font-mono text-blue-300 text-lg font-semibold">PGN: ${pgn}</span>
+          <span class="ml-2 text-gray-400 text-xs">Last Seen: ${new Date(item.last_seen_timestamp * 1000).toLocaleString()}</span>
+        </div>
+        <div class="mt-2 sm:mt-0">
+          <span class="inline-block bg-yellow-700 text-yellow-200 text-xs font-bold px-2 py-1 rounded">Count: ${item.count.toLocaleString()}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    unknownPgnsContent.appendChild(container);
+  }
+
+  function renderUnknownPgnsWithToggle(data) {
+    if (!unknownPgnsContent) return;
+    unknownPgnsContent.innerHTML = "";
+    // Add toggle buttons
+    const toggleContainer = document.createElement("div");
+    toggleContainer.className = "mb-4 flex gap-2 items-center";
+    const tableBtn = document.createElement("button");
+    tableBtn.textContent = "Table View";
+    tableBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
+    const cardBtn = document.createElement("button");
+    cardBtn.textContent = "Card View";
+    cardBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
+    toggleContainer.appendChild(tableBtn);
+    toggleContainer.appendChild(cardBtn);
+    unknownPgnsContent.appendChild(toggleContainer);
+    // Render default (table)
+    let currentView = "table";
+    function render() {
+      if (currentView === "table") {
+        renderUnknownPgnsTable(data);
+      } else {
+        renderUnknownPgnsCards(data);
+      }
+    }
+    render();
+    tableBtn.addEventListener("click", () => {
+      currentView = "table";
+      render();
+    });
+    cardBtn.addEventListener("click", () => {
+      currentView = "card";
+      render();
     });
   }
 
