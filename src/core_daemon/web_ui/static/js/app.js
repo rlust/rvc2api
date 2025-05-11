@@ -2165,23 +2165,21 @@
       );
     }
 
-    // Initialize sidebar state for desktop
+    // Initialize sidebar state for desktop - This sets the initial state based on localStorage
     const savedSidebarState = localStorage.getItem(
       DESKTOP_SIDEBAR_EXPANDED_KEY
     );
-    // console.log("[DEBUG] Initializing sidebar. Saved state:", savedSidebarState);
+    // Set initial state. setDesktopSidebarVisible handles ARIA attributes and localStorage update.
     setDesktopSidebarVisible(
       savedSidebarState === null ? true : savedSidebarState === "true"
     );
 
-    // Event listeners for mobile sidebar controls (these are distinct)
-    if (mobileMenuButton && sidebar && closeSidebarButton) {
+    // Event listeners for mobile sidebar controls
+    if (mobileMenuButton && sidebar) { // Removed closeSidebarButton from condition as its listener is in setupSidebarCollapseExpand
       mobileMenuButton.addEventListener("click", () => {
         sidebar.classList.remove("-translate-x-full");
-        sidebar.setAttribute(ARIA_HIDDEN, "false");
+        sidebar.setAttribute(ARIA_HIDDEN, "false"); // Ensure ARIA state is updated
       });
-      // Note: The mobile close button listener is in setupSidebarCollapseExpand,
-      // which is fine as long as it's only added once and correctly targets mobile scenarios.
     }
 
     // Setup navigation links
@@ -2203,30 +2201,31 @@
     // Connect Entity WebSocket globally for background updates
     connectEntitySocket();
 
-    // Log controls setup
+    // Log controls setup (pause/resume)
     if (logPauseButton) {
       logPauseButton.addEventListener("click", () => {
         isLogPaused = true;
         logPauseButton.disabled = true;
-        logResumeButton.disabled = false;
-        showToast("Log stream paused.", "info", 1500); // Added toast
+        if (logResumeButton) logResumeButton.disabled = false; // Enable resume button
+        showToast("Log stream paused.", "info", 1500);
       });
     }
     if (logResumeButton) {
+      logResumeButton.disabled = true; // Initially disabled if logs are not paused
       logResumeButton.addEventListener("click", () => {
         isLogPaused = false;
-        logPauseButton.disabled = false;
-        logResumeButton.disabled = true;
-        if (logStream) logStream.scrollTop = logStream.scrollHeight;
-        showToast("Log stream resumed.", "info", 1500); // Added toast
+        if (logPauseButton) logPauseButton.disabled = false; // Enable pause button
+        logResumeButton.disabled = true; // Disable resume button
+        if (logStream) logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom
+        showToast("Log stream resumed.", "info", 1500);
       });
     }
-    // ... (other log controls remain the same, ensure their event listeners are correctly placed if not here)
+    // Note: Listeners for logClearButton, logLevelSelect, logSearchInput are already global (patched outside this function).
 
     // Call setup functions that manage their own event listeners
     setupBulkLightControlButtons();
     setupPinnedLogsResizablePanel(); // Manages pinned logs listeners
-    setupSidebarCollapseExpand(); // NOW THE SOLE HANDLER for desktop sidebar click/toggle listeners
+    setupSidebarCollapseExpand(); // Handles all sidebar button listeners (desktop toggle, mobile close, background click)
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
   }
