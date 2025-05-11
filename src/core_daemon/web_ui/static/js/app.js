@@ -1267,6 +1267,9 @@
       sidebar.classList.add("md:w-64");
       mainContent.classList.remove("md:ml-16");
       mainContent.classList.add("md:ml-64");
+      // Inline style fallback for Tailwind CDN JIT issues
+      sidebar.style.width = "16rem";
+      mainContent.style.marginLeft = "16rem";
       if (icon) icon.className = "mdi mdi-chevron-left text-xl";
       if (span) span.textContent = "Collapse";
       sidebarNavContent.classList.remove(CLASS_HIDDEN);
@@ -1277,6 +1280,9 @@
       sidebar.classList.add("md:w-16");
       mainContent.classList.remove("md:ml-64");
       mainContent.classList.add("md:ml-16");
+      // Inline style fallback for Tailwind CDN JIT issues
+      sidebar.style.width = "4rem";
+      mainContent.style.marginLeft = "4rem";
       if (icon) icon.className = "mdi mdi-chevron-right text-xl";
       if (span) span.textContent = "";
       sidebarNavContent.classList.add(CLASS_HIDDEN);
