@@ -63,8 +63,8 @@
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar Navigation -->
             <aside id="sidebar"
-                   class="h-screen flex flex-col justify-between bg-gray-800 p-4 border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out"
-                   style="width: 16rem">
+                   class="fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 <!-- Base width, JS overrides for collapsed state --> flex flex-col justify-between bg-gray-800 p-4 border-r border-gray-700 overflow-y-auto transition-transform duration-300 ease-in-out transform -translate-x-full md:translate-x-0 <!-- Hidden on mobile, visible on desktop by default -->"
+                   aria-label="Sidebar">
                 <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-lg font-semibold">Navigation</span>

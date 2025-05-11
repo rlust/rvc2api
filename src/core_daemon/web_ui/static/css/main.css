@@ -5,6 +5,7 @@ body {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
+  overflow: hidden; /* Prevent body from scrolling, main content will scroll */
 }
 
 /* Theme Variables - Default (Catppuccin Mocha as example) */
@@ -227,6 +228,7 @@ body {
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
+  overflow: hidden; /* Prevent body from scrolling, main content will scroll */
 }
 
 #appHeader {
@@ -234,9 +236,18 @@ body {
   border-bottom: 1px solid var(--color-border-primary);
 }
 
+/* Sidebar Navigation */
 #sidebar {
   background-color: var(--color-bg-secondary);
   border-right: 1px solid var(--color-border-primary);
+  /* height is managed by fixed positioning: h-[calc(100vh-4rem)] in HTML */
+  /* overflow-y: auto; /* Let sidebar content scroll if it exceeds viewport height */
+  /* transition for width is handled by JS to sync with mainContent margin */
+}
+
+#sidebarNavContent {
+  overflow-y: auto; /* Allow scrolling within the nav content if it's too long */
+  height: 100%; /* Ensure it takes full height of the sidebar for scrolling */
 }
 
 .nav-link {
@@ -304,6 +315,10 @@ textarea {
 
 #pinnedLogsContent {
   background-color: var(--color-bg-primary);
+  overflow-y: auto; /* Allow log content to scroll */
+  height: calc(
+    100% - 2rem
+  ); /* Full height of container minus its own header/controls */
 }
 
 /* Log Stream Styles */
@@ -436,6 +451,9 @@ a:hover {
 #mainContent {
   padding-top: 4rem; /* Height of the header */
   /* padding-bottom will be dynamically adjusted by JS if logs are pinned and expanded */
+  overflow-y: auto; /* Allow main content to scroll independently */
+  height: calc(100vh - 4rem); /* Full viewport height minus header height */
+  /* transition for margin-left is handled by JS */
 }
 
 /* Utility for screen readers only */

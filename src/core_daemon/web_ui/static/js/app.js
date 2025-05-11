@@ -959,7 +959,9 @@
               <tr class="border-b border-gray-700 hover:bg-gray-700">
                 <td class="px-4 py-2 font-mono text-blue-300">${pgn}</td>
                 <td class="px-4 py-2 text-yellow-200 font-bold">${item.count.toLocaleString()}</td>
-                <td class="px-4 py-2 text-gray-400">${new Date(item.last_seen_timestamp * 1000).toLocaleString()}</td>
+                <td class="px-4 py-2 text-gray-400">${new Date(
+                  item.last_seen_timestamp * 1000
+                ).toLocaleString()}</td>
               </tr>
             `
           )
@@ -980,11 +982,14 @@
     container.className = "space-y-4";
     Object.entries(data).forEach(([pgn, item]) => {
       const card = document.createElement("div");
-      card.className = "bg-gray-800 rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between";
+      card.className =
+        "bg-gray-800 rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between";
       card.innerHTML = `
         <div>
           <span class="font-mono text-blue-300 text-lg font-semibold">PGN: ${pgn}</span>
-          <span class="ml-2 text-gray-400 text-xs">Last Seen: ${new Date(item.last_seen_timestamp * 1000).toLocaleString()}</span>
+          <span class="ml-2 text-gray-400 text-xs">Last Seen: ${new Date(
+            item.last_seen_timestamp * 1000
+          ).toLocaleString()}</span>
         </div>
         <div class="mt-2 sm:mt-0">
           <span class="inline-block bg-yellow-700 text-yellow-200 text-xs font-bold px-2 py-1 rounded">Count: ${item.count.toLocaleString()}</span>
@@ -1003,10 +1008,12 @@
     toggleContainer.className = "mb-4 flex gap-2 items-center";
     const tableBtn = document.createElement("button");
     tableBtn.textContent = "Table View";
-    tableBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
+    tableBtn.className =
+      "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
     const cardBtn = document.createElement("button");
     cardBtn.textContent = "Card View";
-    cardBtn.className = "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
+    cardBtn.className =
+      "px-3 py-1 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 focus:outline-none";
     toggleContainer.appendChild(tableBtn);
     toggleContainer.appendChild(cardBtn);
     unknownPgnsContent.appendChild(toggleContainer);
@@ -1371,6 +1378,8 @@
    * @param {Object} opts.styles - { expanded: {width, marginLeft, height, paddingBottom}, collapsed: {...} }
    * @param {Function} [opts.onExpand] - Callback after expand
    * @param {Function} [opts.onCollapse] - Callback after collapse
+   * @param {HTMLElement} [opts.pinnedLogsContainer] - The pinned logs container element (optional)
+   * @param {Object} [opts.pinnedLogsStyles] - Styles for pinned logs container (optional)
    */
   function setPanelExpanded({
     panel,
@@ -1381,17 +1390,42 @@
     styles,
     onExpand,
     onCollapse,
+    // New: Pinned logs container and its related elements
+    pinnedLogsContainer,
+    pinnedLogsStyles,
   }) {
     if (!panel) return;
-    // Animate width/height if specified
+
+    // Clear existing inline transition before applying new one or changing properties directly
+    panel.style.transition = "";
+    if (mainContent) mainContent.style.transition = "";
+    if (pinnedLogsContainer) pinnedLogsContainer.style.transition = ""; // Clear for pinned logs
+
+    // Apply new transition if specified
     if (styles.transition) {
+      // Force reflow to ensure transition applies correctly after clearing
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _ = panel.offsetHeight;
       panel.style.transition = styles.transition;
-      if (mainContent) mainContent.style.transition = styles.transition;
+      if (mainContent) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const __ = mainContent.offsetHeight;
+        mainContent.style.transition = styles.transition; // Use the same transition as sidebar for margin-left
+      }
+      if (
+        pinnedLogsContainer &&
+        pinnedLogsStyles &&
+        pinnedLogsStyles.transition
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const ___ = pinnedLogsContainer.offsetHeight;
+        pinnedLogsContainer.style.transition = pinnedLogsStyles.transition; // Use specific transition for pinned logs (e.g., for 'left')
+      }
     }
+
     if (expanded) {
       if (styles.expanded.width) {
         panel.style.setProperty("width", styles.expanded.width, "important");
-        console.log("[SIDEBAR] Set width (expanded):", styles.expanded.width);
       }
       if (mainContent && styles.expanded.marginLeft) {
         mainContent.style.setProperty(
@@ -1399,27 +1433,36 @@
           styles.expanded.marginLeft,
           "important"
         );
-        console.log(
-          "[MAIN] Set margin-left (expanded):",
-          styles.expanded.marginLeft
-        );
       }
-      if (panel && styles.expanded.height)
+      // Pinned logs adjustment when sidebar expands
+      if (
+        pinnedLogsContainer &&
+        pinnedLogsStyles &&
+        pinnedLogsStyles.expanded &&
+        pinnedLogsStyles.expanded.left
+      ) {
+        pinnedLogsContainer.style.left = pinnedLogsStyles.expanded.left;
+      }
+      if (panel && styles.expanded.height) {
         panel.style.height = styles.expanded.height;
-      if (mainContent && styles.expanded.paddingBottom)
+      }
+      if (mainContent && styles.expanded.paddingBottom) {
         mainContent.style.paddingBottom = styles.expanded.paddingBottom;
+      }
       if (content) content.classList.remove(CLASS_HIDDEN);
-      if (toggleButton && toggleButton.querySelector("i"))
+      if (toggleButton && toggleButton.querySelector("i")) {
         toggleButton.querySelector("i").className =
           styles.expanded.iconClass || "";
-      if (toggleButton && toggleButton.querySelector("span"))
+      }
+      if (toggleButton && toggleButton.querySelector("span")) {
         toggleButton.querySelector("span").textContent =
           styles.expanded.label || "";
+      }
+      if (toggleButton) toggleButton.setAttribute("aria-expanded", "true");
       if (onExpand) onExpand();
     } else {
       if (styles.collapsed.width) {
         panel.style.setProperty("width", styles.collapsed.width, "important");
-        console.log("[SIDEBAR] Set width (collapsed):", styles.collapsed.width);
       }
       if (mainContent && styles.collapsed.marginLeft) {
         mainContent.style.setProperty(
@@ -1427,43 +1470,92 @@
           styles.collapsed.marginLeft,
           "important"
         );
-        console.log(
-          "[MAIN] Set margin-left (collapsed):",
-          styles.collapsed.marginLeft
-        );
       }
-      if (panel && styles.collapsed.height)
+      // Pinned logs adjustment when sidebar collapses
+      if (
+        pinnedLogsContainer &&
+        pinnedLogsStyles &&
+        pinnedLogsStyles.collapsed &&
+        pinnedLogsStyles.collapsed.left
+      ) {
+        pinnedLogsContainer.style.left = pinnedLogsStyles.collapsed.left;
+      }
+      if (panel && styles.collapsed.height) {
         panel.style.height = styles.collapsed.height;
-      if (mainContent && styles.collapsed.paddingBottom)
+      }
+      if (mainContent && styles.collapsed.paddingBottom) {
         mainContent.style.paddingBottom = styles.collapsed.paddingBottom;
+      }
       if (content) content.classList.add(CLASS_HIDDEN);
-      if (toggleButton && toggleButton.querySelector("i"))
+      if (toggleButton && toggleButton.querySelector("i")) {
         toggleButton.querySelector("i").className =
           styles.collapsed.iconClass || "";
-      if (toggleButton && toggleButton.querySelector("span"))
+      }
+      if (toggleButton && toggleButton.querySelector("span")) {
         toggleButton.querySelector("span").textContent =
           styles.collapsed.label || "";
+      }
+      if (toggleButton) toggleButton.setAttribute("aria-expanded", "false");
       if (onCollapse) onCollapse();
     }
   }
 
   /**
    * Sets the visibility and state of the desktop sidebar.
+   * Also adjusts the pinned logs container's left margin to align with the sidebar.
    * @param {boolean} expanded - True to expand the sidebar, false to collapse.
    */
   function setDesktopSidebarVisible(expanded) {
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
-    sidebar.setAttribute("aria-expanded", expanded);
-    toggleSidebarDesktopButton.setAttribute("aria-expanded", expanded);
 
     if (
       !sidebar ||
       !mainContent ||
       !toggleSidebarDesktopButton ||
-      !sidebarNavContent
-    )
+      !sidebarNavContent ||
+      !pinnedLogsContainer
+    ) {
+      console.warn(
+        "[SIDEBAR/LOGS] Missing one or more critical elements for setDesktopSidebarVisible or adjustPinnedLogsLayout"
+      );
       return;
+    }
+
+    sidebar.setAttribute("aria-expanded", expanded.toString());
+    toggleSidebarDesktopButton.setAttribute(
+      "aria-expanded",
+      expanded.toString()
+    );
+
+    // Define styles for sidebar and main content
+    const sidebarStyles = {
+      transition:
+        "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
+      expanded: {
+        width: "16rem", // Tailwind w-64
+        marginLeft: "16rem", // mainContent margin
+        iconClass: "mdi mdi-chevron-left text-xl",
+        label: "Collapse",
+      },
+      collapsed: {
+        width: "4rem", // Tailwind w-16
+        marginLeft: "4rem", // mainContent margin
+        iconClass: "mdi mdi-chevron-right text-xl",
+        label: "",
+      },
+    };
+
+    // Define styles for pinned logs container (specifically its 'left' property)
+    const pinnedLogsStylesDef = {
+      transition: "left 0.3s cubic-bezier(0.4,0,0.2,1)", // Match sidebar transition timing
+      expanded: {
+        left: "16rem", // Align with expanded sidebar
+      },
+      collapsed: {
+        left: "4rem", // Align with collapsed sidebar
+      },
+    };
 
     setPanelExpanded({
       panel: sidebar,
@@ -1471,30 +1563,135 @@
       mainContent,
       toggleButton: toggleSidebarDesktopButton,
       expanded,
-      styles: {
-        transition:
-          "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
-        expanded: {
-          width: "16rem",
-          marginLeft: "16rem",
-          iconClass: "mdi mdi-chevron-left text-xl",
-          label: "Collapse",
-        },
-        collapsed: {
-          width: "4rem",
-          marginLeft: "4rem",
-          iconClass: "mdi mdi-chevron-right text-xl",
-          label: "",
-        },
-      },
+      styles: sidebarStyles,
+      // Pass pinned logs elements and their styles to setPanelExpanded
+      pinnedLogsContainer,
+      pinnedLogsStyles: pinnedLogsStylesDef,
       onExpand: () => {
         sidebar.classList.remove("sidebar-collapsed-hoverable");
+        sidebarNavContent.classList.remove(CLASS_HIDDEN);
+        sidebar
+          .querySelectorAll(".nav-link span")
+          .forEach((span) => span.classList.remove(CLASS_HIDDEN));
+        sidebar
+          .querySelectorAll(".nav-link i")
+          .forEach((icon) => icon.classList.add("mr-2"));
+        // Ensure pinned logs are correctly positioned after sidebar animation completes
+        // This might be redundant if setPanelExpanded handles it, but good for explicit control
+        adjustPinnedLogsLayout();
       },
       onCollapse: () => {
         sidebar.classList.add("sidebar-collapsed-hoverable");
+        sidebar
+          .querySelectorAll(".nav-link span")
+          .forEach((span) => span.classList.add(CLASS_HIDDEN));
+        sidebar
+          .querySelectorAll(".nav-link i")
+          .forEach((icon) => icon.classList.remove("mr-2"));
+        // Ensure pinned logs are correctly positioned after sidebar animation completes
+        adjustPinnedLogsLayout();
       },
     });
+    // Initial call to adjust layout, especially if logs are already expanded/collapsed
+    // setPanelExpanded will handle the left adjustment, this handles height/padding
     adjustPinnedLogsLayout();
+  }
+
+  /**
+   * Enhances sidebar collapse/expand/hover behavior.
+   * - Click-to-expand on collapsed sidebar (desktop)
+   * - Robust state save/restore in localStorage
+   * - Maintains ARIA and accessibility
+   */
+  function setupSidebarCollapseExpand() {
+    if (
+      !sidebar ||
+      !mainContent ||
+      !toggleSidebarDesktopButton ||
+      !sidebarNavContent
+    )
+      return;
+    // Only expand when clicking the sidebar background (not any child)
+    sidebar.addEventListener("click", (e) => {
+      if (
+        window.innerWidth >= MD_BREAKPOINT_PX &&
+        !isDesktopSidebarExpanded &&
+        e.target === sidebar
+      ) {
+        setDesktopSidebarVisible(true);
+      }
+    });
+    // Collapse/expand button
+    toggleSidebarDesktopButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setDesktopSidebarVisible(!isDesktopSidebarExpanded);
+    });
+    // Mobile close button
+    if (closeSidebarButton) {
+      closeSidebarButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setDesktopSidebarVisible(false);
+      });
+    }
+    // Add ARIA attributes for accessibility
+    sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded);
+    toggleSidebarDesktopButton.setAttribute(
+      "aria-expanded",
+      isDesktopSidebarExpanded
+    );
+  }
+
+  /**
+   * Adjusts the pinned logs drawer position so it does not cover the sidebar.
+   * Sets the left offset to match the sidebar width (expanded/collapsed) on desktop.
+   * On mobile, sets left to 0.
+   * Should be called on sidebar expand/collapse, window resize, and after toggling logs.
+   */
+  function adjustPinnedLogsLayout() {
+    if (!pinnedLogsContainer || !sidebar || !mainContent) {
+      console.warn("[LOGS] Missing elements for adjustPinnedLogsLayout");
+      return;
+    }
+
+    const logsHeaderHeight = pinnedLogsHeader
+      ? pinnedLogsHeader.offsetHeight
+      : 0;
+    let currentPinnedLogsHeight = pinnedLogsContainer.offsetHeight;
+    const isLogsExpanded =
+      pinnedLogsContent && !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
+
+    // Determine the actual height of the logs container based on its expanded/collapsed state
+    // This relies on the height being set correctly by togglePinnedLogs
+    if (isLogsExpanded) {
+      // If expanded, use its current (presumably expanded) height
+      // Or, if a specific expanded height is desired and stored, use that.
+      // For now, assume togglePinnedLogs sets it to PINNED_LOGS_EXPANDED_HEIGHT_REM or similar.
+      currentPinnedLogsHeight =
+        parseFloat(PINNED_LOGS_EXPANDED_HEIGHT_REM) * 16; // Convert rem to px (approx)
+    } else {
+      currentPinnedLogsHeight =
+        parseFloat(PINNED_LOGS_COLLAPSED_HEIGHT_REM) * 16; // Convert rem to px
+    }
+
+    if (window.innerWidth < MD_BREAKPOINT_PX) {
+      // Mobile: logs bar spans full width, sidebar is an overlay or hidden
+      pinnedLogsContainer.style.left = "0px";
+      pinnedLogsContainer.style.right = "0px";
+      // Main content padding bottom should account for logs height (either expanded or collapsed header)
+      mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
+    } else {
+      // Desktop: align with sidebar. 'left' is now handled by setDesktopSidebarVisible via setPanelExpanded.
+      // The sidebar's width (expanded or collapsed) will determine the 'left' for pinnedLogsContainer.
+      const sidebarCurrentWidth = sidebar.offsetWidth; // Get the actual current width of the sidebar
+      pinnedLogsContainer.style.left = `${sidebarCurrentWidth}px`;
+      pinnedLogsContainer.style.right = "0px";
+      mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
+    }
+
+    // Adjust content height within the pinned logs container
+    if (pinnedLogsContent) {
+      pinnedLogsContent.style.height = `calc(100% - ${logsHeaderHeight}px)`;
+    }
   }
 
   /**
@@ -1891,107 +2088,6 @@
       }
     });
 
-  /**
-   * Enhances sidebar collapse/expand/hover behavior.
-   * - Click-to-expand on collapsed sidebar (desktop)
-   * - Robust state save/restore in localStorage
-   * - Maintains ARIA and accessibility
-   */
-  function setupSidebarCollapseExpand() {
-    if (
-      !sidebar ||
-      !mainContent ||
-      !toggleSidebarDesktopButton ||
-      !sidebarNavContent
-    )
-      return;
-    // Only expand when clicking the sidebar background (not any child)
-    sidebar.addEventListener("click", (e) => {
-      if (
-        window.innerWidth >= MD_BREAKPOINT_PX &&
-        !isDesktopSidebarExpanded &&
-        e.target === sidebar
-      ) {
-        setDesktopSidebarVisible(true);
-      }
-    });
-    // Collapse/expand button
-    toggleSidebarDesktopButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setDesktopSidebarVisible(!isDesktopSidebarExpanded);
-    });
-    // Mobile close button
-    if (closeSidebarButton) {
-      closeSidebarButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        setDesktopSidebarVisible(false);
-      });
-    }
-    // Add ARIA attributes for accessibility
-    sidebar.setAttribute("aria-expanded", isDesktopSidebarExpanded);
-    toggleSidebarDesktopButton.setAttribute(
-      "aria-expanded",
-      isDesktopSidebarExpanded
-    );
-  }
-
-  /**
-   * Updates the area filter dropdown for lights based on the current light entities.
-   * Ensures all unique areas are present as options, sorted alphabetically.
-   * @param {object} lightEntities - Object of light entities keyed by entity_id.
-   */
-  function updateAreaFilterForLights(lightEntities) {
-    if (!areaFilter) return;
-    const currentValue = areaFilter.value;
-    const areas = new Set(["All"]);
-    Object.values(lightEntities).forEach((e) => {
-      if (e.device_type === "light") {
-        areas.add(e.suggested_area || "Unknown Area");
-      }
-    });
-    // Remove all options
-    while (areaFilter.firstChild) areaFilter.removeChild(areaFilter.firstChild);
-    // Add sorted options
-    Array.from(areas)
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((area) => {
-        const opt = document.createElement("option");
-        opt.value = area;
-        opt.textContent = area;
-        areaFilter.appendChild(opt);
-      });
-    // Restore previous selection if possible
-    if ([...areas].includes(currentValue)) {
-      areaFilter.value = currentValue;
-    } else {
-      areaFilter.value = "All";
-    }
-  }
-
-  /**
-   * Adjusts the pinned logs drawer position so it does not cover the sidebar.
-   * Sets the left offset to match the sidebar width (expanded/collapsed) on desktop.
-   * On mobile, sets left to 0.
-   * Should be called on sidebar expand/collapse, window resize, and after toggling logs.
-   */
-  function adjustPinnedLogsLayout() {
-    if (!pinnedLogsContainer || !sidebar) return;
-    if (window.innerWidth < MD_BREAKPOINT_PX) {
-      // Mobile: logs bar spans full width
-      pinnedLogsContainer.style.left = "0px";
-    } else {
-      // Desktop: align with sidebar
-      const isSidebarCollapsedDesktop = sidebar.classList.contains(
-        SIDEBAR_COLLAPSED_WIDTH_DESKTOP
-      );
-      if (isSidebarCollapsedDesktop) {
-        pinnedLogsContainer.style.left = "4rem"; // Collapsed width
-      } else {
-        pinnedLogsContainer.style.left = "16rem"; // Expanded width
-      }
-    }
-  }
-
   // =====================
   // APP INITIALIZATION
   // =====================
@@ -2147,4 +2243,4 @@
       areaFilter.addEventListener("change", renderGroupedLights);
     }
   });
-})();
+})(); // Ensure this IIFE is properly closed
