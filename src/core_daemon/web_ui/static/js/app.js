@@ -1277,9 +1277,14 @@
       if (mainContent) mainContent.style.transition = styles.transition;
     }
     if (expanded) {
-      if (styles.expanded.width) panel.style.width = styles.expanded.width;
-      if (mainContent && styles.expanded.marginLeft)
-        mainContent.style.marginLeft = styles.expanded.marginLeft;
+      if (styles.expanded.width) {
+        panel.style.setProperty("width", styles.expanded.width, "important");
+        console.log("[SIDEBAR] Set width (expanded):", styles.expanded.width);
+      }
+      if (mainContent && styles.expanded.marginLeft) {
+        mainContent.style.setProperty("margin-left", styles.expanded.marginLeft, "important");
+        console.log("[MAIN] Set margin-left (expanded):", styles.expanded.marginLeft);
+      }
       if (panel && styles.expanded.height) panel.style.height = styles.expanded.height;
       if (mainContent && styles.expanded.paddingBottom)
         mainContent.style.paddingBottom = styles.expanded.paddingBottom;
@@ -1290,9 +1295,14 @@
         toggleButton.querySelector("span").textContent = styles.expanded.label || "";
       if (onExpand) onExpand();
     } else {
-      if (styles.collapsed.width) panel.style.width = styles.collapsed.width;
-      if (mainContent && styles.collapsed.marginLeft)
-        mainContent.style.marginLeft = styles.collapsed.marginLeft;
+      if (styles.collapsed.width) {
+        panel.style.setProperty("width", styles.collapsed.width, "important");
+        console.log("[SIDEBAR] Set width (collapsed):", styles.collapsed.width);
+      }
+      if (mainContent && styles.collapsed.marginLeft) {
+        mainContent.style.setProperty("margin-left", styles.collapsed.marginLeft, "important");
+        console.log("[MAIN] Set margin-left (collapsed):", styles.collapsed.marginLeft);
+      }
       if (panel && styles.collapsed.height) panel.style.height = styles.collapsed.height;
       if (mainContent && styles.collapsed.paddingBottom)
         mainContent.style.paddingBottom = styles.collapsed.paddingBottom;
