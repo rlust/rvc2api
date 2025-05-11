@@ -1901,52 +1901,8 @@
       });
 
     // Pinned logs toggle and initial state
-    if (
-      togglePinnedLogsButton &&
-      pinnedLogsContent &&
-      pinnedLogsContainer &&
-      mainContent
-    ) {
-      const toggleLogs = () => {
-        const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
-        console.log(`[LOG DRAWER] toggleLogs called. isOpen (before toggle): ${isOpen}`);
-        pinnedLogsContent.classList.toggle(CLASS_HIDDEN, isOpen);
-        const chevron = togglePinnedLogsButton.querySelector("i");
-        if (isOpen) {
-          // Is now closing
-          pinnedLogsContainer.style.height = "3rem"; // Collapsed height
-          mainContent.style.paddingBottom = "3rem";
-          if (chevron) chevron.className = "mdi mdi-chevron-up text-2xl";
-          console.log("[LOG DRAWER] toggleLogs: closing, calling disconnectLogSocket()");
-          disconnectLogSocket(); // Disconnect when closed
-        } else {
-          // Is now opening
-          pinnedLogsContainer.style.height = "30vh"; // Example expanded height
-          mainContent.style.paddingBottom = "30vh";
-          if (chevron) chevron.className = "mdi mdi-chevron-down text-2xl";
-          console.log("[LOG DRAWER] toggleLogs: opening, calling connectLogSocket()");
-          connectLogSocket(); // Connect when opened
-        }
-        isPinnedLogsVisible = !isOpen;
-        adjustPinnedLogsLayout();
-      };
-      togglePinnedLogsButton.addEventListener("click", toggleLogs);
-      pinnedLogsHeader.addEventListener("click", (e) => {
-        // Allow clicking header to toggle
-        if (
-          e.target === pinnedLogsHeader ||
-          (pinnedLogsHeader.contains(e.target) && e.target.tagName !== "BUTTON")
-        ) {
-          toggleLogs();
-        }
-      });
-      // --- Removed forced collapse of logs here ---
-      // The initial open/closed state is now set only by setPinnedLogsState in setupPinnedLogsResizablePanel
-    } else {
-      console.warn(
-        "Pinned logs elements not found, functionality may be limited."
-      );
-    }
+    // --- Removed duplicate toggleLogs logic and event listeners from initializeApp ---
+    // The log drawer's open/close state and event listeners are now managed only by setupPinnedLogsResizablePanel.
 
     // Setup periodic data fetching for dashboard items if on home view
     // This will be managed by navigateToView now, but intervals can be set here if needed globally
