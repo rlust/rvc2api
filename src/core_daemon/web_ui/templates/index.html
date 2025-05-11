@@ -327,13 +327,11 @@ Loading rvc.json...</pre>
                         <!-- Added Clear button -->
                     </div>
                 </div>
-                <pre id="log-stream"
-                     class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap"></pre>
-                <!-- Removed h-full, added flex-1 min-h-0 -->
-                <p id="logs-waiting-message"
-                   class="text-gray-500 hidden absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    Waiting for logs...
-                </p>
+                <pre id="log-stream" class="bg-black text-green-400 p-3 rounded overflow-auto flex-1 min-h-0 font-mono text-xs whitespace-pre-wrap">
+                    <p id="logs-waiting-message" class="text-gray-500 hidden flex items-center justify-center bg-black bg-opacity-50">
+                        Waiting for logs...
+                    </p>
+                </pre>
             </div>
         </div>
         <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
