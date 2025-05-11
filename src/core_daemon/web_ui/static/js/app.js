@@ -136,7 +136,6 @@
   let currentLogLevel = LOG_LEVELS.INFO; // Default log level
   let isLogPaused = false;
   let entitySocket; // For real-time entity updates (e.g., lights)
-  let lightStates = {}; // To store the state of lights for optimistic UI and updates
   let isDesktopSidebarExpanded = true; // Track desktop sidebar state
   const currentLightStates = {}; // Store current states of all lights
   // Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
@@ -298,26 +297,32 @@
    * @param {string} [data.version] - Server version.
    */
   function updateApiServerView(data) {
-    if (!apiStatusContent) return;
-    apiStatusContent.innerHTML = "";
-    const status = data.status || "unknown";
-    const message = data.message || "";
-    const version = data.version || APP_VERSION || "";
-    const statusColor =
-      status === "ok"
-        ? CLASS_TEXT_GREEN_400
-        : status === "error"
-        ? CLASS_TEXT_RED_400
-        : CLASS_TEXT_YELLOW_400;
-    apiStatusContent.innerHTML = `
-      <div class="flex items-center space-x-2">
-        <span class="font-semibold">Status:</span>
-        <span class="${statusColor}">${status}</span>
-        <span class="ml-4 font-semibold">Version:</span>
-        <span>${version}</span>
-      </div>
-      <div class="mt-2 text-sm text-gray-400">${message}</div>
-    `;
+    try {
+      if (!apiStatusContent) return;
+      apiStatusContent.innerHTML = "";
+      const status = data.status || "unknown";
+      const message = data.message || "";
+      const version = data.version || APP_VERSION || "";
+      const statusColor =
+        status === "ok"
+          ? CLASS_TEXT_GREEN_400
+          : status === "error"
+          ? CLASS_TEXT_RED_400
+          : CLASS_TEXT_YELLOW_400;
+      apiStatusContent.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <span class="font-semibold">Status:</span>
+          <span class="${statusColor}">${status}</span>
+          <span class="ml-4 font-semibold">Version:</span>
+          <span>${version}</span>
+        </div>
+        <div class="mt-2 text-sm text-gray-400">${message}</div>
+      `;
+    } catch (err) {
+      console.error("Error in updateApiServerView:", err);
+      if (apiStatusContent)
+        apiStatusContent.textContent = "Error rendering API status.";
+    }
   }
 
   /**
@@ -326,16 +331,22 @@
    * @param {object} data - Health data with keys as metric names and values as status/counts.
    */
   function updateApplicationHealthView(data) {
-    if (!appHealthContent) return;
-    appHealthContent.innerHTML = "";
-    if (!data || typeof data !== "object") {
-      appHealthContent.textContent = "No health data available.";
-      return;
+    try {
+      if (!appHealthContent) return;
+      appHealthContent.innerHTML = "";
+      if (!data || typeof data !== "object") {
+        appHealthContent.textContent = "No health data available.";
+        return;
+      }
+      const entries = Object.entries(data).map(([key, value]) => {
+        return `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`;
+      });
+      appHealthContent.innerHTML = entries.join("");
+    } catch (err) {
+      console.error("Error in updateApplicationHealthView:", err);
+      if (appHealthContent)
+        appHealthContent.textContent = "Error rendering application health.";
     }
-    const entries = Object.entries(data).map(([key, value]) => {
-      return `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`;
-    });
-    appHealthContent.innerHTML = entries.join("");
   }
 
   /**
@@ -344,27 +355,191 @@
    * @param {object} data - CAN status data, expected to have an 'interfaces' object.
    */
   function updateCanStatusView(data) {
-    if (!canStatusContent) return;
-    canStatusContent.innerHTML = "";
-    if (
-      !data ||
-      !data.interfaces ||
-      Object.keys(data.interfaces).length === 0
-    ) {
-      canStatusContent.textContent = "No CAN interfaces found.";
-      return;
+    try {
+      if (!canStatusContent) return;
+      canStatusContent.innerHTML = "";
+      if (
+        !data ||
+        !data.interfaces ||
+        Object.keys(data.interfaces).length === 0
+      ) {
+        canStatusContent.textContent = "No CAN interfaces found.";
+        return;
+      }
+      const interfaces = data.interfaces;
+      Object.entries(interfaces).forEach(([iface, stats]) => {
+        const ifaceDiv = document.createElement("div");
+        ifaceDiv.className = "mb-2";
+        ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${
+          stats.state || "unknown"
+        }</span> <span class="ml-2 text-xs text-gray-400">RX: ${
+          stats.rx_packets || 0
+        } / TX: ${stats.tx_packets || 0}</span>`;
+        canStatusContent.appendChild(ifaceDiv);
+      });
+    } catch (err) {
+      console.error("Error in updateCanStatusView:", err);
+      if (canStatusContent)
+        canStatusContent.textContent = "Error rendering CAN status.";
     }
-    const interfaces = data.interfaces;
-    Object.entries(interfaces).forEach(([iface, stats]) => {
-      const ifaceDiv = document.createElement("div");
-      ifaceDiv.className = "mb-2";
-      ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${
-        stats.state || "unknown"
-      }</span> <span class="ml-2 text-xs text-gray-400">RX: ${
-        stats.rx_packets || 0
-      } / TX: ${stats.tx_packets || 0}</span>`;
-      canStatusContent.appendChild(ifaceDiv);
-    });
+  }
+
+  /**
+   * Updates the lights view with fetched data.
+   * @param {object} data - The response from the lights API. Expected to be an object where keys are entity IDs.
+   */
+  async function updateLightsView() {
+    try {
+      if (!lightsView.classList.contains("hidden")) {
+        // Only fetch if view is active
+        if (lightsLoadingMessage)
+          lightsLoadingMessage.classList.remove("hidden");
+        if (lightsContent) lightsContent.innerHTML = ""; // Clear previous
+
+        try {
+          const response = await fetch(
+            `${apiBasePath}/entities?device_type=light`
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const lightsData = await response.json();
+
+          Object.keys(currentLightStates).forEach(
+            (key) => delete currentLightStates[key]
+          ); // Clear old states
+          Object.values(lightsData).forEach((light) => {
+            currentLightStates[light.entity_id] = light;
+          });
+
+          if (lightsLoadingMessage)
+            lightsLoadingMessage.classList.add("hidden");
+          updateAreaFilterForLights(currentLightStates);
+          renderGroupedLights();
+        } catch (error) {
+          console.error("Failed to fetch lights:", error);
+          if (lightsLoadingMessage) {
+            lightsLoadingMessage.textContent =
+              "Error loading lights. Please check console.";
+            lightsLoadingMessage.classList.remove("hidden");
+          }
+          if (lightsContent)
+            lightsContent.innerHTML =
+              '<p class="text-red-500">Error loading lights data.</p>';
+        }
+      }
+    } catch (err) {
+      console.error("Error in updateLightsView:", err);
+      if (lightsContent) lightsContent.textContent = "Error rendering lights.";
+    }
+  }
+
+  /**
+   * Updates the specification text view.
+   * @param {string} textData - The RVC specification text (JSON string).
+   */
+  function updateSpecTextView(textData) {
+    try {
+      if (specContent) {
+        specContent.textContent = textData;
+      }
+    } catch (err) {
+      console.error("Error in updateSpecTextView:", err);
+      if (specContent)
+        specContent.textContent = "Error rendering spec content.";
+    }
+  }
+
+  /**
+   * Updates the specification metadata view.
+   * @param {object} metadata - The RVC specification metadata.
+   * @param {string} [metadata.version] - Specification version.
+   * @param {string} [metadata.source] - Specification source/document URL.
+   */
+  function updateSpecMetadataView(metadata) {
+    try {
+      if (specMetadataDiv) {
+        if (
+          metadata &&
+          (metadata.version || metadata.source || metadata.spec_document)
+        ) {
+          // Check spec_document too
+          specMetadataDiv.innerHTML = `
+            Version: ${metadata.version || "N/A"}<br>
+            Source: ${metadata.spec_document || metadata.source || "N/A"}
+          `;
+        } else {
+          specMetadataDiv.textContent = "Specification metadata not available.";
+        }
+      }
+    } catch (err) {
+      console.error("Error in updateSpecMetadataView:", err);
+      if (specMetadataDiv)
+        specMetadataDiv.textContent = "Error rendering spec metadata.";
+    }
+  }
+
+  /**
+   * Renders unmapped CAN entries with YAML suggestion and copy-to-clipboard button.
+   * @param {object} data - The unmapped entries data from the API.
+   */
+  function renderUnmappedEntries(data) {
+    try {
+      if (!unmappedEntriesContent) return;
+      unmappedEntriesContent.innerHTML = "";
+      if (Object.keys(data).length === 0) {
+        unmappedEntriesContent.innerHTML =
+          '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
+        return;
+      }
+      for (const [key, entry] of Object.entries(data)) {
+        const entryDiv = document.createElement("div");
+        entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow mb-4";
+        // YAML suggestion (reuse original logic or a simplified version)
+        const yamlSuggestion = generateYamlSuggestion(entry);
+        entryDiv.innerHTML = `
+          <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
+          <div class="mb-3">
+            <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
+            <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
+            <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
+          </div>
+        `;
+        unmappedEntriesContent.appendChild(entryDiv);
+      }
+      // Add event listeners to copy buttons
+      unmappedEntriesContent
+        .querySelectorAll(".copy-yaml-btn")
+        .forEach((button) => {
+          button.addEventListener("click", (event) => {
+            const yamlText =
+              event.target.previousElementSibling.querySelector(
+                "code"
+              ).innerText;
+            navigator.clipboard
+              .writeText(yamlText)
+              .then(() => {
+                event.target.textContent = "Copied!";
+                showToast("YAML copied to clipboard!", "success");
+                setTimeout(() => {
+                  event.target.textContent = "Copy YAML";
+                }, 2000);
+              })
+              .catch((err) => {
+                showToast("Failed to copy YAML.", "error");
+                event.target.textContent = "Failed to copy";
+                setTimeout(() => {
+                  event.target.textContent = "Copy YAML";
+                }, 2000);
+              });
+          });
+        });
+    } catch (err) {
+      console.error("Error in renderUnmappedEntries:", err);
+      if (unmappedEntriesContent)
+        unmappedEntriesContent.textContent =
+          "Error rendering unmapped entries.";
+    }
   }
 
   /**
@@ -607,49 +782,6 @@
   }
 
   /**
-   * Updates the lights view with fetched data.
-   * @param {object} data - The response from the lights API. Expected to be an object where keys are entity IDs.
-   */
-  async function updateLightsView() {
-    if (!lightsView.classList.contains("hidden")) {
-      // Only fetch if view is active
-      if (lightsLoadingMessage) lightsLoadingMessage.classList.remove("hidden");
-      if (lightsContent) lightsContent.innerHTML = ""; // Clear previous
-
-      try {
-        const response = await fetch(
-          `${apiBasePath}/entities?device_type=light`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const lightsData = await response.json();
-
-        Object.keys(currentLightStates).forEach(
-          (key) => delete currentLightStates[key]
-        ); // Clear old states
-        Object.values(lightsData).forEach((light) => {
-          currentLightStates[light.entity_id] = light;
-        });
-
-        if (lightsLoadingMessage) lightsLoadingMessage.classList.add("hidden");
-        updateAreaFilterForLights(currentLightStates);
-        renderGroupedLights();
-      } catch (error) {
-        console.error("Failed to fetch lights:", error);
-        if (lightsLoadingMessage) {
-          lightsLoadingMessage.textContent =
-            "Error loading lights. Please check console.";
-          lightsLoadingMessage.classList.remove("hidden");
-        }
-        if (lightsContent)
-          lightsContent.innerHTML =
-            '<p class="text-red-500">Error loading lights data.</p>';
-      }
-    }
-  }
-
-  /**
    * Fetches light entities from the API.
    * Uses /api/entities?type=light as per user's note.
    */
@@ -692,39 +824,6 @@
   }
 
   /**
-   * Updates the specification text view.
-   * @param {string} textData - The RVC specification text (JSON string).
-   */
-  function updateSpecTextView(textData) {
-    if (specContent) {
-      specContent.textContent = textData;
-    }
-  }
-
-  /**
-   * Updates the specification metadata view.
-   * @param {object} metadata - The RVC specification metadata.
-   * @param {string} [metadata.version] - Specification version.
-   * @param {string} [metadata.source] - Specification source/document URL.
-   */
-  function updateSpecMetadataView(metadata) {
-    if (specMetadataDiv) {
-      if (
-        metadata &&
-        (metadata.version || metadata.source || metadata.spec_document)
-      ) {
-        // Check spec_document too
-        specMetadataDiv.innerHTML = `
-          Version: ${metadata.version || "N/A"}<br>
-          Source: ${metadata.spec_document || metadata.source || "N/A"}
-        `;
-      } else {
-        specMetadataDiv.textContent = "Specification metadata not available.";
-      }
-    }
-  }
-
-  /**
    * Fetches and displays the rvc.json specification content and metadata.
    * Fetches content from /api/config/rvc_spec (text)
    * Fetches metadata from /api/config/rvc_spec_metadata (JSON)
@@ -756,60 +855,6 @@
       },
       // No separate loading element for metadata, or use specMetadataDiv if it has one
     });
-  }
-
-  /**
-   * Renders unmapped CAN entries with YAML suggestion and copy-to-clipboard button.
-   * @param {object} data - The unmapped entries data from the API.
-   */
-  function renderUnmappedEntries(data) {
-    if (!unmappedEntriesContent) return;
-    unmappedEntriesContent.innerHTML = "";
-    if (Object.keys(data).length === 0) {
-      unmappedEntriesContent.innerHTML =
-        '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
-      return;
-    }
-    for (const [key, entry] of Object.entries(data)) {
-      const entryDiv = document.createElement("div");
-      entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow mb-4";
-      // YAML suggestion (reuse original logic or a simplified version)
-      const yamlSuggestion = generateYamlSuggestion(entry);
-      entryDiv.innerHTML = `
-        <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
-        <div class="mb-3">
-          <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
-          <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
-          <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
-        </div>
-      `;
-      unmappedEntriesContent.appendChild(entryDiv);
-    }
-    // Add event listeners to copy buttons
-    unmappedEntriesContent
-      .querySelectorAll(".copy-yaml-btn")
-      .forEach((button) => {
-        button.addEventListener("click", (event) => {
-          const yamlText =
-            event.target.previousElementSibling.querySelector("code").innerText;
-          navigator.clipboard
-            .writeText(yamlText)
-            .then(() => {
-              event.target.textContent = "Copied!";
-              showToast("YAML copied to clipboard!", "success");
-              setTimeout(() => {
-                event.target.textContent = "Copy YAML";
-              }, 2000);
-            })
-            .catch((err) => {
-              showToast("Failed to copy YAML.", "error");
-              event.target.textContent = "Failed to copy";
-              setTimeout(() => {
-                event.target.textContent = "Copy YAML";
-              }, 2000);
-            });
-        });
-      });
   }
 
   /**
@@ -1024,7 +1069,9 @@
       (logSocket.readyState === WebSocket.CONNECTING ||
         logSocket.readyState === WebSocket.CLOSING)
     ) {
-      console.log("[LOG DRAWER] Closing previous WebSocket before opening new one.");
+      console.log(
+        "[LOG DRAWER] Closing previous WebSocket before opening new one."
+      );
       logSocket.close();
     }
 
@@ -1071,7 +1118,10 @@
    * Disconnects the log WebSocket.
    */
   function disconnectLogSocket() {
-    console.log("[LOG DRAWER] disconnectLogSocket called. logSocket:", logSocket);
+    console.log(
+      "[LOG DRAWER] disconnectLogSocket called. logSocket:",
+      logSocket
+    );
     if (logSocket) {
       logSocket.close();
       logSocket = null;
@@ -1282,17 +1332,27 @@
         console.log("[SIDEBAR] Set width (expanded):", styles.expanded.width);
       }
       if (mainContent && styles.expanded.marginLeft) {
-        mainContent.style.setProperty("margin-left", styles.expanded.marginLeft, "important");
-        console.log("[MAIN] Set margin-left (expanded):", styles.expanded.marginLeft);
+        mainContent.style.setProperty(
+          "margin-left",
+          styles.expanded.marginLeft,
+          "important"
+        );
+        console.log(
+          "[MAIN] Set margin-left (expanded):",
+          styles.expanded.marginLeft
+        );
       }
-      if (panel && styles.expanded.height) panel.style.height = styles.expanded.height;
+      if (panel && styles.expanded.height)
+        panel.style.height = styles.expanded.height;
       if (mainContent && styles.expanded.paddingBottom)
         mainContent.style.paddingBottom = styles.expanded.paddingBottom;
       if (content) content.classList.remove(CLASS_HIDDEN);
       if (toggleButton && toggleButton.querySelector("i"))
-        toggleButton.querySelector("i").className = styles.expanded.iconClass || "";
+        toggleButton.querySelector("i").className =
+          styles.expanded.iconClass || "";
       if (toggleButton && toggleButton.querySelector("span"))
-        toggleButton.querySelector("span").textContent = styles.expanded.label || "";
+        toggleButton.querySelector("span").textContent =
+          styles.expanded.label || "";
       if (onExpand) onExpand();
     } else {
       if (styles.collapsed.width) {
@@ -1300,17 +1360,27 @@
         console.log("[SIDEBAR] Set width (collapsed):", styles.collapsed.width);
       }
       if (mainContent && styles.collapsed.marginLeft) {
-        mainContent.style.setProperty("margin-left", styles.collapsed.marginLeft, "important");
-        console.log("[MAIN] Set margin-left (collapsed):", styles.collapsed.marginLeft);
+        mainContent.style.setProperty(
+          "margin-left",
+          styles.collapsed.marginLeft,
+          "important"
+        );
+        console.log(
+          "[MAIN] Set margin-left (collapsed):",
+          styles.collapsed.marginLeft
+        );
       }
-      if (panel && styles.collapsed.height) panel.style.height = styles.collapsed.height;
+      if (panel && styles.collapsed.height)
+        panel.style.height = styles.collapsed.height;
       if (mainContent && styles.collapsed.paddingBottom)
         mainContent.style.paddingBottom = styles.collapsed.paddingBottom;
       if (content) content.classList.add(CLASS_HIDDEN);
       if (toggleButton && toggleButton.querySelector("i"))
-        toggleButton.querySelector("i").className = styles.collapsed.iconClass || "";
+        toggleButton.querySelector("i").className =
+          styles.collapsed.iconClass || "";
       if (toggleButton && toggleButton.querySelector("span"))
-        toggleButton.querySelector("span").textContent = styles.collapsed.label || "";
+        toggleButton.querySelector("span").textContent =
+          styles.collapsed.label || "";
       if (onCollapse) onCollapse();
     }
   }
@@ -1323,7 +1393,13 @@
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
 
-    if (!sidebar || !mainContent || !toggleSidebarDesktopButton || !sidebarNavContent) return;
+    if (
+      !sidebar ||
+      !mainContent ||
+      !toggleSidebarDesktopButton ||
+      !sidebarNavContent
+    )
+      return;
 
     setPanelExpanded({
       panel: sidebar,
@@ -1332,7 +1408,8 @@
       toggleButton: toggleSidebarDesktopButton,
       expanded,
       styles: {
-        transition: "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
+        transition:
+          "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
         expanded: {
           width: "16rem",
           marginLeft: "16rem",
@@ -1558,7 +1635,8 @@
         toggleButton: togglePinnedLogsButton,
         expanded: isOpen,
         styles: {
-          transition: "height 0.3s cubic-bezier(0.4,0,0.2,1), padding-bottom 0.3s cubic-bezier(0.4,0,0.2,1)",
+          transition:
+            "height 0.3s cubic-bezier(0.4,0,0.2,1), padding-bottom 0.3s cubic-bezier(0.4,0,0.2,1)",
           expanded: {
             height: currentExpandedLogsHeight,
             paddingBottom: currentExpandedLogsHeight,

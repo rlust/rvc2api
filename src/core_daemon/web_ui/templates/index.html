@@ -14,6 +14,16 @@
     </head>
     <body class="theme-default min-h-screen flex flex-col antialiased"
           data-app-version="{{ app_version }}">
+        <noscript>
+            <div style="background: #fee;
+                        color: #900;
+                        padding: 1rem;
+                        text-align: center;
+                        font-weight: bold">
+                This dashboard requires JavaScript to function. Please enable JavaScript
+                in your browser.
+            </div>
+        </noscript>
         <a href="#mainContent"
            class="sr-only focus:not-sr-only focus:fixed focus:z-[9999] focus:top-0 focus:left-0 focus:bg-blue-600 focus:text-white focus:p-3">Skip to main content</a>
         <div id="toast-container"
@@ -60,6 +70,7 @@
                         <button id="closeSidebarButton"
                                 aria-expanded="true"
                                 aria-controls="sidebar"
+                                aria-label="Close sidebar"
                                 class="md:hidden text-gray-400 hover:text-white">
                             <i class="mdi mdi-close text-2xl" aria-hidden="true"></i>
                         </button>
@@ -282,7 +293,9 @@ Loading rvc.json...</pre>
                  tabindex="0"
                  class="absolute top-0 left-0 right-0 h-2 cursor-ns-resize"
                  style="z-index: 61"
-                 aria-label="Resize pinned logs panel"></div>
+                 aria-label="Resize pinned logs panel"
+                 role="separator"
+                 aria-orientation="vertical"></div>
             <!-- Added aria-label -->
             <!-- Draggable Resize Handle -->
             <div id="pinnedLogsHeader"
