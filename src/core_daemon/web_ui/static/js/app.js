@@ -1619,12 +1619,19 @@
    * @param {boolean} show - Whether to show the waiting message.
    */
   function setLogsWaitingMessage(show) {
+    // Only show/hide the waiting message overlay inside the logStream area, not over the controls
     const logsWaitingMessage = document.getElementById("logs-waiting-message");
     if (!logsWaitingMessage) return;
     if (show) {
       logsWaitingMessage.classList.remove(CLASS_HIDDEN);
+      // Ensure log controls are always enabled
+      if (logLevelSelect) logLevelSelect.disabled = false;
+      if (logSearchInput) logSearchInput.disabled = false;
+      if (logPauseButton) logPauseButton.disabled = false;
+      if (logClearButton) logClearButton.disabled = false;
     } else {
       logsWaitingMessage.classList.add(CLASS_HIDDEN);
+      // Controls remain enabled
     }
   }
 
