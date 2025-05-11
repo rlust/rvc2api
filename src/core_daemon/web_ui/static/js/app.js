@@ -1015,21 +1015,26 @@
    * Connects to the log WebSocket.
    */
   function connectLogSocket() {
-    if (logSocket && logSocket.readyState === WebSocket.OPEN) return;
-    // Disconnect if already connecting or closing
+    console.log("[LOG DRAWER] connectLogSocket called. logSocket:", logSocket);
+    if (logSocket && logSocket.readyState === WebSocket.OPEN) {
+      console.log("[LOG DRAWER] WebSocket already open.");
+      return;
+    }
     if (
       logSocket &&
       (logSocket.readyState === WebSocket.CONNECTING ||
         logSocket.readyState === WebSocket.CLOSING)
     ) {
+      console.log("[LOG DRAWER] Closing previous WebSocket before opening new one.");
       logSocket.close();
     }
 
     // FIX: Use /api/ws/logs to match backend router prefix
     logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
+    console.log("[LOG DRAWER] WebSocket created:", logSocket);
 
     logSocket.onopen = () => {
-      console.log("Log WebSocket connected.");
+      console.log("[LOG DRAWER] Log WebSocket connected.");
       showToast("Log stream connected.", "info", 2000);
       if (
         logStream &&
@@ -1046,13 +1051,13 @@
     };
 
     logSocket.onerror = (error) => {
-      console.error("Log WebSocket error:", error);
+      console.error("[LOG DRAWER] Log WebSocket error:", error);
       showToast("Log stream error.", "error");
     };
 
     logSocket.onclose = (event) => {
       console.log(
-        "Log WebSocket disconnected. Code:",
+        "[LOG DRAWER] Log WebSocket disconnected. Code:",
         event.code,
         "Reason:",
         event.reason
@@ -1067,10 +1072,11 @@
    * Disconnects the log WebSocket.
    */
   function disconnectLogSocket() {
+    console.log("[LOG DRAWER] disconnectLogSocket called. logSocket:", logSocket);
     if (logSocket) {
       logSocket.close();
       logSocket = null;
-      console.log("Log WebSocket intentionally disconnected.");
+      console.log("[LOG DRAWER] Log WebSocket intentionally disconnected.");
     }
   }
 
@@ -1465,6 +1471,7 @@
     }
 
     function setPinnedLogsState(isOpen, height) {
+      console.log(`[LOG DRAWER] setPinnedLogsState called. isOpen: ${isOpen}, height: ${height}`);
       localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
       if (isOpen && height) {
         localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
@@ -1479,6 +1486,7 @@
         if (chevron) {
           chevron.className = "mdi mdi-chevron-down text-2xl";
         }
+        console.log("[LOG DRAWER] Opening drawer, calling connectLogSocket()");
         connectLogSocket();
       } else {
         pinnedLogsContent.classList.add(CLASS_HIDDEN);
@@ -1488,6 +1496,7 @@
         if (chevron) {
           chevron.className = "mdi mdi-chevron-up text-2xl";
         }
+        console.log("[LOG DRAWER] Closing drawer, calling disconnectLogSocket()");
         disconnectLogSocket();
       }
       adjustPinnedLogsLayout();
@@ -1898,6 +1907,7 @@
     ) {
       const toggleLogs = () => {
         const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
+        console.log(`[LOG DRAWER] toggleLogs called. isOpen (before toggle): ${isOpen}`);
         pinnedLogsContent.classList.toggle(CLASS_HIDDEN, isOpen);
         const chevron = togglePinnedLogsButton.querySelector("i");
         if (isOpen) {
@@ -1905,16 +1915,17 @@
           pinnedLogsContainer.style.height = "3rem"; // Collapsed height
           mainContent.style.paddingBottom = "3rem";
           if (chevron) chevron.className = "mdi mdi-chevron-up text-2xl";
+          console.log("[LOG DRAWER] toggleLogs: closing, calling disconnectLogSocket()");
           disconnectLogSocket(); // Disconnect when closed
         } else {
           // Is now opening
           pinnedLogsContainer.style.height = "30vh"; // Example expanded height
           mainContent.style.paddingBottom = "30vh";
           if (chevron) chevron.className = "mdi mdi-chevron-down text-2xl";
+          console.log("[LOG DRAWER] toggleLogs: opening, calling connectLogSocket()");
           connectLogSocket(); // Connect when opened
         }
         isPinnedLogsVisible = !isOpen;
-        // TODO: Save pinned logs state (open/closed, height) to localStorage
         adjustPinnedLogsLayout();
       };
       togglePinnedLogsButton.addEventListener("click", toggleLogs);
