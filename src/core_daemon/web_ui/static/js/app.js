@@ -1256,37 +1256,33 @@
     isDesktopSidebarExpanded = expanded;
     localStorage.setItem(DESKTOP_SIDEBAR_EXPANDED_KEY, expanded);
 
-    if (
-      !sidebar ||
-      !mainContent ||
-      !toggleSidebarDesktopButton ||
-      !sidebarNavContent
-    )
-      return;
+    if (!sidebar || !mainContent || !toggleSidebarDesktopButton || !sidebarNavContent) return;
 
     const icon = toggleSidebarDesktopButton.querySelector("i");
     const span = toggleSidebarDesktopButton.querySelector("span");
 
     if (expanded) {
-      sidebar.classList.remove(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
-      sidebar.classList.add(SIDEBAR_EXPANDED_WIDTH_DESKTOP);
-      mainContent.classList.remove(MAIN_CONTENT_MARGIN_COLLAPSED_DESKTOP);
-      mainContent.classList.add(MAIN_CONTENT_MARGIN_EXPANDED_DESKTOP);
+      // Expanded: wide sidebar, main content shifted
+      sidebar.classList.remove("md:w-16");
+      sidebar.classList.add("md:w-64");
+      mainContent.classList.remove("md:ml-16");
+      mainContent.classList.add("md:ml-64");
       if (icon) icon.className = "mdi mdi-chevron-left text-xl";
       if (span) span.textContent = "Collapse";
       sidebarNavContent.classList.remove(CLASS_HIDDEN);
       sidebar.classList.remove("sidebar-collapsed-hoverable");
     } else {
-      sidebar.classList.remove(SIDEBAR_EXPANDED_WIDTH_DESKTOP);
-      sidebar.classList.add(SIDEBAR_COLLAPSED_WIDTH_DESKTOP);
-      mainContent.classList.remove(MAIN_CONTENT_MARGIN_EXPANDED_DESKTOP);
-      mainContent.classList.add(MAIN_CONTENT_MARGIN_COLLAPSED_DESKTOP);
+      // Collapsed: narrow sidebar, main content less shifted
+      sidebar.classList.remove("md:w-64");
+      sidebar.classList.add("md:w-16");
+      mainContent.classList.remove("md:ml-64");
+      mainContent.classList.add("md:ml-16");
       if (icon) icon.className = "mdi mdi-chevron-right text-xl";
-      if (span) span.textContent = ""; // Or hide span
-      sidebarNavContent.classList.add(CLASS_HIDDEN); // Hide nav text when collapsed
+      if (span) span.textContent = "";
+      sidebarNavContent.classList.add(CLASS_HIDDEN);
       sidebar.classList.add("sidebar-collapsed-hoverable");
     }
-    adjustPinnedLogsLayout(); // Adjust pinned logs layout if it's visible
+    adjustPinnedLogsLayout();
   }
 
   /**
