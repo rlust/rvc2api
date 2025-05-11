@@ -1696,46 +1696,36 @@
    */
   function adjustPinnedLogsLayout() {
     if (!pinnedLogsContainer || !sidebar || !mainContent) {
-      console.warn("[LOGS] Missing elements for adjustPinnedLogsLayout");
+      console.warn("[LOGS] Missing elements for adjustPinnedLogsLayout. Cannot adjust layout.");
       return;
     }
 
-    const logsHeaderHeight = pinnedLogsHeader
-      ? pinnedLogsHeader.offsetHeight
-      : 0;
-    let currentPinnedLogsHeight = pinnedLogsContainer.offsetHeight;
-    const isLogsExpanded =
-      pinnedLogsContent && !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
-
-    // Determine the actual height of the logs container based on its expanded/collapsed state
-    // This relies on the height being set correctly by togglePinnedLogs
-    if (isLogsExpanded) {
-      // If expanded, use its current (presumably expanded) height
-      // Or, if a specific expanded height is desired and stored, use that.
-      // For now, assume togglePinnedLogs sets it to PINNED_LOGS_EXPANDED_HEIGHT_REM or similar.
-      currentPinnedLogsHeight =
-        parseFloat(PINNED_LOGS_EXPANDED_HEIGHT_REM) * 16; // Convert rem to px (approx)
-    } else {
-      currentPinnedLogsHeight =
-        parseFloat(PINNED_LOGS_COLLAPSED_HEIGHT_REM) * 16; // Convert rem to px
-    }
+    const logsHeaderHeight = pinnedLogsHeader ? pinnedLogsHeader.offsetHeight : 0;
+    // Get the current actual height of the logs container.
+    // This height is primarily managed by setPinnedLogsState (within setupPinnedLogsResizablePanel)
+    // and reflects user interactions (toggle, resize) or initial load state.
+    const currentPinnedLogsHeight = pinnedLogsContainer.offsetHeight;
 
     if (window.innerWidth < MD_BREAKPOINT_PX) {
-      // Mobile: logs bar spans full width, sidebar is an overlay or hidden
+      // Mobile: logs bar spans full width, sidebar is an overlay or hidden.
+      // `left` and `right` are set to 0 to span the viewport.
       pinnedLogsContainer.style.left = "0px";
       pinnedLogsContainer.style.right = "0px";
-      // Main content padding bottom should account for logs height (either expanded or collapsed header)
+      // Adjust main content padding to prevent overlap with the logs container.
       mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
     } else {
-      // Desktop: align with sidebar. 'left' is now handled by setDesktopSidebarVisible via setPanelExpanded.
-      // The sidebar's width (expanded or collapsed) will determine the 'left' for pinnedLogsContainer.
-      const sidebarCurrentWidth = sidebar.offsetWidth; // Get the actual current width of the sidebar
-      pinnedLogsContainer.style.left = `${sidebarCurrentWidth}px`;
+      // Desktop:
+      // The 'left' position of pinnedLogsContainer is dynamically set by 'setDesktopSidebarVisible'
+      // (via 'setPanelExpanded') using 'rem' units to align with the sidebar's width
+      // and to ensure smooth transitions. This function should not override that.
+      // 'right' is set to 0 to make the logs container span the rest of the main content area.
       pinnedLogsContainer.style.right = "0px";
+      // Adjust main content padding.
       mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
     }
 
-    // Adjust content height within the pinned logs container
+    // Adjust the height of the scrollable content area within the pinned logs container,
+    // accounting for the header height.
     if (pinnedLogsContent) {
       pinnedLogsContent.style.height = `calc(100% - ${logsHeaderHeight}px)`;
     }
