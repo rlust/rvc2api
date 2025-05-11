@@ -1249,6 +1249,63 @@
   }
 
   /**
+   * Utility to toggle open/collapsed state for a panel (sidebar or drawer).
+   * @param {Object} opts
+   * @param {HTMLElement} opts.panel - The panel element (sidebar or drawer)
+   * @param {HTMLElement} opts.content - The content element to show/hide (optional)
+   * @param {HTMLElement} opts.mainContent - The main content element (for margin adjustment, optional)
+   * @param {HTMLElement} opts.toggleButton - The button to update icon/text (optional)
+   * @param {boolean} opts.expanded - True to expand, false to collapse
+   * @param {Object} opts.styles - { expanded: {width, marginLeft, height, paddingBottom}, collapsed: {...} }
+   * @param {Function} [opts.onExpand] - Callback after expand
+   * @param {Function} [opts.onCollapse] - Callback after collapse
+   */
+  function setPanelExpanded({
+    panel,
+    content,
+    mainContent,
+    toggleButton,
+    expanded,
+    styles,
+    onExpand,
+    onCollapse,
+  }) {
+    if (!panel) return;
+    // Animate width/height if specified
+    if (styles.transition) {
+      panel.style.transition = styles.transition;
+      if (mainContent) mainContent.style.transition = styles.transition;
+    }
+    if (expanded) {
+      if (styles.expanded.width) panel.style.width = styles.expanded.width;
+      if (mainContent && styles.expanded.marginLeft)
+        mainContent.style.marginLeft = styles.expanded.marginLeft;
+      if (panel && styles.expanded.height) panel.style.height = styles.expanded.height;
+      if (mainContent && styles.expanded.paddingBottom)
+        mainContent.style.paddingBottom = styles.expanded.paddingBottom;
+      if (content) content.classList.remove(CLASS_HIDDEN);
+      if (toggleButton && toggleButton.querySelector("i"))
+        toggleButton.querySelector("i").className = styles.expanded.iconClass || "";
+      if (toggleButton && toggleButton.querySelector("span"))
+        toggleButton.querySelector("span").textContent = styles.expanded.label || "";
+      if (onExpand) onExpand();
+    } else {
+      if (styles.collapsed.width) panel.style.width = styles.collapsed.width;
+      if (mainContent && styles.collapsed.marginLeft)
+        mainContent.style.marginLeft = styles.collapsed.marginLeft;
+      if (panel && styles.collapsed.height) panel.style.height = styles.collapsed.height;
+      if (mainContent && styles.collapsed.paddingBottom)
+        mainContent.style.paddingBottom = styles.collapsed.paddingBottom;
+      if (content) content.classList.add(CLASS_HIDDEN);
+      if (toggleButton && toggleButton.querySelector("i"))
+        toggleButton.querySelector("i").className = styles.collapsed.iconClass || "";
+      if (toggleButton && toggleButton.querySelector("span"))
+        toggleButton.querySelector("span").textContent = styles.collapsed.label || "";
+      if (onCollapse) onCollapse();
+    }
+  }
+
+  /**
    * Sets the visibility and state of the desktop sidebar.
    * @param {boolean} expanded - True to expand the sidebar, false to collapse.
    */
@@ -1258,36 +1315,34 @@
 
     if (!sidebar || !mainContent || !toggleSidebarDesktopButton || !sidebarNavContent) return;
 
-    const icon = toggleSidebarDesktopButton.querySelector("i");
-    const span = toggleSidebarDesktopButton.querySelector("span");
-
-    if (expanded) {
-      // Expanded: wide sidebar, main content shifted
-      sidebar.classList.remove("md:w-16");
-      sidebar.classList.add("md:w-64");
-      mainContent.classList.remove("md:ml-16");
-      mainContent.classList.add("md:ml-64");
-      // Inline style fallback for Tailwind CDN JIT issues
-      sidebar.style.width = "16rem";
-      mainContent.style.marginLeft = "16rem";
-      if (icon) icon.className = "mdi mdi-chevron-left text-xl";
-      if (span) span.textContent = "Collapse";
-      sidebarNavContent.classList.remove(CLASS_HIDDEN);
-      sidebar.classList.remove("sidebar-collapsed-hoverable");
-    } else {
-      // Collapsed: narrow sidebar, main content less shifted
-      sidebar.classList.remove("md:w-64");
-      sidebar.classList.add("md:w-16");
-      mainContent.classList.remove("md:ml-64");
-      mainContent.classList.add("md:ml-16");
-      // Inline style fallback for Tailwind CDN JIT issues
-      sidebar.style.width = "4rem";
-      mainContent.style.marginLeft = "4rem";
-      if (icon) icon.className = "mdi mdi-chevron-right text-xl";
-      if (span) span.textContent = "";
-      sidebarNavContent.classList.add(CLASS_HIDDEN);
-      sidebar.classList.add("sidebar-collapsed-hoverable");
-    }
+    setPanelExpanded({
+      panel: sidebar,
+      content: sidebarNavContent,
+      mainContent,
+      toggleButton: toggleSidebarDesktopButton,
+      expanded,
+      styles: {
+        transition: "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
+        expanded: {
+          width: "16rem",
+          marginLeft: "16rem",
+          iconClass: "mdi mdi-chevron-left text-xl",
+          label: "Collapse",
+        },
+        collapsed: {
+          width: "4rem",
+          marginLeft: "4rem",
+          iconClass: "mdi mdi-chevron-right text-xl",
+          label: "",
+        },
+      },
+      onExpand: () => {
+        sidebar.classList.remove("sidebar-collapsed-hoverable");
+      },
+      onCollapse: () => {
+        sidebar.classList.add("sidebar-collapsed-hoverable");
+      },
+    });
     adjustPinnedLogsLayout();
   }
 
@@ -1481,34 +1536,39 @@
     }, 50);
 
     function setPinnedLogsState(isOpen, height) {
-      console.log(`[LOG DRAWER] setPinnedLogsState called. isOpen: ${isOpen}, height: ${height}`);
-      localStorage.setItem(PINNED_LOGS_OPEN_KEY, isOpen);
+      localStorage.setItem("pinnedLogsOpen", isOpen);
       if (isOpen && height) {
-        localStorage.setItem(PINNED_LOGS_HEIGHT_KEY, height);
+        localStorage.setItem("pinnedLogsHeight", height);
         currentExpandedLogsHeight = height;
       }
-      if (isOpen) {
-        pinnedLogsContent.classList.remove(CLASS_HIDDEN);
-        pinnedLogsContainer.style.height = currentExpandedLogsHeight;
-        pinnedLogsContent.style.height = `calc(${currentExpandedLogsHeight} - ${COLLAPSED_LOGS_HEIGHT})`;
-        mainContent.style.paddingBottom = currentExpandedLogsHeight;
-        const chevron = togglePinnedLogsButton.querySelector("i");
-        if (chevron) {
-          chevron.className = "mdi mdi-chevron-down text-2xl";
-        }
-        console.log("[LOG DRAWER] Opening drawer, calling connectLogSocket()");
-        connectLogSocket();
-      } else {
-        pinnedLogsContent.classList.add(CLASS_HIDDEN);
-        pinnedLogsContainer.style.height = COLLAPSED_LOGS_HEIGHT;
-        mainContent.style.paddingBottom = COLLAPSED_LOGS_HEIGHT;
-        const chevron = togglePinnedLogsButton.querySelector("i");
-        if (chevron) {
-          chevron.className = "mdi mdi-chevron-up text-2xl";
-        }
-        console.log("[LOG DRAWER] Closing drawer, calling disconnectLogSocket()");
-        disconnectLogSocket();
-      }
+      setPanelExpanded({
+        panel: pinnedLogsContainer,
+        content: pinnedLogsContent,
+        mainContent,
+        toggleButton: togglePinnedLogsButton,
+        expanded: isOpen,
+        styles: {
+          transition: "height 0.3s cubic-bezier(0.4,0,0.2,1), padding-bottom 0.3s cubic-bezier(0.4,0,0.2,1)",
+          expanded: {
+            height: currentExpandedLogsHeight,
+            paddingBottom: currentExpandedLogsHeight,
+            iconClass: "mdi mdi-chevron-down text-2xl",
+            label: "",
+          },
+          collapsed: {
+            height: "3rem",
+            paddingBottom: "3rem",
+            iconClass: "mdi mdi-chevron-up text-2xl",
+            label: "",
+          },
+        },
+        onExpand: () => {
+          connectLogSocket();
+        },
+        onCollapse: () => {
+          disconnectLogSocket();
+        },
+      });
       adjustPinnedLogsLayout();
     }
 
