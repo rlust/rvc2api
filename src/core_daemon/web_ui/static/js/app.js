@@ -1580,8 +1580,8 @@
       pinnedLogsContainer,
       pinnedLogsStyles: pinnedLogsStylesDef,
       onExpand: () => {
-        // Added "relative top-0.5" to the text span for better vertical alignment with log drawer text
-        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.expanded.iconClass} mr-0"></span><span class="ml-2 relative top-0.5">${sidebarStyles.expanded.label}</span>`;
+        // Removed "relative top-0.5" from the label span
+        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.expanded.iconClass} mr-0"></span><span class="ml-2">${sidebarStyles.expanded.label}</span>`;
         sidebar.classList.remove("sidebar-collapsed-hoverable");
         sidebarNavContent.classList.remove(CLASS_HIDDEN);
         sidebar
@@ -1595,9 +1595,10 @@
         adjustPinnedLogsLayout();
       },
       onCollapse: () => {
-        // Added "relative top-0.5" to the text span for better vertical alignment
-        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2 relative top-0.5">${sidebarStyles.collapsed.label}</span>`;
+        // Removed "relative top-0.5" from the collapsed label span as well for consistency.
+        toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2">${sidebarStyles.collapsed.label}</span>`;
         sidebar.classList.add("sidebar-collapsed-hoverable");
+        sidebarNavContent.classList.add(CLASS_HIDDEN);
         sidebar
           .querySelectorAll(".nav-link span")
           .forEach((span) => span.classList.add(CLASS_HIDDEN));
