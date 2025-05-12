@@ -31,6 +31,22 @@
 ## - If `status_dgn` is not specified for an entity, its status might be expected on the
 ##   same top-level command DGN, or handled by a separate top-level DGN block that maps to the
 ##   same `entity_id` (e.g., DGN "1FEDC" for lock statuses, where "1FEDC" itself acts as a status DGN).
+##
+## dgn_pairs Section:
+## - Use the dgn_pairs section to explicitly define command/status DGN groupings for high-confidence CAN sniffer grouping.
+## - Format: COMMAND_DGN: STATUS_DGN
+##   - The key is the DGN for the command/control message (the message that initiates an action).
+##   - The value is the DGN for the status/response message (the message that reports the result or state after the command).
+## - Example:
+##     dgn_pairs:
+##       1FEDB: 1FEDA   # Light/lock command -> Light/lock status
+##       1FEDB: 1FEDC   # Lock command -> Lock status
+## - If a command maps to multiple status DGNs, use a list:
+##     dgn_pairs:
+##       1FEDB: [1FEDA, 1FEDC]
+
+dgn_pairs:
+  1FEDB: 1FEDA # Light/lock command -> Light/lock status
 
 # Template section for reusable parameters
 templates:

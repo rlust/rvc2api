@@ -83,6 +83,7 @@ def load_config_data(
     dict[str, dict],
     dict[str, dict],
     dict[str, str],  # Added for pgn_hex_to_name_map
+    dict,  # Added for dgn_pairs
 ]:
     """
     Load and parse:
@@ -110,7 +111,8 @@ def load_config_data(
       light_entity_ids: set[str],
       entity_id_lookup: dict[str,dict],
       light_command_info: dict[str,dict],
-      pgn_hex_to_name_map: dict[str, str]  # Added for pgn_hex_to_name_map
+      pgn_hex_to_name_map: dict[str, str],  # Added for pgn_hex_to_name_map
+      dgn_pairs: dict,                      # Added for dgn_pairs
     """
     # --- MODIFICATION START: Path selection logic ---
     default_spec_path, default_mapping_path = _default_paths()
@@ -206,8 +208,11 @@ def load_config_data(
         templates = raw_map.get("templates", {})
         device_mapping = raw_map
 
+        # Extract dgn_pairs mapping if present
+        dgn_pairs = raw_map.get("dgn_pairs", {})
+
         for dgn_hex, instances in raw_map.items():
-            if dgn_hex == "templates" or not isinstance(instances, dict):
+            if dgn_hex in ("templates", "dgn_pairs") or not isinstance(instances, dict):
                 continue
             for inst_str, configs in instances.items():
                 if not isinstance(configs, list):
@@ -280,4 +285,5 @@ def load_config_data(
         entity_id_lookup,
         light_command_info,
         pgn_hex_to_name_map,  # Return the new map
+        dgn_pairs,  # Return dgn_pairs as the 9th item
     )

@@ -1477,6 +1477,9 @@
       case "unknown-pgns":
         fetchUnknownPgns();
         break;
+      case "can-sniffer":
+        fetchCanSnifferLog();
+        break;
     }
     // Close mobile sidebar if open
     if (
@@ -2274,6 +2277,100 @@
         setLogsWaitingMessage(true);
       }
     });
+
+  /**
+   * Fetches and displays CAN sniffer log data.
+   */
+  function fetchCanSnifferLog() {
+    const canSnifferLoading = document.getElementById(
+      "can-sniffer-loading-message"
+    );
+    const canSnifferTable = document.getElementById("can-sniffer-table");
+    if (!canSnifferTable) return;
+    const tbody = canSnifferTable.querySelector("tbody");
+    if (tbody) tbody.innerHTML = "";
+    fetchData("/api/can-sniffer", {
+      successCallback: (data) => {
+        if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
+        if (!Array.isArray(data) || data.length === 0) {
+          if (tbody)
+            tbody.innerHTML =
+              '<tr><td colspan="8" class="text-center text-gray-400 py-4">No CAN command/control groupings observed yet.</td></tr>';
+          return;
+        }
+        data
+          .slice()
+          .reverse()
+          .forEach((group) => {
+            const { command, response, confidence, reason } = group;
+            // Pick color class based on confidence
+            let rowClass = "";
+            let icon = "";
+            if (confidence === "high") {
+              rowClass = "bg-green-900/60 hover:bg-green-800/80";
+              icon =
+                '<span title="Mapped grouping" class="mdi mdi-link-variant text-green-400 mr-1"></span>';
+            } else if (confidence === "low") {
+              rowClass = "bg-yellow-900/60 hover:bg-yellow-800/80";
+              icon =
+                '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline text-yellow-400 mr-1"></span>';
+            }
+            // Render command row
+            const trCmd = document.createElement("tr");
+            trCmd.className = rowClass;
+            trCmd.innerHTML = `
+            <td class="px-2 py-1 font-mono">${new Date(
+              command.timestamp * 1000
+            ).toLocaleTimeString()}</td>
+            <td class="px-2 py-1">TX</td>
+            <td class="px-2 py-1 font-mono">${command.pgn || ""}</td>
+            <td class="px-2 py-1 font-mono">${command.dgn_hex || ""}</td>
+            <td class="px-2 py-1">${icon}${command.name || ""}</td>
+            <td class="px-2 py-1 font-mono">${
+              command.arbitration_id
+                ? "0x" + command.arbitration_id.toString(16).toUpperCase()
+                : ""
+            }</td>
+            <td class="px-2 py-1 font-mono">${command.data || ""}</td>
+            <td class="px-2 py-1 font-mono">${
+              command.decoded ? JSON.stringify(command.decoded) : ""
+            }</td>
+          `;
+            tbody.appendChild(trCmd);
+            // Render response row
+            const trResp = document.createElement("tr");
+            trResp.className = rowClass;
+            trResp.innerHTML = `
+            <td class="px-2 py-1 font-mono">${new Date(
+              response.timestamp * 1000
+            ).toLocaleTimeString()}</td>
+            <td class="px-2 py-1">RX</td>
+            <td class="px-2 py-1 font-mono">${response.pgn || ""}</td>
+            <td class="px-2 py-1 font-mono">${response.dgn_hex || ""}</td>
+            <td class="px-2 py-1">${icon}${response.name || ""}</td>
+            <td class="px-2 py-1 font-mono">${
+              response.arbitration_id
+                ? "0x" + response.arbitration_id.toString(16).toUpperCase()
+                : ""
+            }</td>
+            <td class="px-2 py-1 font-mono">${response.data || ""}</td>
+            <td class="px-2 py-1 font-mono">${
+              response.decoded ? JSON.stringify(response.decoded) : ""
+            }</td>
+          `;
+            tbody.appendChild(trResp);
+          });
+      },
+      errorCallback: (error) => {
+        if (canSnifferLoading) {
+          canSnifferLoading.textContent = `Error loading CAN sniffer data: ${error.message}`;
+          canSnifferLoading.classList.remove("hidden");
+        }
+        if (tbody) tbody.innerHTML = "";
+      },
+      loadingElement: canSnifferLoading,
+    });
+  }
 
   // =====================
   // APP INITIALIZATION

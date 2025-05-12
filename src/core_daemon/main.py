@@ -29,13 +29,16 @@ import os
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Import application state variables and initialization function
 from core_daemon import app_state  # Import the module itself
-from core_daemon.app_state import initialize_app_from_config  # Import the new init function
+from core_daemon.app_state import (  # Import the new init function
+    get_can_sniffer_grouped,
+    initialize_app_from_config,
+)
 
 # Import CAN components from can_manager
 from core_daemon.can_manager import initialize_can_listeners, initialize_can_writer_task
@@ -204,6 +207,12 @@ async def shutdown_event():
 @app.get("/", response_class=HTMLResponse)
 async def serve_home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/api/can-sniffer", response_class=JSONResponse)
+async def get_can_sniffer():
+    """Returns grouped CAN command/control sniffer pairs with confidence."""
+    return get_can_sniffer_grouped()
 
 
 app.include_router(api_router_can, prefix="/api")

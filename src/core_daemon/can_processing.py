@@ -24,7 +24,9 @@ import can
 # Imports from app_state
 from core_daemon.app_state import unknown_pgns  # Add unknown_pgns
 from core_daemon.app_state import (
+    add_can_sniffer_entry,
     entity_id_lookup,
+    try_group_response,
     unmapped_entries,
     update_entity_state_and_history,
 )
@@ -109,6 +111,40 @@ def process_can_message(
         decoded, raw = decode_payload(entry, msg.data)
         decoded_payload_for_unmapped = decoded
         SUCCESSFUL_DECODES.inc()
+
+        # --- CAN Command/Control Sniffer Logging (RX/TX + Grouping, all sources) ---
+        is_command = (
+            entry.get("name", "").lower().find("command") != -1
+            or entry.get("name", "").lower().find("control") != -1
+        )
+        now = time.time()
+        instance = raw.get("instance")
+        dgn_hex = entry.get("dgn_hex")
+        # Extract source address from arbitration ID (last byte for typical RV-C)
+        source_addr = msg.arbitration_id & 0xFF
+        sniffer_entry = {
+            "timestamp": now,
+            "direction": "rx",
+            "arbitration_id": msg.arbitration_id,
+            "data": msg.data.hex().upper(),
+            "decoded": decoded,
+            "raw": raw,
+            "iface": iface_name,
+            "pgn": entry.get("pgn"),
+            "dgn_hex": dgn_hex,
+            "name": entry.get("name"),
+            "instance": instance,
+            "source_addr": source_addr,
+        }
+        if is_command:
+            # Log ALL command/control messages, regardless of source
+            add_can_sniffer_entry(sniffer_entry)
+        else:
+            # Try to group as a response
+            grouped = try_group_response(sniffer_entry)
+            if not grouped:
+                add_can_sniffer_entry(sniffer_entry)
+        # --- END CAN Command/Control Sniffer Logging ---
 
     except Exception as e:
         logger.error(

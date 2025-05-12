@@ -57,6 +57,96 @@ pgn_hex_to_name_map: Dict[str, str] = {}
 clients: Set[WebSocket] = set()
 log_ws_clients: Set[WebSocket] = set()
 
+# CAN command/control sniffer log
+can_command_sniffer_log: list = (
+    []
+)  # Each entry: { 'timestamp', 'direction', 'arbitration_id', 'data', 'decoded', 'raw' }
+
+# Known command/status DGN pairings for high-confidence grouping
+KNOWN_COMMAND_STATUS_PAIRS: dict[str, str] = {
+    # Example: '1F0D0': '1F1D0',
+}
+
+# Pending commands (TX) waiting for a response
+pending_commands = []  # Each: {timestamp, instance, dgn, arbitration_id, data, ...}
+# Grouped command/response pairs
+can_sniffer_grouped = []  # Each: {command, response, confidence, reason}
+
+
+def add_pending_command(entry: dict):
+    pending_commands.append(entry)
+    # Clean up old entries (older than 2s)
+    now = entry["timestamp"]
+    new_pending = []
+    for cmd in pending_commands:
+        if now - cmd["timestamp"] < 2.0:
+            new_pending.append(cmd)
+    pending_commands[:] = new_pending
+
+
+def try_group_response(response_entry: dict):
+    """
+    Try to group a response (RX) with a pending command (TX).
+    Returns True if grouped, False otherwise.
+    """
+    now = response_entry["timestamp"]
+    instance = response_entry.get("instance")
+    dgn = response_entry.get("dgn_hex")
+    # High-confidence: mapping
+    for cmd in pending_commands:
+        cmd_dgn = cmd.get("dgn_hex")
+        if (
+            cmd.get("instance") == instance
+            and isinstance(cmd_dgn, str)
+            and KNOWN_COMMAND_STATUS_PAIRS.get(cmd_dgn) == dgn
+            and 0 <= now - cmd["timestamp"] < 1.0
+        ):
+            can_sniffer_grouped.append(
+                {
+                    "command": cmd,
+                    "response": response_entry,
+                    "confidence": "high",
+                    "reason": "mapping",
+                }
+            )
+            pending_commands.remove(cmd)
+            return True
+    # Low-confidence: heuristic (same instance, short time window, opposite direction)
+    for cmd in pending_commands:
+        if cmd.get("instance") == instance and 0 <= now - cmd["timestamp"] < 0.5:
+            can_sniffer_grouped.append(
+                {
+                    "command": cmd,
+                    "response": response_entry,
+                    "confidence": "low",
+                    "reason": "heuristic",
+                }
+            )
+            pending_commands.remove(cmd)
+            return True
+    return False
+
+
+def get_can_sniffer_grouped():
+    return list(can_sniffer_grouped)
+
+
+def add_can_sniffer_entry(entry: dict) -> None:
+    """
+    Adds a CAN command/control message entry to the sniffer log.
+    """
+    can_command_sniffer_log.append(entry)
+    # Optionally limit log size
+    if len(can_command_sniffer_log) > 1000:
+        can_command_sniffer_log.pop(0)
+
+
+def get_can_sniffer_log() -> list:
+    """
+    Returns the current CAN command/control sniffer log.
+    """
+    return list(can_command_sniffer_log)
+
 
 def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function: Callable) -> None:
     """
@@ -66,7 +156,8 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     and preseed_light_states.
     """
     global decoder_map, raw_device_mapping, device_lookup, status_lookup
-    global light_entity_ids, entity_id_lookup, light_command_info, pgn_hex_to_name_map
+    global light_entity_ids, entity_id_lookup, light_command_info
+    global pgn_hex_to_name_map, KNOWN_COMMAND_STATUS_PAIRS
     # Globals like state, history, etc., are modified by functions called from here (e.g., preseed)
 
     (
@@ -78,6 +169,7 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
         entity_id_lookup_val,
         light_command_info_val,
         pgn_hex_to_name_map_val,
+        dgn_pairs_val,  # 9th item: dgn_pairs
     ) = config_data_tuple
 
     # Clear and update global dictionaries
@@ -102,7 +194,13 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     # Convert set to sorted list for light_entity_ids, as it's typed List[str] globally
     light_entity_ids = sorted(list(light_entity_ids_set_val))
 
-    logger.info("Application state populated from configuration data.")  # Existing log
+    # Set up high-confidence DGN command/status mapping from dgn_pairs
+    if dgn_pairs_val:
+        KNOWN_COMMAND_STATUS_PAIRS.clear()
+        for cmd_dgn, status_dgn in dgn_pairs_val.items():
+            KNOWN_COMMAND_STATUS_PAIRS[cmd_dgn.upper()] = status_dgn.upper()
+
+    logger.info("Application state populated from configuration data.")
 
     # These functions use the globals that were just set
     initialize_history_deques_internal()

@@ -117,6 +117,11 @@
                                             class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
                                         <i class="mdi mdi-help-rhombus-outline mr-2" aria-hidden="true"></i>Unknown PGNs
                                     </button>
+                                    <!-- Add CAN Sniffer button to Troubleshooting section in sidebar -->
+                                    <button data-view="can-sniffer"
+                                            class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                        <i class="mdi mdi-access-point-network mr-2" aria-hidden="true"></i>CAN Sniffer
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -286,6 +291,38 @@ Loading rvc.json...</pre>
                     <div id="unknown-pgns-container" class="space-y-6">
                         <p id="unknown-pgns-loading-message" class="text-lg">Loading unknown PGNs...</p>
                         <!-- Unknown PGNs will be loaded here -->
+                    </div>
+                </section>
+                <!-- Add CAN Sniffer view section to main content area -->
+                <section id="can-sniffer-view" class="view-section hidden">
+                    <h1 class="text-3xl font-bold mb-6">CAN Command/Control Sniffer</h1>
+                    <p class="mb-4 text-gray-400">
+                        This view shows command and control messages observed on the CAN
+                        bus, including both outgoing (TX) and incoming (RX) messages. Use
+                        this to help build out <code>device_mapping.yml</code>.
+                    </p>
+                    <div id="can-sniffer-container" class="space-y-6">
+                        <p id="can-sniffer-loading-message">Loading CAN sniffer data...</p>
+                        <div class="overflow-x-auto">
+                            <table id="can-sniffer-table"
+                                   class="min-w-full bg-gray-800 text-gray-200 rounded shadow text-xs">
+                                <thead>
+                                    <tr>
+                                        <th class="px-2 py-1">Time</th>
+                                        <th class="px-2 py-1">Dir</th>
+                                        <th class="px-2 py-1">PGN</th>
+                                        <th class="px-2 py-1">DGN</th>
+                                        <th class="px-2 py-1">Name</th>
+                                        <th class="px-2 py-1">Arb ID</th>
+                                        <th class="px-2 py-1">Data</th>
+                                        <th class="px-2 py-1">Decoded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rows will be populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </main>
