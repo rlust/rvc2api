@@ -1,3 +1,22 @@
+/**
+ * @file canSnifferView.js
+ * @module canSnifferView
+ * @description
+ *   Modularized CAN Sniffer view logic for the rvc2api Web UI frontend.
+ *   Handles all UI, WebSocket, and rendering logic for the CAN Sniffer view.
+ *   - Connects to the /api/ws/can-sniffer WebSocket endpoint for real-time updates
+ *   - Renders command/response groupings in the CAN sniffer table
+ *   - Provides cleanup and initialization for navigation
+ *   - Exports renderCanSnifferView and cleanupCanSnifferView for use by app.js
+ *
+ *   This file should not contain any global app state or navigation logic.
+ *   All DOM queries are scoped to the CAN Sniffer view elements.
+ *
+ *   Usage:
+ *     import { renderCanSnifferView, cleanupCanSnifferView } from './views/canSnifferView.js';
+ *     // Call renderCanSnifferView() when entering the view, cleanupCanSnifferView() when leaving.
+ */
+
 // canSnifferView.js - Modularized CAN Sniffer view logic for rvc2api Web UI
 // Handles WebSocket connection, table rendering, and cleanup for CAN Sniffer
 

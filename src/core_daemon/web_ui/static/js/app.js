@@ -121,9 +121,6 @@ let isResizingPinnedLogs = false; // Already used for resize handle
 let originalContainerTransition; // For resize handle
 let currentLogLevel = LOG_LEVELS.INFO; // Default log level
 let isLogPaused = false;
-// Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
-// const entitySocketUrl = `ws://${window.location.host}/api/ws`; // Original
-// More robust scheme
 
 // Sidebar state: expanded/collapsed (desktop)
 let isDesktopSidebarExpanded = true; // Default to expanded; will be set on load
