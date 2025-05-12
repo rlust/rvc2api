@@ -53,6 +53,7 @@ import {
   renderUnknownPgnsWithToggle,
 } from "./views/unknownPgnsView.js";
 import { renderHomeView } from "./views/homeView.js";
+import { fetchSpecView } from "./views/specView.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -748,8 +749,7 @@ function navigateToView(viewName, isInitial = false) {
       fetchMappingContent();
       break;
     case "spec":
-      fetchSpecContent();
-      // fetchSpecMetadata(); // Combined into fetchSpecContent if API supports
+      fetchSpecView();
       break;
     case "unmapped":
       fetchUnmappedEntries();
