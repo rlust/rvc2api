@@ -18,30 +18,31 @@ import {
   DEFAULT_THEME,
   SELECTED_THEME_KEY,
   DESKTOP_SIDEBAR_EXPANDED_KEY,
-  LOG_WEBSOCKET_RECONNECT_INTERVAL,
   CAN_STATUS_REFRESH_INTERVAL,
   API_STATUS_REFRESH_INTERVAL,
   APP_HEALTH_REFRESH_INTERVAL,
   MD_BREAKPOINT_PX,
   CLASS_HIDDEN,
   CLASS_ACTIVE_NAV,
-  CLASS_LIGHT_ON,
-  CLASS_LIGHT_OFF,
   ATTR_DATA_VIEW,
   ARIA_HIDDEN,
   LOG_LEVELS,
-  PINNED_LOGS_COLLAPSED_HEIGHT_REM,
-  PINNED_LOGS_EXPANDED_HEIGHT_REM,
-  PINNED_LOGS_EXPANDED_ICON,
-  PINNED_LOGS_COLLAPSED_ICON,
-  ICON_COPY,
-  ICON_LOADING_SPINNER,
   CLASS_TEXT_GREEN_400,
   CLASS_TEXT_RED_400,
   CLASS_TEXT_YELLOW_400,
   apiBasePath,
+  SIDEBAR_WIDTH_EXPANDED,
+  SIDEBAR_WIDTH_COLLAPSED,
+  SIDEBAR_TRANSITION,
+  entitySocketUrl,
 } from "./config.js";
 import { fetchData } from "./api.js";
+import { showToast } from "./utils.js";
+import {
+  handleLightsViewVisibility,
+  updateLightsView,
+} from "./views/lightsView.js";
+import { WebSocketManager } from "./wsManager.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -64,10 +65,6 @@ const mobileMenuButton = document.getElementById("mobileMenuButton");
 const navLinks = document.querySelectorAll(".nav-link");
 const views = document.querySelectorAll(".view-section");
 const homeView = document.getElementById("home-view");
-const lightsView = document.getElementById("lights-view");
-const lightsContent = document.getElementById("lightsContent"); // Updated from light-grid
-const lightsLoadingMessage = document.getElementById("lights-loading-message");
-const areaFilter = document.getElementById("area-filter");
 const mappingView = document.getElementById("mapping-view");
 const mappingContent = document.getElementById("mapping-content");
 const specView = document.getElementById("spec-view");
@@ -99,7 +96,7 @@ const togglePinnedLogsButton = document.getElementById("togglePinnedLogsBtn");
 const toastContainer = document.getElementById("toast-container");
 const closeSidebarButton = document.getElementById("closeSidebarButton");
 
-let logSocket;
+let logSocketManager = null;
 let currentView = "home"; // Default view
 let currentTheme = DEFAULT_THEME;
 let pinnedLogMessages = []; // Not currently used, consider for re-filtering if needed
@@ -108,16 +105,11 @@ let isResizingPinnedLogs = false; // Already used for resize handle
 let originalContainerTransition; // For resize handle
 let currentLogLevel = LOG_LEVELS.INFO; // Default log level
 let isLogPaused = false;
-let entitySocket; // For real-time entity updates (e.g., lights)
-let isDesktopSidebarExpanded = true; // Track desktop sidebar state
-const currentLightStates = {}; // Store current states of all lights
 // Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
 // const entitySocketUrl = `ws://${window.location.host}/api/ws`; // Original
-const entitySocketUrl = `${
-  window.location.protocol === "https:" ? "wss:" : "ws:"
-}//${window.location.host}/api/ws`; // More robust scheme
+// More robust scheme
 
-let canSnifferSocket = null;
+let canSnifferSocketManager = null;
 
 // =====================
 // UTILITY FUNCTIONS
@@ -213,6 +205,23 @@ function debounce(func, wait) {
 function getLocalStorage(key, fallback) {
   const value = localStorage.getItem(key);
   return value !== null ? value : fallback;
+}
+
+/**
+ * Helper to DRY out fetchers.
+ * @param {string} path - API path (e.g. '/status/server')
+ * @param {function} onSuccess - Success callback
+ * @param {HTMLElement} container - Loading element
+ * @param {object} [opts] - Additional fetchData options
+ * @returns {function} Fetcher function
+ */
+function makeFetcher(path, onSuccess, container, opts = {}) {
+  return () =>
+    fetchData(`${apiBasePath}${path}`, {
+      successCallback: onSuccess,
+      loadingElement: container,
+      ...opts,
+    });
 }
 
 // =====================
@@ -315,49 +324,6 @@ function updateCanStatusView(data) {
 }
 
 /**
- * Updates the lights view with fetched data.
- * @param {object} data - The response from the lights API. Expected to be an object where keys are entity IDs.
- */
-async function updateLightsView() {
-  try {
-    if (!lightsView.classList.contains("hidden")) {
-      if (lightsLoadingMessage) lightsLoadingMessage.classList.remove("hidden");
-      if (lightsContent) lightsContent.innerHTML = ""; // Clear previous
-
-      fetchData(`${apiBasePath}/entities?device_type=light`, {
-        successCallback: (lightsData) => {
-          Object.keys(currentLightStates).forEach(
-            (key) => delete currentLightStates[key]
-          );
-          Object.values(lightsData).forEach((light) => {
-            currentLightStates[light.entity_id] = light;
-          });
-          if (lightsLoadingMessage)
-            lightsLoadingMessage.classList.add("hidden");
-          updateAreaFilterForLights(currentLightStates);
-          renderGroupedLights();
-        },
-        errorCallback: (error) => {
-          console.error("Failed to fetch lights:", error);
-          if (lightsLoadingMessage) {
-            lightsLoadingMessage.textContent =
-              "Error loading lights. Please check console.";
-            lightsLoadingMessage.classList.remove("hidden");
-          }
-          if (lightsContent)
-            lightsContent.innerHTML =
-              '<p class="text-red-500">Error loading lights data.</p>';
-        },
-        loadingElement: lightsLoadingMessage,
-      });
-    }
-  } catch (err) {
-    console.error("Error in updateLightsView:", err);
-    if (lightsContent) lightsContent.textContent = "Error rendering lights.";
-  }
-}
-
-/**
  * Updates the specification text view.
  * @param {string} textData - The RVC specification text (JSON string).
  */
@@ -417,7 +383,6 @@ function renderUnmappedEntries(data) {
     for (const [key, entry] of Object.entries(data)) {
       const entryDiv = document.createElement("div");
       entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow mb-4";
-      // YAML suggestion (reuse original logic or a simplified version)
       const yamlSuggestion = generateYamlSuggestion(entry);
       entryDiv.innerHTML = `
         <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
@@ -429,31 +394,33 @@ function renderUnmappedEntries(data) {
       `;
       unmappedEntriesContent.appendChild(entryDiv);
     }
-    // Add event listeners to copy buttons
-    unmappedEntriesContent
-      .querySelectorAll(".copy-yaml-btn")
-      .forEach((button) => {
-        button.addEventListener("click", (event) => {
-          const yamlText =
-            event.target.previousElementSibling.querySelector("code").innerText;
-          navigator.clipboard
-            .writeText(yamlText)
-            .then(() => {
-              event.target.textContent = "Copied!";
-              showToast("YAML copied to clipboard!", "success");
-              setTimeout(() => {
-                event.target.textContent = "Copy YAML";
-              }, 2000);
-            })
-            .catch((err) => {
-              showToast("Failed to copy YAML.", "error");
-              event.target.textContent = "Failed to copy";
-              setTimeout(() => {
-                event.target.textContent = "Copy YAML";
-              }, 2000);
-            });
-        });
+    // Event delegation for copy buttons
+    if (!unmappedEntriesContent.hasAttribute("data-copy-bound")) {
+      unmappedEntriesContent.setAttribute("data-copy-bound", "");
+      unmappedEntriesContent.addEventListener("click", (event) => {
+        const btn = event.target.closest(".copy-yaml-btn");
+        if (!btn) return;
+        const code = btn.previousElementSibling.querySelector("code");
+        if (!code) return;
+        const yamlText = code.innerText;
+        navigator.clipboard
+          .writeText(yamlText)
+          .then(() => {
+            btn.textContent = "Copied!";
+            showToast("YAML copied to clipboard!", "success");
+            setTimeout(() => {
+              btn.textContent = "Copy YAML";
+            }, 2000);
+          })
+          .catch((err) => {
+            showToast("Failed to copy YAML.", "error");
+            btn.textContent = "Failed to copy";
+            setTimeout(() => {
+              btn.textContent = "Copy YAML";
+            }, 2000);
+          });
       });
+    }
   } catch (err) {
     console.error("Error in renderUnmappedEntries:", err);
     if (unmappedEntriesContent)
@@ -462,286 +429,52 @@ function renderUnmappedEntries(data) {
 }
 
 /**
- * Calls a service for an entity, typically for control commands.
- * @param {string} entityId - The ID of the entity.
- * @param {string} command - The command to execute (e.g., 'turn_on', 'turn_off', 'set_brightness').
- * @param {object} [data={}] - Additional data for the command (e.g., { brightness: 128 }).
- */
-async function callLightService(entityId, command, data = {}) {
-  const path = `${apiBasePath}/entities/${entityId}/control`;
-  const body = { command, ...data };
-  return new Promise((resolve) => {
-    fetchData(path, {
-      method: "POST",
-      body,
-      successCallback: (responseData) => {
-        showToast(`${entityId} ${command} command sent.`, "info", 2000);
-        resolve(responseData);
-      },
-      errorCallback: (error) => {
-        showToast(`Error: ${error.message || "Request failed"}`, "error");
-        resolve(null);
-      },
-      showToastOnError: false,
-    });
-  });
-}
-
-/**
  * Fetches and updates the API server status.
  */
-function fetchApiStatus() {
-  fetchData(`${apiBasePath}/status/server`, {
-    successCallback: updateApiServerView,
+const fetchApiStatus = makeFetcher(
+  "/status/server",
+  updateApiServerView,
+  apiStatusContent,
+  {
     errorCallback: (error) => {
-      console.error("Failed to fetch API server status:", error);
       if (apiStatusContent)
         apiStatusContent.textContent = `Error loading API status: ${error.message}`;
     },
-    loadingElement:
-      apiStatusContent?.querySelector("#api-status-loading-message") ||
-      apiStatusContent,
-    showToastOnError: false, // Background poll
-  });
-}
+    showToastOnError: false,
+  }
+);
 
 /**
  * Fetches and updates the application health status.
  */
-function fetchAppHealth() {
-  fetchData(`${apiBasePath}/status/application`, {
-    successCallback: updateApplicationHealthView,
+const fetchAppHealth = makeFetcher(
+  "/status/application",
+  updateApplicationHealthView,
+  appHealthContent,
+  {
     errorCallback: (error) => {
-      console.error("Failed to fetch application health:", error);
       if (appHealthContent)
         appHealthContent.textContent = `Error loading app health: ${error.message}`;
     },
-    loadingElement:
-      appHealthContent?.querySelector("#app-health-loading-message") ||
-      appHealthContent,
-    showToastOnError: false, // Background poll
-  });
-}
+    showToastOnError: false,
+  }
+);
 
 /**
  * Fetches and updates the CAN interface status.
  */
-function fetchCanStatus() {
-  fetchData(`${apiBasePath}/can/status`, {
-    successCallback: updateCanStatusView,
+const fetchCanStatus = makeFetcher(
+  "/can/status",
+  updateCanStatusView,
+  canStatusContent,
+  {
     errorCallback: (error) => {
-      console.error("Failed to fetch CAN status:", error);
       if (canStatusContent)
         canStatusContent.textContent = `Error loading CAN status: ${error.message}`;
     },
-    loadingElement:
-      canStatusContent?.querySelector("#can-status-loading-message") ||
-      canStatusContent,
-    showToastOnError: false, // Background polling
-  });
-}
-
-/**
- * Renders a single light card.
- * @param {object} entity - The light entity object.
- * @returns {HTMLElement} The created card element.
- */
-function renderLightCard(entity) {
-  const card = document.createElement("div");
-  card.className = "entity-card p-4 rounded-lg shadow-md space-y-3"; // Base classes from main.css
-  card.dataset.entityId = entity.entity_id;
-
-  const friendlyName = entity.friendly_name || entity.entity_id;
-  const entityState = (entity.state || "unknown").toLowerCase(); // Use local var for clarity and ensure lowercase
-  const capabilities = entity.capabilities || [];
-  // const rawAttrs = entity.raw_attributes || {}; // Old way
-  const rawAttrs = entity.raw || {}; // Corrected: entity.raw is part of the WebSocket payload
-
-  card.classList.toggle("light-on", entityState === "on");
-  card.classList.toggle("light-off", entityState !== "on");
-
-  let cardContent = `<h3 class="text-lg font-semibold">${friendlyName}</h3>`;
-  // Removed State: on/off text as per user request
-  // cardContent += `<p class="text-sm">State: <span class="font-medium state-text">${entityState}</span></p>`;
-
-  const hasBrightness = capabilities.includes("brightness");
-
-  if (hasBrightness) {
-    let currentBrightnessPercent = 0;
-
-    if (entityState === "on") {
-      // Prefer value.operating_status (string "0"-"100") if available from WebSocket payload
-      if (entity.value && typeof entity.value.operating_status === "string") {
-        currentBrightnessPercent = parseInt(entity.value.operating_status, 10);
-      }
-      // Fallback to raw.operating_status (number, CAN level e.g. 0-200 for lights)
-      else if (entity.raw && typeof entity.raw.operating_status === "number") {
-        // Lights are typically 0-200 (0xC8) for 0-100% brightness.
-        // Scale CAN value to percentage.
-        currentBrightnessPercent = Math.round(
-          (entity.raw.operating_status / 200.0) * 100
-        );
-      }
-      // If state is "on" but no specific brightness value is found in value or raw,
-      // default to 100% as a sensible fallback.
-      else {
-        currentBrightnessPercent = 100;
-      }
-    } else {
-      // If state is "off", brightness is always 0
-      currentBrightnessPercent = 0;
-    }
-
-    // Clamp brightness to be within 0-100 and ensure it's a valid number
-    currentBrightnessPercent = Math.max(
-      0,
-      Math.min(100, Number(currentBrightnessPercent) || 0)
-    );
-
-    cardContent += `
-      <div class="brightness-control space-y-1">
-        <label for="brightness-${entity.entity_id}" class="block text-sm font-medium">Brightness: <span class="brightness-value">${currentBrightnessPercent}%</span></label>
-        <input type="range" id="brightness-${entity.entity_id}" name="brightness"
-               min="0" max="100" value="${currentBrightnessPercent}"
-               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider">
-      </div>
-    `;
+    showToastOnError: false,
   }
-
-  card.innerHTML = cardContent;
-
-  // Event listener for the whole card (toggle on/off)
-  card.addEventListener("click", (e) => {
-    if (e.target.closest(".brightness-control")) {
-      return; // Don't toggle if click is on brightness slider
-    }
-    callLightService(entity.entity_id, "toggle");
-  });
-
-  if (hasBrightness) {
-    const slider = card.querySelector(".brightness-slider");
-    const brightnessValueDisplay = card.querySelector(".brightness-value");
-    if (slider && brightnessValueDisplay) {
-      slider.addEventListener("input", () => {
-        brightnessValueDisplay.textContent = slider.value + "%";
-      });
-      slider.addEventListener("change", async () => {
-        const brightness = parseInt(slider.value, 10);
-        const entityId = entity.entity_id; // entity is from renderLightCard\'s scope
-        const lightFriendlyName = entity.friendly_name || entityId;
-
-        // Get the most current state of the light from our central store
-        const currentActualLight = currentLightStates[entityId];
-        const isCurrentlyOn =
-          currentActualLight && currentActualLight.state === "on";
-
-        if (!isCurrentlyOn) {
-          // Light is currently off, turn it on AND set brightness in one command
-          showToast(
-            `Turning on ${lightFriendlyName} and setting to ${brightness}%...`,
-            "info",
-            2000
-          );
-          const result = await callLightService(entityId, "set", {
-            state: "on",
-            brightness: brightness,
-          });
-
-          if (!result) {
-            // callLightService resolves to null on error
-            showToast(
-              `Failed to turn on and set brightness for ${lightFriendlyName}.`,
-              "error"
-            );
-            // The UI will eventually reflect the true state via WebSocket.
-          }
-          // No timeout or second command needed as it's a single combined command.
-        } else {
-          // Light is already on, just set brightness
-          showToast(
-            `Setting brightness for ${lightFriendlyName} to ${brightness}%...`,
-            "info",
-            1500
-          );
-          const result = await callLightService(entityId, "set", {
-            brightness: brightness,
-          });
-          if (!result) {
-            // callLightService resolves to null on error
-            showToast(
-              `Failed to set brightness for ${lightFriendlyName}.`,
-              "error"
-            );
-            // The UI will eventually reflect the true state via WebSocket.
-          }
-        }
-      });
-    }
-  }
-  return card;
-}
-
-/**
- * Renders grouped lights by area or as a flat list.
- * @param {object} areas - Object mapping area keys to area details (currently unused, API may not provide).
- * @param {object[]} entities - Array of light entity objects.
- */
-function renderGroupedLights() {
-  if (!lightsContent) {
-    return;
-  }
-  lightsContent.innerHTML = ""; // Clear previous content
-
-  const selectedArea = areaFilter.value;
-  localStorage.setItem("lightsAreaFilter", selectedArea); // Save filter choice
-
-  const grouped = {};
-  Object.values(currentLightStates).forEach((entity) => {
-    if (entity.device_type !== "light") return;
-    const area = entity.suggested_area || "Unknown Area";
-    if (selectedArea !== "All" && selectedArea !== area) return;
-
-    if (!grouped[area]) grouped[area] = [];
-    grouped[area].push(entity);
-  });
-
-  if (Object.keys(grouped).length === 0 && selectedArea === "All") {
-    lightsContent.innerHTML = '<p class="text-gray-400">No lights found.</p>';
-    return;
-  } else if (Object.keys(grouped).length === 0) {
-    lightsContent.innerHTML = `<p class="text-gray-400">No lights found in area: ${selectedArea}.</p>`;
-    return;
-  }
-
-  Object.keys(grouped)
-    .sort()
-    .forEach((area) => {
-      const section = document.createElement("div");
-      section.className = "mb-8"; // Spacing between area groups
-
-      const header = document.createElement("h2");
-      header.className = "text-2xl font-semibold mb-4 pb-2";
-      // Use CSS variable for border color for theme compatibility
-      header.style.borderBottom = `2px solid var(--color-border-primary)`;
-      header.textContent = area;
-      section.appendChild(header);
-
-      const grid = document.createElement("div");
-      grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
-      section.appendChild(grid);
-
-      grouped[area]
-        .sort((a, b) =>
-          (a.friendly_name || a.entity_id).localeCompare(
-            b.friendly_name || b.entity_id
-          )
-        )
-        .forEach((entity) => {
-          grid.appendChild(renderLightCard(entity));
-        });
-      lightsContent.appendChild(section);
-    });
-}
+);
 
 /**
  * Fetches and displays the device_mapping.yml content.
@@ -762,7 +495,7 @@ function fetchMappingContent() {
         mappingContent.textContent = `Error loading mapping: ${error.message}`;
       showToast("Failed to load device mapping.", "error");
     },
-    loadingElement: mappingContent,
+    loadingElement: mappingContent, // Use mappingContent for its loading message
   });
 }
 
@@ -994,46 +727,6 @@ function renderUnknownPgnsWithToggle(data) {
   });
 }
 
-/**
- * Populates the area filter dropdown for lights.
- * @param {object} lights - Object mapping entity IDs to light entity objects.
- */
-function updateAreaFilterForLights(lights) {
-  if (!areaFilter) return;
-
-  const currentSelectedValue =
-    localStorage.getItem("lightsAreaFilter") || "All";
-  const areas = new Set(["All"]); // Always include "All"
-
-  Object.values(lights).forEach((entity) => {
-    // Changed here
-    if (entity.device_type === "light" && entity.suggested_area) {
-      areas.add(entity.suggested_area);
-    }
-  });
-
-  areaFilter.innerHTML = ""; // Clear existing options
-
-  Array.from(areas)
-    .sort()
-    .forEach((area) => {
-      const option = document.createElement("option");
-      option.value = area;
-      option.textContent = area;
-      areaFilter.appendChild(option);
-    });
-
-  // Restore selection if possible, otherwise default to "All"
-  if (areas.has(currentSelectedValue)) {
-    areaFilter.value = currentSelectedValue;
-  } else {
-    areaFilter.value = "All";
-    localStorage.setItem("lightsAreaFilter", "All"); // Update localStorage if previous was invalid
-  }
-  // Disable filter if only "All" (or no lights which implies only "All")
-  areaFilter.disabled = areas.size <= 1;
-}
-
 // =====================
 // WEBSOCKET HANDLERS
 // =====================
@@ -1119,222 +812,61 @@ function appendLogMessage(message) {
  * Connects to the log WebSocket.
  */
 function connectLogSocket() {
-  console.log("[LOG DRAWER] connectLogSocket called. logSocket:", logSocket);
-  if (logSocket && logSocket.readyState === WebSocket.OPEN) {
-    console.log("[LOG DRAWER] WebSocket already open.");
-    return;
-  }
-  if (
-    logSocket &&
-    (logSocket.readyState === WebSocket.CONNECTING ||
-      logSocket.readyState === WebSocket.CLOSING)
-  ) {
-    console.log(
-      "[LOG DRAWER] Closing previous WebSocket before opening new one."
+  if (!logSocketManager) {
+    logSocketManager = new WebSocketManager(
+      `ws://${location.host}/api/ws/logs`,
+      (data) => appendLogMessage(data),
+      {
+        onOpen: () => showToast("Log stream connected.", "info", 2000),
+        onClose: () => showToast("Log stream disconnected.", "warning"),
+        onError: () => showToast("Log stream error.", "error"),
+        autoReconnect: true,
+        reconnectInterval: 5000,
+      }
     );
-    logSocket.close();
   }
-
-  // FIX: Use /api/ws/logs to match backend router prefix
-  logSocket = new WebSocket(`ws://${location.host}/api/ws/logs`);
-  console.log("[LOG DRAWER] WebSocket created:", logSocket);
-
-  logSocket.onopen = () => {
-    console.log("[LOG DRAWER] Log WebSocket connected.");
-    showToast("Log stream connected.", "info", 2000);
-    if (
-      logStream &&
-      logStream.children.length === 0 &&
-      pinnedLogsContent &&
-      !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
-    ) {
-      setLogsWaitingMessage(true);
-    }
-  };
-
-  logSocket.onmessage = (event) => {
-    appendLogMessage(event.data);
-  };
-
-  logSocket.onerror = (error) => {
-    console.error("[LOG DRAWER] Log WebSocket error:", error);
-    showToast("Log stream error.", "error");
-  };
-
-  logSocket.onclose = (event) => {
-    console.log(
-      "[LOG DRAWER] Log WebSocket disconnected. Code:",
-      event.code,
-      "Reason:",
-      event.reason
-    );
-    showToast("Log stream disconnected.", "warning");
-    // Optional: implement reconnect logic
-    // setTimeout(connectLogSocket, LOG_WEBSOCKET_RECONNECT_INTERVAL);
-  };
 }
 
 /**
  * Disconnects the log WebSocket.
  */
 function disconnectLogSocket() {
-  console.log("[LOG DRAWER] disconnectLogSocket called. logSocket:", logSocket);
-  if (logSocket) {
-    logSocket.close();
-    logSocket = null;
-    console.log("[LOG DRAWER] Log WebSocket intentionally disconnected.");
-  }
-}
-
-/**
- * Connects to the entity WebSocket for real-time updates.
- */
-function connectEntitySocket() {
-  if (entitySocket && entitySocket.readyState === WebSocket.OPEN) {
-    console.log("[ENTITY_WS] WebSocket already connected and open.");
-    return;
-  }
-  if (entitySocket && entitySocket.readyState === WebSocket.CONNECTING) {
-    console.log(
-      "[ENTITY_WS] WebSocket is currently connecting. Will not attempt to reconnect yet."
-    );
-    return;
-  }
-
-  console.log(`[ENTITY_WS] Attempting to connect to: ${entitySocketUrl}`);
-  entitySocket = new WebSocket(entitySocketUrl);
-
-  entitySocket.onopen = () => {
-    console.log("[ENTITY_WS] WebSocket connection established successfully.");
-    showToast("Real-time updates connected.", "info", 2000);
-    // Potentially request full state if needed, or rely on initial HTTP load
-  };
-
-  entitySocket.onmessage = (event) => {
-    console.log("[ENTITY_WS] Message received:", event.data);
-    try {
-      const updatedEntity = JSON.parse(event.data);
-
-      if (
-        updatedEntity &&
-        updatedEntity.entity_id &&
-        typeof updatedEntity.state === "string"
-      ) {
-        const entityId = updatedEntity.entity_id;
-
-        // const oldState = currentLightStates[entityId] ? currentLightStates[entityId].state : "N/A";
-        // const oldValue = currentLightStates[entityId] ? currentLightStates[entityId].value : "N/A";
-        // console.log(`[ENTITY_WS] Updating entity ${entityId}. Old state: ${oldState}, Old value: ${JSON.stringify(oldValue)}. New data: ${JSON.stringify(updatedEntity)}`);
-
-        currentLightStates[entityId] = {
-          ...(currentLightStates[entityId] || {}),
-          ...updatedEntity,
-        };
-
-        if (currentView === "lights") {
-          // More targeted update instead of full re-render if possible,
-          // but for now, re-rendering the lights view is acceptable.
-          console.log(
-            "[ENTITY_WS] Lights view is active, re-rendering grouped lights."
-          );
-          renderGroupedLights();
-        } else {
-          console.log(
-            `[ENTITY_WS] Entity update for ${entityId} received, but current view is '${currentView}', not 'lights'. State updated in background.`
-          );
-        }
-      } else {
-        console.warn(
-          "[ENTITY_WS] Received WebSocket message that is not a valid entity update (missing entity_id or state string):",
-          updatedEntity
-        );
-      }
-    } catch (error) {
-      console.error(
-        "[ENTITY_WS] Error processing entity WebSocket message:",
-        error,
-        "Raw data:",
-        event.data
-      );
-    }
-  };
-
-  entitySocket.onerror = (error) => {
-    console.error("[ENTITY_WS] WebSocket error:", error);
-    // Attempt to get more details from the error event if possible
-    if (error instanceof Event) {
-      console.error(
-        "[ENTITY_WS] WebSocket error event details:",
-        JSON.stringify(error, Object.getOwnPropertyNames(error))
-      );
-    }
-    showToast("Real-time updates connection error.", "error");
-  };
-
-  entitySocket.onclose = (event) => {
-    console.log(
-      `[ENTITY_WS] WebSocket disconnected. Code: ${event.code}, Reason: '${event.reason}', Was Clean: ${event.wasClean}`
-    );
-    showToast("Real-time updates disconnected.", "warning");
-    // Optional: implement reconnection logic if desired
-    // if (!event.wasClean) {
-    //   console.log("[ENTITY_WS] Unclean disconnection. Attempting to reconnect in 5 seconds...");
-    //   setTimeout(connectEntitySocket, 5000);
-    // }
-  };
-}
-
-function disconnectEntitySocket() {
-  if (entitySocket) {
-    entitySocket.close();
-    entitySocket = null;
-    console.log("Entity WebSocket intentionally disconnected.");
+  if (logSocketManager) {
+    logSocketManager.close();
+    logSocketManager = null;
   }
 }
 
 function connectCanSnifferSocket() {
-  if (canSnifferSocket && canSnifferSocket.readyState === WebSocket.OPEN) {
-    return;
-  }
-  if (
-    canSnifferSocket &&
-    canSnifferSocket.readyState === WebSocket.CONNECTING
-  ) {
-    return;
-  }
-  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  canSnifferSocket = new WebSocket(
-    `${wsProtocol}//${window.location.host}/api/ws/can-sniffer`
-  );
-
-  canSnifferSocket.onopen = () => {
-    console.log("[CAN SNIFFER] WebSocket connected.");
-    clearCanSnifferTable();
-    const canSnifferLoading = document.getElementById(
-      "can-sniffer-loading-message"
+  if (!canSnifferSocketManager) {
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    canSnifferSocketManager = new WebSocketManager(
+      `${wsProtocol}//${window.location.host}/api/ws/can-sniffer`,
+      (eventData) => {
+        const group = JSON.parse(eventData);
+        addCanSnifferGroupRow(group);
+      },
+      {
+        onOpen: () => {
+          clearCanSnifferTable();
+          const canSnifferLoading = document.getElementById(
+            "can-sniffer-loading-message"
+          );
+          if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
+        },
+        onClose: () => {},
+        onError: () => {},
+        autoReconnect: true,
+        reconnectInterval: 5000,
+      }
     );
-    if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
-  };
-
-  canSnifferSocket.onmessage = (event) => {
-    const group = JSON.parse(event.data);
-    addCanSnifferGroupRow(group);
-  };
-
-  canSnifferSocket.onerror = (error) => {
-    console.error("[CAN SNIFFER] WebSocket error:", error);
-  };
-
-  canSnifferSocket.onclose = () => {
-    console.log("[CAN SNIFFER] WebSocket disconnected.");
-    // Optionally implement reconnect logic here
-  };
+  }
 }
 
 function disconnectCanSnifferSocket() {
-  if (canSnifferSocket) {
-    canSnifferSocket.close();
-    canSnifferSocket = null;
+  if (canSnifferSocketManager) {
+    canSnifferSocketManager.close();
+    canSnifferSocketManager = null;
   }
 }
 
@@ -1421,6 +953,10 @@ function navigateToView(viewName, isInitial = false) {
   views.forEach((v) => v.classList.add(CLASS_HIDDEN));
   const targetView = document.getElementById(`${viewName}-view`);
 
+  if (currentView === "lights") {
+    handleLightsViewVisibility(false);
+  }
+
   if (targetView) {
     targetView.classList.remove(CLASS_HIDDEN);
     currentView = viewName;
@@ -1457,7 +993,7 @@ function navigateToView(viewName, isInitial = false) {
       break;
     case "lights":
       updateLightsView();
-      connectEntitySocket(); // Connect when lights view is active
+      handleLightsViewVisibility(true);
       break;
     case "mapping":
       fetchMappingContent();
@@ -1477,6 +1013,7 @@ function navigateToView(viewName, isInitial = false) {
       connectCanSnifferSocket();
       break;
     default:
+      handleLightsViewVisibility(false);
       disconnectCanSnifferSocket();
       break;
   }
@@ -1513,36 +1050,29 @@ function setPanelExpanded({
   styles,
   onExpand,
   onCollapse,
-  // New: Pinned logs container and its related elements
   pinnedLogsContainer,
   pinnedLogsStyles,
 }) {
   if (!panel) return;
 
-  // Clear existing inline transition before applying new one or changing properties directly
   panel.style.transition = "";
   if (mainContent) mainContent.style.transition = "";
-  if (pinnedLogsContainer) pinnedLogsContainer.style.transition = ""; // Clear for pinned logs
+  if (pinnedLogsContainer) pinnedLogsContainer.style.transition = "";
 
-  // Apply new transition if specified
   if (styles.transition) {
-    // Force reflow to ensure transition applies correctly after clearing
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _ = panel.offsetHeight;
     panel.style.transition = styles.transition;
     if (mainContent) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const __ = mainContent.offsetHeight;
-      mainContent.style.transition = styles.transition; // Use the same transition as sidebar for margin-left
+      mainContent.style.transition = styles.transition;
     }
     if (
       pinnedLogsContainer &&
       pinnedLogsStyles &&
       pinnedLogsStyles.transition
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const ___ = pinnedLogsContainer.offsetHeight;
-      pinnedLogsContainer.style.transition = pinnedLogsStyles.transition; // Use specific transition for pinned logs (e.g., for 'left')
+      pinnedLogsContainer.style.transition = pinnedLogsStyles.transition;
     }
   }
 
@@ -1557,7 +1087,6 @@ function setPanelExpanded({
         "important"
       );
     }
-    // Pinned logs adjustment when sidebar expands
     if (
       pinnedLogsContainer &&
       pinnedLogsStyles &&
@@ -1594,7 +1123,6 @@ function setPanelExpanded({
         "important"
       );
     }
-    // Pinned logs adjustment when sidebar collapses
     if (
       pinnedLogsContainer &&
       pinnedLogsStyles &&
@@ -1654,25 +1182,22 @@ function setDesktopSidebarVisible(expanded) {
   sidebar.setAttribute("aria-expanded", expanded.toString());
   toggleSidebarDesktopButton.setAttribute("aria-expanded", expanded.toString());
 
-  // Define styles for sidebar and main content
   const sidebarStyles = {
-    transition:
-      "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
+    transition: SIDEBAR_TRANSITION,
     expanded: {
-      width: "16rem", // Tailwind w-64
-      marginLeft: "16rem", // mainContent margin for DESKTOP
+      width: SIDEBAR_WIDTH_EXPANDED,
+      marginLeft: SIDEBAR_WIDTH_EXPANDED,
       iconClass: "mdi mdi-chevron-left text-xl",
       label: "Collapse",
     },
     collapsed: {
-      width: "4rem", // Tailwind w-16
-      marginLeft: "4rem", // mainContent margin for DESKTOP
+      width: SIDEBAR_WIDTH_COLLAPSED,
+      marginLeft: SIDEBAR_WIDTH_COLLAPSED,
       iconClass: "mdi mdi-chevron-right text-xl",
       label: "",
     },
   };
 
-  // Adjust mainContent marginLeft for mobile
   let finalMainContentMarginLeftExpanded = sidebarStyles.expanded.marginLeft;
   let finalMainContentMarginLeftCollapsed = sidebarStyles.collapsed.marginLeft;
 
@@ -1693,14 +1218,13 @@ function setDesktopSidebarVisible(expanded) {
     },
   };
 
-  // Define styles for pinned logs container (specifically its 'left' property)
   const pinnedLogsStylesDef = {
-    transition: "left 0.3s cubic-bezier(0.4,0,0.2,1)", // Match sidebar transition timing
+    transition: "left 0.3s cubic-bezier(0.4,0,0.2,1)",
     expanded: {
-      left: "16rem", // Align with expanded sidebar
+      left: SIDEBAR_WIDTH_EXPANDED,
     },
     collapsed: {
-      left: "4rem", // Align with collapsed sidebar
+      left: SIDEBAR_WIDTH_COLLAPSED,
     },
   };
 
@@ -1710,11 +1234,10 @@ function setDesktopSidebarVisible(expanded) {
     mainContent,
     toggleButton: toggleSidebarDesktopButton,
     expanded,
-    styles: effectivePanelStyles, // Use the modified styles for mainContent margin
+    styles: effectivePanelStyles,
     pinnedLogsContainer,
     pinnedLogsStyles: pinnedLogsStylesDef,
     onExpand: () => {
-      // Removed "relative top-0.5" from the label span
       toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.expanded.iconClass} mr-0"></span><span class="ml-2">${sidebarStyles.expanded.label}</span>`;
       sidebar.classList.remove("sidebar-collapsed-hoverable");
       sidebarNavContent.classList.remove(CLASS_HIDDEN);
@@ -1724,12 +1247,9 @@ function setDesktopSidebarVisible(expanded) {
       sidebar
         .querySelectorAll(".nav-link i")
         .forEach((icon) => icon.classList.add("mr-2"));
-      // Ensure pinned logs are correctly positioned after sidebar animation completes
-      // This might be redundant if setPanelExpanded handles it, but good for explicit control
       adjustPinnedLogsLayout();
     },
     onCollapse: () => {
-      // Removed "relative top-0.5" from the collapsed label span as well for consistency.
       toggleSidebarDesktopButton.innerHTML = `<span class="mdi ${sidebarStyles.collapsed.iconClass}"></span><span class="ml-2">${sidebarStyles.collapsed.label}</span>`;
       sidebar.classList.add("sidebar-collapsed-hoverable");
       sidebarNavContent.classList.add(CLASS_HIDDEN);
@@ -1739,12 +1259,9 @@ function setDesktopSidebarVisible(expanded) {
       sidebar
         .querySelectorAll(".nav-link i")
         .forEach((icon) => icon.classList.remove("mr-2"));
-      // Ensure pinned logs are correctly positioned after sidebar animation completes
       adjustPinnedLogsLayout();
     },
   });
-  // Initial call to adjust layout, especially if logs are already expanded/collapsed
-  // setPanelExpanded will handle the left adjustment, this handles height/padding
   adjustPinnedLogsLayout();
 }
 
@@ -1767,10 +1284,8 @@ function setupSidebarCollapseExpand() {
     return;
   }
 
-  // Prevent horizontal scrollbar during animation
   sidebar.style.overflowX = "hidden";
 
-  // Listener for clicking the sidebar background itself to expand it when collapsed (desktop only)
   sidebar.addEventListener("click", (e) => {
     console.log(
       "[SIDEBAR_SETUP] Sidebar area clicked. isDesktopSidebarExpanded:",
@@ -1780,11 +1295,10 @@ function setupSidebarCollapseExpand() {
       "sidebar element:",
       sidebar
     );
-    // Expand only if on desktop, sidebar is currently collapsed, and the click target is the sidebar element itself (not a child element like a nav link or button)
     if (
       window.innerWidth >= MD_BREAKPOINT_PX &&
       !isDesktopSidebarExpanded &&
-      e.target === sidebar // Ensure the click is on the sidebar itself, not its children
+      e.target === sidebar
     ) {
       console.log("[SIDEBAR_SETUP] Expanding sidebar via area click.");
       setDesktopSidebarVisible(true);
@@ -1800,7 +1314,6 @@ function setupSidebarCollapseExpand() {
     }
   });
 
-  // Listener for the dedicated desktop sidebar collapse/expand toggle button
   toggleSidebarDesktopButton.addEventListener("click", (e) => {
     console.log(
       "[SIDEBAR_SETUP] Toggle button clicked. Current isDesktopSidebarExpanded:",
@@ -1808,28 +1321,20 @@ function setupSidebarCollapseExpand() {
       "e.target:",
       e.target
     );
-    e.stopPropagation(); // Crucial: Prevents the sidebar's own click listener (above) from also firing if this button is considered a child of the sidebar.
+    e.stopPropagation();
     setDesktopSidebarVisible(!isDesktopSidebarExpanded);
   });
 
-  // Listener for the mobile sidebar close button
   if (closeSidebarButton) {
     closeSidebarButton.addEventListener("click", (e) => {
       if (sidebar) {
         console.log("[SIDEBAR_SETUP] Mobile close button clicked.");
-        e.stopPropagation(); // Good practice, though less critical if it's the only listener on this specific button
+        e.stopPropagation();
         sidebar.classList.add("-translate-x-full");
         sidebar.setAttribute(ARIA_HIDDEN, "true");
-        // On mobile, closing the sidebar effectively means it's not "expanded" in the desktop sense.
-        // If isDesktopSidebarExpanded is used for mobile state, it should be set to false here.
-        // However, mobile sidebar often has its own visibility state managed by classes like '-translate-x-full'.
-        // For now, we assume setDesktopSidebarVisible(false) is not what we want for a mobile-specific close action
-        // unless the state variable `isDesktopSidebarExpanded` is also meant to track mobile visibility.
       }
     });
   }
-  // ARIA attributes for sidebar and toggleSidebarDesktopButton are managed by setDesktopSidebarVisible.
-  // Initial ARIA attributes are set when setDesktopSidebarVisible is first called in initializeApp.
 }
 
 /**
@@ -1847,31 +1352,17 @@ function adjustPinnedLogsLayout() {
   }
 
   const logsHeaderHeight = pinnedLogsHeader ? pinnedLogsHeader.offsetHeight : 0;
-  // Get the current actual height of the logs container.
-  // This height is primarily managed by setPinnedLogsState (within setupPinnedLogsResizablePanel)
-  // and reflects user interactions (toggle, resize) or initial load state.
   const currentPinnedLogsHeight = pinnedLogsContainer.offsetHeight;
 
   if (window.innerWidth < MD_BREAKPOINT_PX) {
-    // Mobile: logs bar spans full width, sidebar is an overlay or hidden.
-    // `left` and `right` are set to 0 to span the viewport.
     pinnedLogsContainer.style.left = "0px";
     pinnedLogsContainer.style.right = "0px";
-    // Adjust main content padding to prevent overlap with the logs container.
     mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
   } else {
-    // Desktop:
-    // The 'left' position of pinnedLogsContainer is dynamically set by 'setDesktopSidebarVisible'
-    // (via 'setPanelExpanded') using 'rem' units to align with the sidebar's width
-    // and to ensure smooth transitions. This function should not override that.
-    // 'right' is set to 0 to make the logs container span the rest of the main content area.
     pinnedLogsContainer.style.right = "0px";
-    // Adjust main content padding.
     mainContent.style.paddingBottom = `${currentPinnedLogsHeight}px`;
   }
 
-  // Adjust the height of the scrollable content area within the pinned logs container,
-  // accounting for the header height.
   if (pinnedLogsContent) {
     pinnedLogsContent.style.height = `calc(100% - ${logsHeaderHeight}px)`;
   }
@@ -1948,7 +1439,6 @@ function setupBulkLightControlButtons() {
       button.innerHTML =
         '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
       try {
-        // Fetch all lights
         let lights = null;
         await new Promise((resolve) => {
           fetchData(`${apiBasePath}/entities?device_type=light`, {
@@ -1964,7 +1454,6 @@ function setupBulkLightControlButtons() {
           });
         });
         if (!lights) return;
-        // Filter lights for this control
         const entities = Object.values(lights).filter(
           (entity) => entity.device_type === "light" && control.filter(entity)
         );
@@ -1972,7 +1461,6 @@ function setupBulkLightControlButtons() {
           showToast(`No lights found for ${control.name}.`, "warning");
           return;
         }
-        // Send control command to each entity
         let successCount = 0;
         let errorCount = 0;
         for (const entity of entities) {
@@ -2035,7 +1523,6 @@ function setupPinnedLogsResizablePanel() {
   )
     return;
 
-  // Restore state from localStorage (only once on page load)
   const savedIsOpen = localStorage.getItem(PINNED_LOGS_OPEN_KEY) === "true";
   const savedHeight = localStorage.getItem(PINNED_LOGS_HEIGHT_KEY);
   if (savedHeight) {
@@ -2061,7 +1548,6 @@ function setupPinnedLogsResizablePanel() {
     }
   }
 
-  // Set initial state ONCE, do not call setPinnedLogsState again unless user toggles
   const originalTransition = pinnedLogsContainer.style.transition;
   pinnedLogsContainer.style.transition = "none";
   setPinnedLogsState(savedIsOpen, currentExpandedLogsHeight);
@@ -2108,7 +1594,6 @@ function setupPinnedLogsResizablePanel() {
     adjustPinnedLogsLayout();
   }
 
-  // Drag-to-resize logic
   pinnedLogsResizeHandle.addEventListener("mousedown", (e) => {
     if (pinnedLogsContent.classList.contains(CLASS_HIDDEN)) return;
     e.preventDefault();
@@ -2164,11 +1649,9 @@ function setupPinnedLogsResizablePanel() {
     document.addEventListener("mouseup", onMouseUp);
   });
 
-  // --- Toggle logic: only call setPinnedLogsState in response to user actions ---
   if (togglePinnedLogsButton && pinnedLogsHeader) {
     togglePinnedLogsButton.addEventListener("click", () => {
       const isOpen = !pinnedLogsContent.classList.contains(CLASS_HIDDEN);
-      // Only toggle state in response to user click
       setPinnedLogsState(!isOpen, currentExpandedLogsHeight);
     });
     pinnedLogsHeader.addEventListener("click", (e) => {
@@ -2182,7 +1665,6 @@ function setupPinnedLogsResizablePanel() {
     });
   }
 
-  // Responsive: clamp height on window resize
   window.addEventListener("resize", () => {
     const maxHeightPx =
       window.innerHeight * (MAX_LOGS_PANEL_HEIGHT_VH_PERCENT / 100);
@@ -2214,29 +1696,25 @@ function setupPinnedLogsResizablePanel() {
  * @param {boolean} show - Whether to show the waiting message.
  */
 function setLogsWaitingMessage(show) {
-  // Only show/hide the waiting message overlay inside the logStream area, not over the controls
   const logsWaitingMessage = document.getElementById("logs-waiting-message");
   if (!logsWaitingMessage) return;
   if (show) {
     logsWaitingMessage.classList.remove(CLASS_HIDDEN);
-    // Ensure log controls are always enabled
     if (logLevelSelect) logLevelSelect.disabled = false;
     if (logSearchInput) logSearchInput.disabled = false;
     if (logPauseButton) logPauseButton.disabled = false;
     if (logClearButton) logClearButton.disabled = false;
   } else {
     logsWaitingMessage.classList.add(CLASS_HIDDEN);
-    // Controls remain enabled
   }
 }
 
-// Patch log controls to show/hide waiting message on clear/filter/search
 if (logClearButton)
   logClearButton.addEventListener("click", () => {
     if (logStream) logStream.innerHTML = "";
     if (
-      logSocket &&
-      logSocket.readyState === WebSocket.OPEN &&
+      logSocketManager &&
+      logSocketManager.readyState === WebSocket.OPEN &&
       pinnedLogsContent &&
       !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
     ) {
@@ -2247,8 +1725,8 @@ if (logLevelSelect)
   logLevelSelect.addEventListener("change", () => {
     if (logStream) logStream.innerHTML = "";
     if (
-      logSocket &&
-      logSocket.readyState === WebSocket.OPEN &&
+      logSocketManager &&
+      logSocketManager.readyState === WebSocket.OPEN &&
       pinnedLogsContent &&
       !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
     ) {
@@ -2261,8 +1739,8 @@ if (logSearchInput)
     debounce(() => {
       if (logStream) logStream.innerHTML = "";
       if (
-        logSocket &&
-        logSocket.readyState === WebSocket.OPEN &&
+        logSocketManager &&
+        logSocketManager.readyState === WebSocket.OPEN &&
         pinnedLogsContent &&
         !pinnedLogsContent.classList.contains(CLASS_HIDDEN)
       ) {
@@ -2296,7 +1774,6 @@ function fetchCanSnifferLog() {
         .reverse()
         .forEach((group) => {
           const { command, response, confidence, reason } = group;
-          // Pick color class based on confidence
           let rowClass = "";
           let icon = "";
           if (confidence === "high") {
@@ -2308,7 +1785,6 @@ function fetchCanSnifferLog() {
             icon =
               '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline text-yellow-400 mr-1"></span>';
           }
-          // Render command row
           const trCmd = document.createElement("tr");
           trCmd.className = rowClass;
           trCmd.innerHTML = `
@@ -2330,7 +1806,6 @@ function fetchCanSnifferLog() {
           }</td>
         `;
           tbody.appendChild(trCmd);
-          // Render response row
           const trResp = document.createElement("tr");
           trResp.className = rowClass;
           trResp.innerHTML = `
@@ -2373,12 +1848,10 @@ function fetchCanSnifferLog() {
  * Sets up event listeners, loads initial state, and fetches data for the default view.
  */
 function initializeApp() {
-  // Read APP_VERSION from body data attribute
   APP_VERSION = document.body.dataset.appVersion || "N/A";
   if (appVersionDisplay) {
     appVersionDisplay.textContent = `v${APP_VERSION}`;
   } else if (appHeader && APP_VERSION !== "N/A") {
-    // Fallback to adding it to header
     const versionSpan = createDomElement("span", {
       className: "text-xs text-gray-500 ml-2",
       textContent: `v${APP_VERSION}`,
@@ -2386,30 +1859,24 @@ function initializeApp() {
     appHeader.appendChild(versionSpan);
   }
 
-  // Load and apply theme
   const savedTheme = localStorage.getItem(SELECTED_THEME_KEY);
   applyTheme(savedTheme || DEFAULT_THEME);
   if (themeSwitcher) {
     themeSwitcher.addEventListener("change", (e) => applyTheme(e.target.value));
   }
 
-  // Initialize sidebar state for desktop - This sets the initial state based on localStorage
   const savedSidebarState = localStorage.getItem(DESKTOP_SIDEBAR_EXPANDED_KEY);
-  // Set initial state. setDesktopSidebarVisible handles ARIA attributes and localStorage update.
   setDesktopSidebarVisible(
     savedSidebarState === null ? true : savedSidebarState === "true"
   );
 
-  // Event listeners for mobile sidebar controls
   if (mobileMenuButton && sidebar) {
-    // Removed closeSidebarButton from condition as its listener is in setupSidebarCollapseExpand
     mobileMenuButton.addEventListener("click", () => {
       sidebar.classList.remove("-translate-x-full");
-      sidebar.setAttribute(ARIA_HIDDEN, "false"); // Ensure ARIA state is updated
+      sidebar.setAttribute(ARIA_HIDDEN, "false");
     });
   }
 
-  // Setup navigation links
   navLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2420,62 +1887,46 @@ function initializeApp() {
     });
   });
 
-  // Initial view loading and data fetching
-  let initialView = "home"; // Default view
-  // TODO: Could add logic to parse window.location.hash for initial view
+  let initialView = "home";
   navigateToView(initialView, true);
 
-  // Connect Entity WebSocket globally for background updates
-  connectEntitySocket();
-
-  // Log controls setup (pause/resume)
   if (logPauseButton) {
     logPauseButton.addEventListener("click", () => {
       isLogPaused = true;
       logPauseButton.disabled = true;
-      if (logResumeButton) logResumeButton.disabled = false; // Enable resume button
+      if (logResumeButton) logResumeButton.disabled = false;
       showToast("Log stream paused.", "info", 1500);
     });
   }
   if (logResumeButton) {
-    logResumeButton.disabled = true; // Initially disabled if logs are not paused
+    logResumeButton.disabled = true;
     logResumeButton.addEventListener("click", () => {
       isLogPaused = false;
-      if (logPauseButton) logPauseButton.disabled = false; // Enable pause button
-      logResumeButton.disabled = true; // Disable resume button
-      if (logStream) logStream.scrollTop = logStream.scrollHeight; // Scroll to bottom
+      if (logPauseButton) logPauseButton.disabled = false;
+      logResumeButton.disabled = true;
+      if (logStream) logStream.scrollTop = logStream.scrollHeight;
       showToast("Log stream resumed.", "info", 1500);
     });
   }
-  // Note: Listeners for logClearButton, logLevelSelect, logSearchInput are already global (patched outside this function).
 
-  // Call setup functions that manage their own event listeners
   setupBulkLightControlButtons();
-  setupPinnedLogsResizablePanel(); // Manages pinned logs listeners
-  setupSidebarCollapseExpand(); // Handles all sidebar button listeners (desktop toggle, mobile close, background click)
+  setupPinnedLogsResizablePanel();
+  setupSidebarCollapseExpand();
 
-  // Add a global resize listener to re-evaluate sidebar and main content layout
-  window.addEventListener("resize", () => {
-    if (typeof isDesktopSidebarExpanded === "boolean") {
-      // Ensure state is initialized
-      // This will re-apply mainContent margins considering the current window size
-      // and also call adjustPinnedLogsLayout internally.
-      setDesktopSidebarVisible(isDesktopSidebarExpanded);
-    }
-    // Note: adjustPinnedLogsLayout also has its own resize listener for height clamping.
-    // Calling setDesktopSidebarVisible ensures its internal call to adjustPinnedLogsLayout
-    // also considers sidebar width changes affecting pinned logs' left position.
-  });
+  window.addEventListener(
+    "resize",
+    debounce(() => {
+      if (typeof isDesktopSidebarExpanded === "boolean") {
+        setDesktopSidebarVisible(isDesktopSidebarExpanded);
+      }
+    }, 100)
+  );
 
   console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
 }
 
-// Initialize the app when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", () => {
   initializeApp();
-  if (areaFilter) {
-    areaFilter.addEventListener("change", renderGroupedLights);
-  }
 });
 
 setInterval(fetchApiStatus, API_STATUS_REFRESH_INTERVAL);

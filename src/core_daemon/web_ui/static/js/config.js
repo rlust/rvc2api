@@ -38,10 +38,17 @@ export const CLASS_LIGHT_OFF = "light-off";
 export const THEME_CLASSES = VALID_THEMES.map((t) => `theme-${t}`);
 export const ATTR_DATA_VIEW = "data-view";
 export const ARIA_HIDDEN = "aria-hidden";
-export const SIDEBAR_EXPANDED_WIDTH_DESKTOP = "md:w-64";
-export const SIDEBAR_COLLAPSED_WIDTH_DESKTOP = "md:w-16";
-export const MAIN_CONTENT_MARGIN_EXPANDED_DESKTOP = "md:ml-64";
-export const MAIN_CONTENT_MARGIN_COLLAPSED_DESKTOP = "md:ml-16";
+
+// WebSocket URLs
+export const entitySocketUrl = `${
+  window.location.protocol === "https:" ? "wss:" : "ws:"
+}//${window.location.host}/api/ws`;
+
+// Sidebar and transition constants
+export const SIDEBAR_WIDTH_EXPANDED = "16rem";
+export const SIDEBAR_WIDTH_COLLAPSED = "4rem";
+export const SIDEBAR_TRANSITION =
+  "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)";
 
 // Log levels
 export const LOG_LEVELS = {
