@@ -47,6 +47,7 @@ import {
   fetchUnmappedEntries,
   renderUnmappedEntries,
 } from "./views/unmappedView.js";
+import { ICON_COPY } from "./icons.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
