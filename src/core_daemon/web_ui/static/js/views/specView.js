@@ -19,7 +19,36 @@ const specMetadataDiv = document.getElementById("spec-metadata");
 function updateSpecTextView(textData) {
   try {
     if (specContent) {
-      specContent.textContent = textData;
+      // Try to pretty-print JSON if possible, else show as plain text
+      let pretty = null;
+      try {
+        const parsed = JSON.parse(textData);
+        pretty = JSON.stringify(parsed, null, 2);
+      } catch {
+        // Not JSON, show as-is
+      }
+      specContent.textContent = pretty || textData;
+      // Add toggle button for raw/pretty view if JSON
+      if (pretty) {
+        let toggleBtn = document.getElementById("spec-toggle-btn");
+        if (!toggleBtn) {
+          toggleBtn = document.createElement("button");
+          toggleBtn.id = "spec-toggle-btn";
+          toggleBtn.className = "mt-2 mb-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs";
+          toggleBtn.textContent = "Show Raw";
+          specContent.parentElement.insertBefore(toggleBtn, specContent);
+        }
+        let showingPretty = true;
+        toggleBtn.onclick = () => {
+          showingPretty = !showingPretty;
+          specContent.textContent = showingPretty ? pretty : textData;
+          toggleBtn.textContent = showingPretty ? "Show Raw" : "Show Pretty";
+        };
+      } else {
+        // Remove toggle if not JSON
+        const oldBtn = document.getElementById("spec-toggle-btn");
+        if (oldBtn) oldBtn.remove();
+      }
     }
   } catch (err) {
     console.error("Error in updateSpecTextView:", err);
