@@ -49,14 +49,14 @@ api_router_entities = APIRouter()  # FastAPI router for entity-related API endpo
 
 @api_router_entities.get("/entities", response_model=Dict[str, Entity])
 async def list_entities(
-    type: Optional[str] = Query(None),
+    device_type: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
 ):
     """
     Return all entities, optionally filtered by device_type and/or area.
 
     Args:
-        type: Optional filter by entity device_type.
+        device_type: Optional filter by entity device_type.
         area: Optional filter by entity suggested_area.
 
     Returns:
@@ -66,7 +66,7 @@ async def list_entities(
     def matches(eid: str) -> bool:
         """Helper function to check if an entity matches the filter criteria."""
         cfg = entity_id_lookup.get(eid, {})
-        if type and cfg.get("device_type") != type:
+        if device_type and cfg.get("device_type") != device_type:
             return False
         if area and cfg.get("suggested_area") != area:
             return False
