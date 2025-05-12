@@ -640,35 +640,45 @@
     card.dataset.entityId = entity.entity_id;
 
     const friendlyName = entity.friendly_name || entity.entity_id;
-    const state = entity.state || "unknown";
+    const entityState = (entity.state || "unknown").toLowerCase(); // Use local var for clarity and ensure lowercase
     const capabilities = entity.capabilities || [];
-    const rawAttrs = entity.raw_attributes || {};
+    // const rawAttrs = entity.raw_attributes || {}; // Old way
+    const rawAttrs = entity.raw || {}; // Corrected: entity.raw is part of the WebSocket payload
 
-    card.classList.toggle("light-on", state.toLowerCase() === "on");
-    card.classList.toggle("light-off", state.toLowerCase() !== "on");
+    card.classList.toggle("light-on", entityState === "on");
+    card.classList.toggle("light-off", entityState !== "on");
 
     let cardContent = `<h3 class="text-lg font-semibold">${friendlyName}</h3>`;
-    cardContent += `<p class="text-sm">State: <span class="font-medium state-text">${state}</span></p>`;
+    cardContent += `<p class="text-sm">State: <span class="font-medium state-text">${entityState}</span></p>`; // Use entityState
 
     const hasBrightness = capabilities.includes("brightness");
 
     if (hasBrightness) {
       let currentBrightnessPercent = 0;
-      if (
-        state.toLowerCase() === "on" &&
-        typeof rawAttrs.brightness === "number"
-      ) {
-        // Assuming brightness in raw_attributes is 0-255, convert to 0-100 for slider
-        currentBrightnessPercent = Math.round(
-          (rawAttrs.brightness / 255) * 100
-        );
-      } else if (
-        state.toLowerCase() === "on" &&
-        typeof entity.brightness === "number"
-      ) {
-        // Fallback if brightness is directly on entity (0-100)
-        currentBrightnessPercent = entity.brightness;
+
+      if (entityState === "on") {
+        // Prefer value.operating_status (string "0"-"100") if available from WebSocket payload
+        if (entity.value && typeof entity.value.operating_status === 'string') {
+          currentBrightnessPercent = parseInt(entity.value.operating_status, 10);
+        }
+        // Fallback to raw.operating_status (number, CAN level e.g. 0-200 for lights)
+        else if (entity.raw && typeof entity.raw.operating_status === 'number') {
+          // Lights are typically 0-200 (0xC8) for 0-100% brightness.
+          // Scale CAN value to percentage.
+          currentBrightnessPercent = Math.round((entity.raw.operating_status / 200.0) * 100);
+        }
+        // If state is "on" but no specific brightness value is found in value or raw,
+        // default to 100% as a sensible fallback.
+        else {
+          currentBrightnessPercent = 100;
+        }
+      } else {
+        // If state is "off", brightness is always 0
+        currentBrightnessPercent = 0;
       }
+
+      // Clamp brightness to be within 0-100 and ensure it's a valid number
+      currentBrightnessPercent = Math.max(0, Math.min(100, Number(currentBrightnessPercent) || 0));
 
       cardContent += `
         <div class="brightness-control space-y-1">
@@ -680,7 +690,7 @@
           }" name="brightness"
                  min="0" max="100" value="${currentBrightnessPercent}"
                  class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider"
-                 ${state.toLowerCase() !== "on" ? "disabled" : ""}>
+                 ${entityState !== "on" ? "disabled" : ""}>
         </div>
       `;
     }
@@ -1252,67 +1262,29 @@
 
     entitySocket.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        // console.log("Entity WS message received:", message);
+        const updatedEntity = JSON.parse(event.data); // The message IS the entity payload
 
-        if (message.event_type === "state_changed" && message.data) {
-          const entity = message.data;
-          if (
-            entity.device_type === "light" ||
-            currentLightStates.hasOwnProperty(entity.entity_id)
-          ) {
-            // Update local state
-            currentLightStates[entity.entity_id] = {
-              ...currentLightStates[entity.entity_id],
-              ...entity,
-            };
+        // Check if it's a valid entity update (must have entity_id and state)
+        if (updatedEntity && updatedEntity.entity_id && typeof updatedEntity.state === 'string') {
+          const entityId = updatedEntity.entity_id;
 
-            // If lights view is active, update the specific card
-            if (
-              currentView === "lights" &&
-              !lightsView.classList.contains("hidden")
-            ) {
-              const card = lightsContent.querySelector(
-                `[data-entity-id="${entity.entity_id}"]`
-              );
-              if (card) {
-                const newCard = renderLightCard(
-                  currentLightStates[entity.entity_id]
-                );
-                card.replaceWith(newCard);
-              } else {
-                // If card doesn't exist (e.g. new light or filter changed), re-render all
-                renderGroupedLights();
-              }
-            }
+          // Update local state store
+          currentLightStates[entityId] = {
+            ...(currentLightStates[entityId] || {}), // Start with existing or empty object
+            ...updatedEntity, // Apply all fields from the WebSocket message
+          };
+          // The 'state' from updatedEntity should now be in currentLightStates[entityId]
+
+          // If the current view is 'lights', re-render
+          if (currentView === "lights") {
+            // console.log(`Rerendering lights. Entity ${entityId} updated. New state: ${currentLightStates[entityId].state}, Brightness: ${currentLightStates[entityId].value?.operating_status}`);
+            renderGroupedLights(); // This re-renders all light cards based on currentLightStates
           }
-        } else if (message.event_type === "entity_registered" && message.data) {
-          const entity = message.data;
-          if (entity.device_type === "light") {
-            currentLightStates[entity.entity_id] = entity;
-            if (
-              currentView === "lights" &&
-              !lightsView.classList.contains("hidden")
-            ) {
-              updateAreaFilterForLights(currentLightStates); // Update filter if new area appears
-              renderGroupedLights(); // Re-render to include the new light
-            }
-          }
-        } else if (message.event_type === "entity_removed") {
-          const entityId = message.entity_id;
-          if (currentLightStates.hasOwnProperty(entityId)) {
-            delete currentLightStates[entityId];
-            if (
-              currentView === "lights" &&
-              !lightsView.classList.contains("hidden")
-            ) {
-              updateAreaFilterForLights(currentLightStates); // Update filter if area disappears
-              renderGroupedLights(); // Re-render to remove the light
-            }
-          }
+        } else {
+          // console.warn("Received WebSocket message that is not a valid entity update:", updatedEntity);
         }
       } catch (error) {
-        console.error("Error processing entity WebSocket message:", error);
+        console.error("Error processing entity WebSocket message:", error, "Raw data:", event.data);
       }
     };
 
