@@ -1392,6 +1392,25 @@ if (logSearchInput)
 const footerApiServer = document.getElementById("footerApiServer");
 const footerHealthStatus = document.getElementById("footerHealthStatus");
 const footerAppVersion = document.getElementById("footerAppVersion");
+const footerVersionStatus = document.getElementById("footerVersionStatus");
+
+// Simulate fetching the latest version from GitHub (replace with real fetch in production)
+async function fetchLatestVersion() {
+  // Example: fetch from GitHub releases API or a static endpoint
+  // For now, hardcode for demo
+  // return "0.2.0";
+  try {
+    const resp = await fetch(
+      "https://api.github.com/repos/carpenike/rvc2api/releases/latest"
+    );
+    if (!resp.ok) throw new Error("Failed to fetch latest version");
+    const data = await resp.json();
+    // Tag name is usually like 'v0.2.0' or '0.2.0'
+    return data.tag_name.replace(/^v/, "");
+  } catch (e) {
+    return null;
+  }
+}
 
 function updateFooterStatus({ version, status, message }) {
   if (footerApiServer) {
@@ -1413,14 +1432,32 @@ function updateFooterStatus({ version, status, message }) {
   }
 }
 
+async function updateFooterVersionStatus(currentVersion) {
+  if (!footerVersionStatus) return;
+  const latest = await fetchLatestVersion();
+  if (!latest) {
+    footerVersionStatus.textContent = "";
+    return;
+  }
+  if (currentVersion === latest) {
+    footerVersionStatus.innerHTML =
+      '<span class="text-green-400">(Up to date)</span>';
+  } else {
+    const changelogUrl = `https://github.com/holtrop/rvc2api/blob/v${latest}/CHANGELOG.md`;
+    footerVersionStatus.innerHTML = `(<a href="${changelogUrl}" target="_blank" class="text-yellow-400 underline hover:text-yellow-300">v${latest} Available</a>)`;
+  }
+}
+
 async function fetchAndUpdateFooterStatus() {
   try {
     const resp = await fetch(`${apiBasePath}/status/server`);
     if (!resp.ok) throw new Error("API error");
     const data = await resp.json();
     updateFooterStatus(data);
+    await updateFooterVersionStatus(data.version || APP_VERSION);
   } catch (err) {
     updateFooterStatus({ status: "error", message: "API unreachable" });
+    if (footerVersionStatus) footerVersionStatus.textContent = "";
   }
 }
 
