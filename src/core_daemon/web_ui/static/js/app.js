@@ -146,7 +146,8 @@
   let isDesktopSidebarExpanded = true; // Track desktop sidebar state
   const currentLightStates = {}; // Store current states of all lights
   // Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
-  const entitySocketUrl = `ws://${window.location.host}/api/ws`;
+  // const entitySocketUrl = `ws://${window.location.host}/api/ws`; // Original
+  const entitySocketUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws`; // More robust scheme
 
   // =====================
   // UTILITY FUNCTIONS
@@ -1278,25 +1279,34 @@
    */
   function connectEntitySocket() {
     if (entitySocket && entitySocket.readyState === WebSocket.OPEN) {
-      // console.log("Entity WebSocket already connected.");
+      console.log("[ENTITY_WS] WebSocket already connected and open.");
       return;
     }
+    if (entitySocket && entitySocket.readyState === WebSocket.CONNECTING) {
+      console.log("[ENTITY_WS] WebSocket is currently connecting. Will not attempt to reconnect yet.");
+      return;
+    }
+
+    console.log(`[ENTITY_WS] Attempting to connect to: ${entitySocketUrl}`);
     entitySocket = new WebSocket(entitySocketUrl);
 
     entitySocket.onopen = () => {
-      console.log("Entity WebSocket connected."); // Reverted from detailed logging
+      console.log("[ENTITY_WS] WebSocket connection established successfully.");
+      showToast("Real-time updates connected.", "info", 2000);
       // Potentially request full state if needed, or rely on initial HTTP load
     };
 
     entitySocket.onmessage = (event) => {
+      console.log("[ENTITY_WS] Message received:", event.data);
       try {
         const updatedEntity = JSON.parse(event.data);
 
         if (updatedEntity && updatedEntity.entity_id && typeof updatedEntity.state === 'string') {
           const entityId = updatedEntity.entity_id;
 
-          const oldState = currentLightStates[entityId] ? currentLightStates[entityId].state : "N/A";
-          const oldValue = currentLightStates[entityId] ? currentLightStates[entityId].value : "N/A";
+          // const oldState = currentLightStates[entityId] ? currentLightStates[entityId].state : "N/A";
+          // const oldValue = currentLightStates[entityId] ? currentLightStates[entityId].value : "N/A";
+          // console.log(`[ENTITY_WS] Updating entity ${entityId}. Old state: ${oldState}, Old value: ${JSON.stringify(oldValue)}. New data: ${JSON.stringify(updatedEntity)}`);
 
           currentLightStates[entityId] = {
             ...(currentLightStates[entityId] || {}),
@@ -1304,25 +1314,38 @@
           };
 
           if (currentView === "lights") {
+            // More targeted update instead of full re-render if possible,
+            // but for now, re-rendering the lights view is acceptable.
+            console.log("[ENTITY_WS] Lights view is active, re-rendering grouped lights.");
             renderGroupedLights();
+          } else {
+            console.log(`[ENTITY_WS] Entity update for ${entityId} received, but current view is '${currentView}', not 'lights'. State updated in background.`);
           }
         } else {
-          console.warn("Received WebSocket message that is not a valid entity update (missing entity_id or state string):", updatedEntity); // Reverted from detailed logging
+          console.warn("[ENTITY_WS] Received WebSocket message that is not a valid entity update (missing entity_id or state string):", updatedEntity);
         }
       } catch (error) {
-        console.error("Error processing entity WebSocket message:", error); // Reverted and simplified
+        console.error("[ENTITY_WS] Error processing entity WebSocket message:", error, "Raw data:", event.data);
       }
     };
 
     entitySocket.onerror = (error) => {
-      console.error("Entity WebSocket error:", error); // Reverted from detailed logging
-      showToast("Entity connection error.", "error");
+      console.error("[ENTITY_WS] WebSocket error:", error);
+      // Attempt to get more details from the error event if possible
+      if (error instanceof Event) {
+        console.error("[ENTITY_WS] WebSocket error event details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      }
+      showToast("Real-time updates connection error.", "error");
     };
 
     entitySocket.onclose = (event) => {
-      console.log("Entity WebSocket disconnected. Code:", event.code, "Reason:", event.reason); // Reverted from detailed logging
+      console.log(`[ENTITY_WS] WebSocket disconnected. Code: ${event.code}, Reason: '${event.reason}', Was Clean: ${event.wasClean}`);
+      showToast("Real-time updates disconnected.", "warning");
       // Optional: implement reconnection logic if desired
-      // showToast("Entity connection closed.", "warning");
+      // if (!event.wasClean) {
+      //   console.log("[ENTITY_WS] Unclean disconnection. Attempting to reconnect in 5 seconds...");
+      //   setTimeout(connectEntitySocket, 5000);
+      // }
     };
   }
 
