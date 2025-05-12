@@ -115,6 +115,9 @@ let isLogPaused = false;
 
 let canSnifferSocketManager = null;
 
+// Sidebar state: expanded/collapsed (desktop)
+let isDesktopSidebarExpanded = true; // Default to expanded; will be set on load
+
 // =====================
 // UTILITY FUNCTIONS
 // =====================
