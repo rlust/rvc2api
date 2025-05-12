@@ -67,31 +67,69 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     """
     global decoder_map, raw_device_mapping, device_lookup, status_lookup
     global light_entity_ids, entity_id_lookup, light_command_info, pgn_hex_to_name_map
+    # Globals like state, history, etc., are modified by functions called from here (e.g., preseed)
 
     (
         decoder_map_val,
         raw_device_mapping_val,
         device_lookup_val,
         status_lookup_val,
-        light_entity_ids_val,
+        light_entity_ids_set_val,  # This is a set from load_config_data
         entity_id_lookup_val,
         light_command_info_val,
         pgn_hex_to_name_map_val,
     ) = config_data_tuple
 
+    # Clear and update global dictionaries
+    # These ensure that if this function were ever called again, state is fresh.
+    entity_id_lookup.clear()
+    entity_id_lookup.update(entity_id_lookup_val)
+
+    light_command_info.clear()
+    light_command_info.update(light_command_info_val)
+
+    device_lookup.clear()
+    device_lookup.update(device_lookup_val)
+
+    status_lookup.clear()
+    status_lookup.update(status_lookup_val)
+
+    # Assign other global config data (these are typically assigned once at startup)
     decoder_map = decoder_map_val
     raw_device_mapping = raw_device_mapping_val
-    device_lookup = device_lookup_val
-    status_lookup = status_lookup_val
-    light_entity_ids = light_entity_ids_val
-    entity_id_lookup = entity_id_lookup_val
-    light_command_info = light_command_info_val
     pgn_hex_to_name_map = pgn_hex_to_name_map_val
 
-    logger.info("Application state populated from configuration data.")
+    # Convert set to sorted list for light_entity_ids, as it's typed List[str] globally
+    light_entity_ids = sorted(list(light_entity_ids_set_val))
 
+    logger.info("Application state populated from configuration data.")  # Existing log
+
+    # These functions use the globals that were just set
     initialize_history_deques_internal()
     preseed_light_states_internal(decode_payload_function)
+
+    # Add detailed logging for the critical dictionaries AT THE END of this function
+    logger.info(
+        f"End of initialize_app_from_config: len(entity_id_lookup) = {len(entity_id_lookup)}"
+    )
+    logger.info(f"End of initialize_app_from_config: id(entity_id_lookup) = {id(entity_id_lookup)}")
+    logger.info(
+        f"End of initialize_app_from_config: Keys in entity_id_lookup (first 5): "
+        f"{list(entity_id_lookup.keys())[:5]}"
+    )
+    logger.info(
+        f"End of initialize_app_from_config: len(light_command_info) = {len(light_command_info)}"
+    )
+    logger.info(
+        f"End of initialize_app_from_config: id(light_command_info) = {id(light_command_info)}"
+    )
+    logger.info(
+        f"End of initialize_app_from_config: Keys in light_command_info (first 5): "
+        f"{list(light_command_info.keys())[:5]}"
+    )
+    logger.info(
+        "Global app_state dictionaries populated and ID-logged from initialize_app_from_config."
+    )
 
 
 def get_last_known_brightness(entity_id: str) -> int:
