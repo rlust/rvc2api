@@ -124,9 +124,14 @@ function updateOrInsertLightCard(entityId) {
   // Gather all entities for this area
   const areaEntities = Object.values(currentLightStates)
     .filter(e => e.device_type === "light" && (e.suggested_area || "Unknown Area") === entityArea);
-  areaEntities.sort((a, b) =>
-    (a.friendly_name || a.entity_id).localeCompare(b.friendly_name || b.entity_id)
-  );
+  areaEntities.sort((a, b) => {
+    const nameA = a.friendly_name || a.entity_id;
+    const nameB = b.friendly_name || b.entity_id;
+    if (nameA === nameB) {
+      return a.entity_id.localeCompare(b.entity_id);
+    }
+    return nameA.localeCompare(nameB);
+  });
   // Remove all cards, then re-append in sorted order
   const cards = Array.from(grid.querySelectorAll(".entity-card"));
   cards.forEach(card => card.remove());
