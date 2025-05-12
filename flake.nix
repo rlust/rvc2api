@@ -250,4 +250,100 @@
         inherit apps checks;
       }
     );
+
+  # --- NixOS module for structured settings and env vars ---
+  nixosModules.rvc2api = { config, lib, ... }: {
+    options.rvc2api.settings = {
+      pushover = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable Pushover integration";
+        };
+        apiToken = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Pushover API token";
+        };
+        userKey = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Pushover user key";
+        };
+        device = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Pushover device name (optional)";
+        };
+        priority = lib.mkOption {
+          type = lib.types.nullOr lib.types.int;
+          default = null;
+          description = "Pushover message priority (optional)";
+        };
+      };
+      uptimerobot = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable UptimeRobot integration";
+        };
+        apiKey = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "UptimeRobot API key";
+        };
+      };
+      canbus = {
+        channels = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ "can0" "can1" ];
+          description = "SocketCAN interfaces to listen on (comma-separated for env)";
+        };
+        bustype = lib.mkOption {
+          type = lib.types.str;
+          default = "socketcan";
+          description = "python-can bus type";
+        };
+        bitrate = lib.mkOption {
+          type = lib.types.int;
+          default = 500000;
+          description = "CAN bus bitrate";
+        };
+      };
+      rvcSpecPath = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Override path to rvc.json (RVC spec file)";
+      };
+      deviceMappingPath = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Override path to device_mapping.yml";
+      };
+    };
+
+    config = {
+      systemd.services.rvc2api.environment = {
+        # Pushover
+        ENABLE_PUSHOVER = if config.rvc2api.settings.pushover.enable then "1" else "0";
+        PUSHOVER_API_TOKEN = config.rvc2api.settings.pushover.apiToken;
+        PUSHOVER_USER_KEY = config.rvc2api.settings.pushover.userKey;
+        PUSHOVER_DEVICE = lib.mkIf (config.rvc2api.settings.pushover.device != null) config.rvc2api.settings.pushover.device;
+        PUSHOVER_PRIORITY = lib.mkIf (config.rvc2api.settings.pushover.priority != null) (toString config.rvc2api.settings.pushover.priority);
+
+        # UptimeRobot
+        ENABLE_UPTIMEROBOT = if config.rvc2api.settings.uptimerobot.enable then "1" else "0";
+        UPTIMEROBOT_API_KEY = config.rvc2api.settings.uptimerobot.apiKey;
+
+        # CAN bus config
+        CAN_CHANNELS = lib.concatStringsSep "," config.rvc2api.settings.canbus.channels;
+        CAN_BUSTYPE = config.rvc2api.settings.canbus.bustype;
+        CAN_BITRATE = toString config.rvc2api.settings.canbus.bitrate;
+
+        # Config file overrides
+        CAN_SPEC_PATH = lib.mkIf (config.rvc2api.settings.rvcSpecPath != null) config.rvc2api.settings.rvcSpecPath;
+        CAN_MAP_PATH = lib.mkIf (config.rvc2api.settings.deviceMappingPath != null) config.rvc2api.settings.deviceMappingPath;
+      };
+    };
+  };
 }
