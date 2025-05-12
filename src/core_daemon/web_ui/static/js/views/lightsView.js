@@ -119,6 +119,22 @@ function updateOrInsertLightCard(entityId) {
   // Insert new/updated card
   const newCard = renderLightCard(entity);
   grid.appendChild(newCard);
+
+  // --- Stable sort: ensure all cards are sorted after update ---
+  // Gather all entities for this area
+  const areaEntities = Object.values(currentLightStates)
+    .filter(e => e.device_type === "light" && (e.suggested_area || "Unknown Area") === entityArea);
+  areaEntities.sort((a, b) =>
+    (a.friendly_name || a.entity_id).localeCompare(b.friendly_name || b.entity_id)
+  );
+  // Remove all cards, then re-append in sorted order
+  const cards = Array.from(grid.querySelectorAll(".entity-card"));
+  cards.forEach(card => card.remove());
+  areaEntities.forEach(e => {
+    grid.appendChild(
+      e.entity_id === entityId ? newCard : renderLightCard(e)
+    );
+  });
 }
 
 export function handleLightsViewVisibility(isVisible) {
