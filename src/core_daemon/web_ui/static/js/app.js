@@ -713,29 +713,34 @@
         slider.addEventListener("input", () => {
           brightnessValueDisplay.textContent = slider.value + "%";
         });
-        slider.addEventListener("change", async () => { // Added async here
+        slider.addEventListener("change", async () => {
           const brightness = parseInt(slider.value, 10);
-          // If the light is currently off, turn it on first
-          if (entityState !== "on") {
-            // We need to get the latest entity state before setting brightness
-            // however, the card won't re-render immediately.
-            // For now, assume 'turn_on' is successful and then set brightness.
-            // A more robust solution might involve waiting for a state update via WebSocket
-            // or having callLightService return the new state.
-            await callLightService(entity.entity_id, "turn_on");
-            // Update local entityState for immediate UI feedback if possible,
-            // though WebSocket will eventually update it.
-            // This is a simplification; the actual state update comes via WebSocket.
-            const currentCard = document.querySelector(`[data-entity-id='${entity.entity_id}']`);
-            if (currentCard) {
-                currentCard.classList.remove("light-off");
-                currentCard.classList.add("light-on");
-                // Enable slider if it was disabled
-                const currentSlider = currentCard.querySelector('.brightness-slider');
-                if (currentSlider) currentSlider.disabled = false;
+          const entityId = entity.entity_id; // entity is from renderLightCard\'s scope
+          const lightFriendlyName = entity.friendly_name || entityId;
+
+          // Get the most current state of the light from our central store
+          const currentActualLight = currentLightStates[entityId];
+          const isCurrentlyOn = currentActualLight && currentActualLight.state === "on";
+
+          if (!isCurrentlyOn) {
+            // Light is currently off, turn it on AND set brightness in one command
+            showToast(`Turning on ${lightFriendlyName} and setting to ${brightness}%...`, "info", 2000);
+            const result = await callLightService(entityId, "set", { state: "on", brightness: brightness });
+
+            if (!result) { // callLightService resolves to null on error
+              showToast(`Failed to turn on and set brightness for ${lightFriendlyName}.`, "error");
+              // The UI will eventually reflect the true state via WebSocket.
+            }
+            // No timeout or second command needed as it's a single combined command.
+          } else {
+            // Light is already on, just set brightness
+            showToast(`Setting brightness for ${lightFriendlyName} to ${brightness}%...`, "info", 1500);
+            const result = await callLightService(entityId, "set", { brightness: brightness });
+            if (!result) { // callLightService resolves to null on error
+                showToast(`Failed to set brightness for ${lightFriendlyName}.`, "error");
+                // The UI will eventually reflect the true state via WebSocket.
             }
           }
-          callLightService(entity.entity_id, "set", { brightness: brightness });
         });
       }
     }
