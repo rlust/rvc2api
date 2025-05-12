@@ -220,9 +220,19 @@ def load_config_data(
 
                     eid = merged.get("entity_id")
                     fname = merged.get("friendly_name")
+                    # ADD THIS LOGGING
+                    log_msg_processing = (
+                        f"Processing entry: DGN={dgn_hex}, Inst={inst_str}, "
+                        f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
+                        f"Merged FName={fname}"
+                    )
+                    logger.info(log_msg_processing)
                     if eid and fname:
-                        # Debug: Log merged config for each entity
-                        logger.info(f"entity_id_lookup[{eid}] = {json.dumps(merged, indent=2)}")
+                        log_msg_adding = (
+                            f"Adding to entity_id_lookup: eid='{eid}', fname='{fname}' "
+                            f"with merged data: {json.dumps(merged, indent=2)}"
+                        )
+                        logger.info(log_msg_adding)
                         key = (dgn_hex.upper(), str(inst_str))
                         device_lookup[key] = merged
                         entity_id_lookup[eid] = merged
@@ -238,6 +248,15 @@ def load_config_data(
                                 "instance": int(inst_str),
                                 "interface": merged.get("interface"),
                             }
+                    else:
+                        # ADD THIS LOGGING
+                        log_msg_skipping = (
+                            f"Skipping entry for entity_id_lookup: DGN={dgn_hex}, Inst={inst_str}, "
+                            f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
+                            f"Merged FName={fname}. "
+                            "eid and fname must be present and non-empty."
+                        )
+                        logger.warning(log_msg_skipping)
         logger.info(f"Loaded {len(device_lookup)} device_lookup entries.")  # Changed to logger.info
         logger.info(f"Loaded {len(status_lookup)} status_lookup entries.")  # Changed to logger.info
         status_keys_to_log = list(status_lookup.keys())
