@@ -328,26 +328,83 @@ async def control_entity(
     ),
 ) -> ControlEntityResponse:
     """
-    Control a specific entity (light) by sending a command.
+    Control a light entity based on the provided command.
+
+    This endpoint allows setting the state (on/off) and brightness of a light,
+    toggling its state, or adjusting its brightness up or down.
 
     Args:
-        entity_id: The ID of the entity to control.
-        cmd: The control command to execute.
+        entity_id: The ID of the light entity to control.
+        cmd: The control command, specifying the desired action.
+             - `command`: "set", "toggle", "brightness_up", "brightness_down".
+             - `state`: "on" or "off" (used with "set").
+             - `brightness`: 0-100 (used with "set").
 
     Raises:
-        HTTPException: If the entity is not found or not controllable.
+        HTTPException:
+            - 400: If the entity is not controllable as a light, or if the command is invalid
+                   (e.g., invalid state, missing parameters for a command).
+            - 404: If the entity_id is not found.
+            - 500: If there's an error sending the CAN command.
 
     Returns:
-        A response indicating the status of the control command.
+        ControlEntityResponse: An object detailing the command sent, the resulting
+                               state, brightness, and a description of the action performed.
     """
+    logger.info(f"Control endpoint called for entity_id: '{entity_id}' (type: {type(entity_id)})")
+    logger.info(
+        f"Checking entity_id_lookup. Contains '{entity_id}'? "
+        f"{'yes' if entity_id in entity_id_lookup else 'no'}"
+    )
+    if not entity_id_lookup:
+        logger.warning("entity_id_lookup is EMPTY at control_entity!")
+    else:
+        logger.info(f"entity_id_lookup keys (first 20): {list(entity_id_lookup.keys())[:20]}")
+        if entity_id not in entity_id_lookup and "basement_cargo_light" not in entity_id_lookup:
+            logger.info(
+                f"Neither '{entity_id}' nor 'basement_cargo_light' are in entity_id_lookup."
+            )
+        elif "basement_cargo_light" in entity_id_lookup:
+            logger.info(
+                f"Data for 'basement_cargo_light' in entity_id_lookup: "
+                f"{entity_id_lookup.get('basement_cargo_light')}"
+            )
+        else:
+            logger.info(f"'{entity_id}' is in entity_id_lookup, but 'basement_cargo_light' is NOT.")
+
     device = entity_id_lookup.get(entity_id)
     if not device:
-        logger.debug(f"Control command for unknown entity_id: {entity_id}")
+        logger.warning(f"Device '{entity_id}' not found in entity_id_lookup. Raising 404.")
+        if len(entity_id_lookup) < 60:  # Log all keys if the dict is reasonably small
+            logger.info(f"Full entity_id_lookup keys at 404: {list(entity_id_lookup.keys())}")
+        else:
+            logger.info(f"entity_id_lookup has {len(entity_id_lookup)} keys. Not logging all.")
         raise HTTPException(status_code=404, detail="Entity not found")
 
-    if entity_id not in light_command_info:  # Check if it's a controllable light
-        logger.debug(f"Control command for non-controllable entity_id: {entity_id}")
+    logger.info(
+        f"Device '{entity_id}' found in entity_id_lookup. Proceeding to check light_command_info."
+    )
+    logger.info(
+        f"Checking light_command_info. Contains '{entity_id}'? "
+        f"{'yes' if entity_id in light_command_info else 'no'}"
+    )
+    if not light_command_info:
+        logger.warning("light_command_info is EMPTY at control_entity!")
+    else:
+        logger.info(f"light_command_info keys (first 20): {list(light_command_info.keys())[:20]}")
+
+    if entity_id not in light_command_info:
+        logger.warning(
+            f"Entity '{entity_id}' found in entity_id_lookup but NOT in light_command_info. "
+            f"Raising 400."
+        )
+        if len(light_command_info) < 60:
+            logger.info(f"Full light_command_info keys at 400: {list(light_command_info.keys())}")
+        else:
+            logger.info(f"light_command_info has {len(light_command_info)} keys. Not logging all.")
         raise HTTPException(status_code=400, detail="Entity is not controllable as a light")
+
+    logger.info(f"Entity '{entity_id}' found in light_command_info. Proceeding with control logic.")
 
     logger.info(
         f"HTTP CMD RX: entity_id='{entity_id}', command='{cmd.command}', "
