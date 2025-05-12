@@ -8,6 +8,7 @@ This module provides:
   WebSocket clients.
 - FastAPI WebSocket endpoint handlers for both data and log streaming.
 - Management of active WebSocket client connections (now delegated to app_state).
+- WebSocket endpoint and broadcast logic for live CAN Sniffer grouped events.
 """
 
 import asyncio
@@ -111,3 +112,45 @@ async def websocket_logs_endpoint(ws: WebSocket):
     except Exception as e:
         log_ws_clients.discard(ws)
         logger.error(f"Log WebSocket error for client {ws.client.host}:{ws.client.port}: {e}")
+
+
+# ── CAN Sniffer WebSocket State and Endpoint ────────────────────────────────
+can_sniffer_ws_clients = set()
+
+
+async def can_sniffer_ws_endpoint(ws: WebSocket):
+    """
+    WebSocket endpoint for live CAN Sniffer grouped events.
+    On connect, sends all current groupings, then streams new groupings as they occur.
+    """
+    await ws.accept()
+    can_sniffer_ws_clients.add(ws)
+    try:
+        from core_daemon.app_state import get_can_sniffer_grouped
+
+        # On connect, send the current grouped sniffer log
+        for group in get_can_sniffer_grouped():
+            await ws.send_json(group)
+        while True:
+            await ws.receive_text()  # Keep the connection open
+    except Exception:
+        pass
+    finally:
+        can_sniffer_ws_clients.discard(ws)
+
+
+async def broadcast_can_sniffer_group(group):
+    """
+    Broadcast a new CAN sniffer grouping to all connected WebSocket clients.
+    Removes clients that have disconnected or errored.
+    Args:
+        group (dict): The grouped command/response event to broadcast.
+    """
+    to_remove = set()
+    for ws in can_sniffer_ws_clients:
+        try:
+            await ws.send_json(group)
+        except Exception:
+            to_remove.add(ws)
+    for ws in to_remove:
+        can_sniffer_ws_clients.discard(ws)

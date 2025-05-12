@@ -29,16 +29,13 @@ import os
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Import application state variables and initialization function
 from core_daemon import app_state  # Import the module itself
-from core_daemon.app_state import (  # Import the new init function
-    get_can_sniffer_grouped,
-    initialize_app_from_config,
-)
+from core_daemon.app_state import initialize_app_from_config
 
 # Import CAN components from can_manager
 from core_daemon.can_manager import initialize_can_listeners, initialize_can_writer_task
@@ -103,6 +100,7 @@ app = FastAPI(
     root_path=API_ROOT_PATH,
 )
 
+# ── Static files and templates ─────────────────────────────────────────────
 static_paths = get_static_paths()
 web_ui_dir = static_paths["web_ui_dir"]
 static_dir = static_paths["static_dir"]
@@ -135,13 +133,21 @@ else:
     templates = None
 
 
-# ── HTTP middleware for Prometheus ─────────────────────────────────────────
+# ── Middleware ─────────────────────────────────────────────────────────────
 @app.middleware("http")
 async def prometheus_middleware_handler(request, call_next):
-    # This function now simply calls the imported middleware
+    """Prometheus metrics middleware for HTTP requests."""
     return await prometheus_http_middleware(request, call_next)
 
 
+# ── Exception Handlers ─────────────────────────────────────────────────────
+@app.exception_handler(ResponseValidationError)
+async def validation_exception_handler(request, exc):
+    """Handles response validation errors with a plain text message."""
+    return PlainTextResponse(f"Validation error: {exc}", status_code=500)
+
+
+# ── Event Handlers ─────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def start_can_writer():
     """FastAPI startup event: Initializes and schedules the CAN writer task."""
@@ -163,7 +169,6 @@ async def setup_websocket_logging():
         logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
 
 
-# ── CAN Reader Startup ──────────────────────────────────────────────────────
 @app.on_event("startup")
 async def start_can_readers():
     """
@@ -176,8 +181,6 @@ async def start_can_readers():
     bustype = canbus_config["bustype"]
     bitrate = canbus_config["bitrate"]
 
-    # Pass necessary arguments to the new process_can_message function
-    # These arguments now come from the app_state module after initialization
     message_handler_with_args = functools.partial(
         process_can_message,
         loop=loop,
@@ -197,34 +200,26 @@ async def start_can_readers():
     )
 
 
-# ── Main Application Setup ───────────────────────────────────────────────────
 @app.on_event("shutdown")
 async def shutdown_event():
     """FastAPI shutdown event: Logs a message when the application is shutting down."""
     logger.info("rvc2api shutting down...")
 
 
+# ── Top-level UI Route ─────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def serve_home(request: Request):
+    """Serves the main UI HTML page."""
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/api/can-sniffer", response_class=JSONResponse)
-async def get_can_sniffer():
-    """Returns grouped CAN command/control sniffer pairs with confidence."""
-    return get_can_sniffer_grouped()
-
-
+# ── API Routers ────────────────────────────────────────────────────────────
 app.include_router(api_router_can, prefix="/api")
 app.include_router(api_router_config_ws, prefix="/api")
 app.include_router(api_router_entities, prefix="/api")
 
 
-@app.exception_handler(ResponseValidationError)
-async def validation_exception_handler(request, exc):
-    return PlainTextResponse(f"Validation error: {exc}", status_code=500)
-
-
+# ── Entrypoint ─────────────────────────────────────────────────────────────
 def main():
     """
     Main function to run the Uvicorn server for the rvc2api application.

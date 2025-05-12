@@ -2,19 +2,18 @@
 Defines FastAPI APIRouter for CAN bus related operations.
 
 This module includes routes to get the status of CAN interfaces,
-check the CAN transmit queue, and potentially other CAN-specific actions.
+check the CAN transmit queue, and CAN sniffer endpoints.
 """
 
 import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter
-from pyroute2 import IPRoute  # Import IPRoute
+from fastapi.responses import JSONResponse
+from pyroute2 import IPRoute
 
-# Assuming can_tx_queue is in core_daemon.can_manager
+from core_daemon.app_state import get_can_sniffer_grouped
 from core_daemon.can_manager import can_tx_queue
-
-# Assuming CANInterfaceStats model is in core_daemon.models
 from core_daemon.models import AllCANStats, CANInterfaceStats
 
 logger = logging.getLogger(__name__)
@@ -233,3 +232,9 @@ async def get_queue_status():
         (maximum queue size, or "unbounded").
     """
     return {"length": can_tx_queue.qsize(), "maxsize": can_tx_queue.maxsize or "unbounded"}
+
+
+@api_router_can.get("/can-sniffer", response_class=JSONResponse)
+async def get_can_sniffer():
+    """Returns grouped CAN command/control sniffer pairs with confidence."""
+    return get_can_sniffer_grouped()

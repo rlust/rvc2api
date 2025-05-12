@@ -6,6 +6,7 @@ and configuration-derived lookups (like entity definitions, light commands, etc.
 It provides functions to initialize, update, and access this shared state.
 """
 
+import asyncio
 import logging
 import time
 from collections import deque
@@ -20,6 +21,12 @@ from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
 # We need to import it if it's used in type hints for unmapped_entries
 from core_daemon.models import UnknownPGNEntry, UnmappedEntryModel
 from rvc_decoder.decode import load_config_data  # Changed from rvc_load_and_process_device_mapping
+
+# At the top, after imports
+try:
+    from core_daemon.main import broadcast_can_sniffer_group
+except ImportError:
+    broadcast_can_sniffer_group = None
 
 # In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
@@ -101,27 +108,29 @@ def try_group_response(response_entry: dict):
             and KNOWN_COMMAND_STATUS_PAIRS.get(cmd_dgn) == dgn
             and 0 <= now - cmd["timestamp"] < 1.0
         ):
-            can_sniffer_grouped.append(
-                {
-                    "command": cmd,
-                    "response": response_entry,
-                    "confidence": "high",
-                    "reason": "mapping",
-                }
-            )
+            group = {
+                "command": cmd,
+                "response": response_entry,
+                "confidence": "high",
+                "reason": "mapping",
+            }
+            can_sniffer_grouped.append(group)
+            if broadcast_can_sniffer_group:
+                asyncio.create_task(broadcast_can_sniffer_group(group))
             pending_commands.remove(cmd)
             return True
     # Low-confidence: heuristic (same instance, short time window, opposite direction)
     for cmd in pending_commands:
         if cmd.get("instance") == instance and 0 <= now - cmd["timestamp"] < 0.5:
-            can_sniffer_grouped.append(
-                {
-                    "command": cmd,
-                    "response": response_entry,
-                    "confidence": "low",
-                    "reason": "heuristic",
-                }
-            )
+            group = {
+                "command": cmd,
+                "response": response_entry,
+                "confidence": "low",
+                "reason": "heuristic",
+            }
+            can_sniffer_grouped.append(group)
+            if broadcast_can_sniffer_group:
+                asyncio.create_task(broadcast_can_sniffer_group(group))
             pending_commands.remove(cmd)
             return True
     return False

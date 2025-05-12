@@ -151,6 +151,8 @@
     window.location.protocol === "https:" ? "wss:" : "ws:"
   }//${window.location.host}/api/ws`; // More robust scheme
 
+  let canSnifferSocket = null;
+
   // =====================
   // UTILITY FUNCTIONS
   // =====================
@@ -1414,6 +1416,98 @@
     }
   }
 
+  function connectCanSnifferSocket() {
+    if (canSnifferSocket && canSnifferSocket.readyState === WebSocket.OPEN) {
+      return;
+    }
+    if (canSnifferSocket && canSnifferSocket.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    canSnifferSocket = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/can-sniffer`);
+
+    canSnifferSocket.onopen = () => {
+      console.log("[CAN SNIFFER] WebSocket connected.");
+      clearCanSnifferTable();
+      const canSnifferLoading = document.getElementById("can-sniffer-loading-message");
+      if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
+    };
+
+    canSnifferSocket.onmessage = (event) => {
+      const group = JSON.parse(event.data);
+      addCanSnifferGroupRow(group);
+    };
+
+    canSnifferSocket.onerror = (error) => {
+      console.error("[CAN SNIFFER] WebSocket error:", error);
+    };
+
+    canSnifferSocket.onclose = () => {
+      console.log("[CAN SNIFFER] WebSocket disconnected.");
+      // Optionally implement reconnect logic here
+    };
+  }
+
+  function disconnectCanSnifferSocket() {
+    if (canSnifferSocket) {
+      canSnifferSocket.close();
+      canSnifferSocket = null;
+    }
+  }
+
+  function clearCanSnifferTable() {
+    const canSnifferTable = document.getElementById("can-sniffer-table");
+    if (canSnifferTable) {
+      const tbody = canSnifferTable.querySelector("tbody");
+      if (tbody) tbody.innerHTML = "";
+    }
+  }
+
+  function addCanSnifferGroupRow(group) {
+    const canSnifferTable = document.getElementById("can-sniffer-table");
+    if (!canSnifferTable) return;
+    const tbody = canSnifferTable.querySelector("tbody");
+    if (!tbody) return;
+    const { command, response, confidence, reason } = group;
+    let rowClass = "";
+    let icon = "";
+    if (confidence === "high") {
+      rowClass = "bg-green-900/60 hover:bg-green-800/80";
+      icon = '<span title="Mapped grouping" class="mdi mdi-link-variant text-green-400 mr-1"></span>';
+    } else if (confidence === "low") {
+      rowClass = "bg-yellow-900/60 hover:bg-yellow-800/80";
+      icon = '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline text-yellow-400 mr-1"></span>';
+    }
+    // Command row
+    const trCmd = document.createElement("tr");
+    trCmd.className = rowClass;
+    trCmd.innerHTML = `
+      <td class="px-2 py-1 font-mono">${new Date(command.timestamp * 1000).toLocaleTimeString()}</td>
+      <td class="px-2 py-1">TX</td>
+      <td class="px-2 py-1 font-mono">${command.pgn || ""}</td>
+      <td class="px-2 py-1 font-mono">${command.dgn_hex || ""}</td>
+      <td class="px-2 py-1">${icon}${command.name || ""}</td>
+      <td class="px-2 py-1 font-mono">${command.arbitration_id ? "0x" + command.arbitration_id.toString(16).toUpperCase() : ""}</td>
+      <td class="px-2 py-1 font-mono">${command.data || ""}</td>
+      <td class="px-2 py-1 font-mono">${command.decoded ? JSON.stringify(command.decoded) : ""}</td>
+    `;
+    tbody.appendChild(trCmd);
+    // Response row
+    const trResp = document.createElement("tr");
+    trResp.className = rowClass;
+    trResp.innerHTML = `
+      <td class="px-2 py-1 font-mono">${new Date(response.timestamp * 1000).toLocaleTimeString()}</td>
+      <td class="px-2 py-1">RX</td>
+      <td class="px-2 py-1 font-mono">${response.pgn || ""}</td>
+      <td class="px-2 py-1 font-mono">${response.dgn_hex || ""}</td>
+      <td class="px-2 py-1">${icon}${response.name || ""}</td>
+      <td class="px-2 py-1 font-mono">${response.arbitration_id ? "0x" + response.arbitration_id.toString(16).toUpperCase() : ""}</td>
+      <td class="px-2 py-1 font-mono">${response.data || ""}</td>
+      <td class="px-2 py-1 font-mono">${response.decoded ? JSON.stringify(response.decoded) : ""}</td>
+    `;
+    tbody.appendChild(trResp);
+  }
+
   // =====================
   // UI EVENT HANDLERS & INIT
   // =====================
@@ -1478,7 +1572,11 @@
         fetchUnknownPgns();
         break;
       case "can-sniffer":
-        fetchCanSnifferLog();
+        clearCanSnifferTable();
+        connectCanSnifferSocket();
+        break;
+      default:
+        disconnectCanSnifferSocket();
         break;
     }
     // Close mobile sidebar if open

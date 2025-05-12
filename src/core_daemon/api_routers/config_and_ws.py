@@ -20,7 +20,11 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from core_daemon import app_state
 from core_daemon._version import VERSION  # Import VERSION
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
-from core_daemon.websocket import websocket_endpoint, websocket_logs_endpoint
+from core_daemon.websocket import (
+    can_sniffer_ws_endpoint,
+    websocket_endpoint,
+    websocket_logs_endpoint,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +188,11 @@ async def serve_websocket_endpoint(ws: WebSocket):
 async def serve_websocket_logs_endpoint(ws: WebSocket):
     print("LOG WS HANDLER CALLED")  # Debug: confirm handler is hit
     await websocket_logs_endpoint(ws)
+
+
+@api_router_config_ws.websocket("/ws/can-sniffer")
+async def serve_can_sniffer_ws(ws: WebSocket):
+    await can_sniffer_ws_endpoint(ws)
 
 
 # ── Configuration File Endpoints ───────────────────────────────────────────
