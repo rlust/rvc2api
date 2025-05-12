@@ -9,12 +9,14 @@
  * Author: Ryan Holt
  * Last updated: 2025-05-12
  */
-import { fetchData } from '../api.js';
-import { showToast } from '../utils.js';
-import { apiBasePath } from '../config.js';
+import { fetchData } from "../api.js";
+import { showToast } from "../utils.js";
+import { apiBasePath } from "../config.js";
 
-const unmappedEntriesView = document.getElementById('unmapped-view');
-const unmappedEntriesContent = document.getElementById('unmapped-entries-container');
+const unmappedEntriesView = document.getElementById("unmapped-view");
+const unmappedEntriesContent = document.getElementById(
+  "unmapped-entries-container"
+);
 
 function generateYamlSuggestion(entry) {
   const { id, name, description, type, length, factor, offset, unit } = entry;
@@ -52,24 +54,29 @@ export function renderUnmappedEntries(data) {
       unmappedEntriesContent.appendChild(entryDiv);
     }
     // Event delegation for copy buttons
-    if (!unmappedEntriesContent.hasAttribute('data-copy-bound')) {
-      unmappedEntriesContent.setAttribute('data-copy-bound','');
-      unmappedEntriesContent.addEventListener('click', (event) => {
-        const btn = event.target.closest('.copy-yaml-btn');
+    if (!unmappedEntriesContent.hasAttribute("data-copy-bound")) {
+      unmappedEntriesContent.setAttribute("data-copy-bound", "");
+      unmappedEntriesContent.addEventListener("click", (event) => {
+        const btn = event.target.closest(".copy-yaml-btn");
         if (!btn) return;
-        const code = btn.previousElementSibling.querySelector('code');
+        const code = btn.previousElementSibling.querySelector("code");
         if (!code) return;
         const yamlText = code.innerText;
-        navigator.clipboard.writeText(yamlText)
+        navigator.clipboard
+          .writeText(yamlText)
           .then(() => {
             btn.textContent = "Copied!";
             showToast("YAML copied to clipboard!", "success");
-            setTimeout(() => { btn.textContent = "Copy YAML"; }, 2000);
+            setTimeout(() => {
+              btn.textContent = "Copy YAML";
+            }, 2000);
           })
           .catch((err) => {
             showToast("Failed to copy YAML.", "error");
             btn.textContent = "Failed to copy";
-            setTimeout(() => { btn.textContent = "Copy YAML"; }, 2000);
+            setTimeout(() => {
+              btn.textContent = "Copy YAML";
+            }, 2000);
           });
       });
     }
