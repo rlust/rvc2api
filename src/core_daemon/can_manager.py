@@ -88,12 +88,47 @@ async def can_writer():
                     f"CAN TX (1/2): {interface_name} ID: {msg.arbitration_id:08X} "
                     f"Data: {msg.data.hex().upper()}"
                 )
+                # --- CAN Sniffer Logging (TX, ALL messages) ---
+                now = time.time()
+                from core_daemon.app_state import decoder_map
+
+                entry = decoder_map.get(msg.arbitration_id)
+                instance = None
+                decoded = None
+                raw = None
+                try:
+                    if entry:
+                        from rvc_decoder import decode_payload
+
+                        decoded, raw = decode_payload(entry, msg.data)
+                        instance = raw.get("instance")
+                except Exception:
+                    pass
+                # Determine origin (self vs other)
+                SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
+                source_addr = msg.arbitration_id & 0xFF
+                origin = "self" if source_addr == SELF_SOURCE_ADDR else "other"
+                sniffer_entry = {
+                    "timestamp": now,
+                    "direction": "tx",
+                    "arbitration_id": msg.arbitration_id,
+                    "data": msg.data.hex().upper(),
+                    "decoded": decoded,
+                    "raw": raw,
+                    "iface": interface_name,
+                    "pgn": entry.get("pgn") if entry else None,
+                    "dgn_hex": entry.get("dgn_hex") if entry else None,
+                    "name": entry.get("name") if entry else None,
+                    "instance": instance,
+                    "source_addr": source_addr,
+                    "origin": origin,
+                }
+                add_can_sniffer_entry(sniffer_entry)
+                # --- END CAN Sniffer Logging ---
                 # --- CAN Command/Control Sniffer Logging (TX) ---
                 # Heuristic: log all outgoing messages with 'command' or 'control'
                 # in the PGN name if available
                 # (If PGN name is not available, log all TX for now)
-                from core_daemon.app_state import decoder_map
-
                 entry = decoder_map.get(msg.arbitration_id)
                 if entry and (
                     entry.get("name", "").lower().find("command") != -1
