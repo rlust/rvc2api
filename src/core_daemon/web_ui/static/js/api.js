@@ -81,7 +81,7 @@ export function fetchData(url, options = {}) {
  * @returns {Promise<any>} Resolves with the response or false on error.
  */
 export function callLightService(entityId, command, params = {}) {
-  return fetch(`/api/entities/${entityId}/service`, {
+  return fetch(`/api/entities/${entityId}/control`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ command, ...params }),
