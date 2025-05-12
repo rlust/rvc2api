@@ -50,6 +50,10 @@ from core_daemon.config import (
     get_static_paths,
 )
 
+# Import the feature manager
+from core_daemon.feature_manager import shutdown_all as feature_shutdown_all
+from core_daemon.feature_manager import startup_all as feature_startup_all
+
 # Import the middleware
 from core_daemon.middleware import prometheus_http_middleware
 from core_daemon.websocket import WebSocketLogHandler
@@ -198,6 +202,18 @@ async def start_can_readers():
         message_handler_callback=message_handler_with_args,
         logger_instance=logger,
     )
+
+
+@app.on_event("startup")
+async def startup_features():
+    """FastAPI startup event: Initializes all enabled optional features."""
+    await feature_startup_all()
+
+
+@app.on_event("shutdown")
+async def shutdown_features():
+    """FastAPI shutdown event: Shuts down all enabled optional features."""
+    await feature_shutdown_all()
 
 
 @app.on_event("shutdown")

@@ -18,11 +18,12 @@ from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from core_daemon import app_state
+from core_daemon import app_state, feature_manager
 from core_daemon._version import VERSION  # Import VERSION
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
 from core_daemon.websocket import (
     can_sniffer_ws_endpoint,
+    features_ws_endpoint,
     websocket_endpoint,
     websocket_logs_endpoint,
 )
@@ -40,8 +41,25 @@ SERVER_START_TIME = time.time()
 
 @api_router_config_ws.get("/healthz")
 async def healthz():
-    """Liveness probe."""
-    return JSONResponse(status_code=200, content={"status": "ok"})
+    """Liveness probe with feature health aggregation."""
+    features = feature_manager.get_enabled_features()
+    health_report = {name: f.health for name, f in features.items()}
+    # Consider healthy if all enabled features are healthy/unknown/disabled
+    unhealthy = {
+        name: status
+        for name, status in health_report.items()
+        if status not in ("healthy", "unknown", "disabled")
+    }
+    if unhealthy:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "unhealthy_features": unhealthy,
+                "all_features": health_report,
+            },
+        )
+    return JSONResponse(status_code=200, content={"status": "ok", "features": health_report})
 
 
 @api_router_config_ws.get("/readyz")
@@ -194,6 +212,12 @@ async def serve_websocket_logs_endpoint(ws: WebSocket):
 @api_router_config_ws.websocket("/ws/can-sniffer")
 async def serve_can_sniffer_ws(ws: WebSocket):
     await can_sniffer_ws_endpoint(ws)
+
+
+@api_router_config_ws.websocket("/ws/features")
+async def serve_features_ws(ws: WebSocket):
+    """WebSocket endpoint for live feature status updates."""
+    await features_ws_endpoint(ws)
 
 
 # --- WebSocket: Home Status Updates ---

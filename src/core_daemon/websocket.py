@@ -193,3 +193,57 @@ async def network_map_ws_endpoint(ws: WebSocket):
         pass
     finally:
         network_map_ws_clients.discard(ws)
+
+
+# ── Features WebSocket State and Endpoint ────────────────────────────────
+features_ws_clients: set[WebSocket] = set()
+
+
+async def broadcast_features_status():
+    from core_daemon.feature_manager import get_all_features
+
+    features = get_all_features()
+    payload = [
+        {
+            "name": f.name,
+            "enabled": f.enabled,
+            "core": f.core,
+            "config": f.config,
+            "health": f.health,  # Add health status
+        }
+        for f in features.values()
+    ]
+    to_remove = set()
+    for ws in features_ws_clients:
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            to_remove.add(ws)
+    for ws in to_remove:
+        features_ws_clients.discard(ws)
+
+
+async def features_ws_endpoint(ws: WebSocket):
+    await ws.accept()
+    features_ws_clients.add(ws)
+    try:
+        from core_daemon.feature_manager import get_all_features
+
+        features = get_all_features()
+        payload = [
+            {
+                "name": f.name,
+                "enabled": f.enabled,
+                "core": f.core,
+                "config": f.config,
+                "health": f.health,  # Add health status
+            }
+            for f in features.values()
+        ]
+        await ws.send_json(payload)
+        while True:
+            await ws.receive_text()  # Keep the connection open
+    except Exception:
+        pass
+    finally:
+        features_ws_clients.discard(ws)
