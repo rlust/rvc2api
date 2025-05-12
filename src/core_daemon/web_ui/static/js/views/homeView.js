@@ -50,13 +50,10 @@ export function setupQuickLightControls() {
   quickLightButtons.forEach(({ id, name, endpoint }) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    // Remove any previous click listeners by cloning
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener("click", () => {
-      const originalText = newBtn.innerHTML;
-      newBtn.disabled = true;
-      newBtn.innerHTML =
+    btn.addEventListener("click", () => {
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML =
         '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
       fetchData(`${apiBasePath}${endpoint}`, {
         method: "POST",
@@ -70,8 +67,8 @@ export function setupQuickLightControls() {
           showToast(`Failed to execute ${name}: ${err.message}`, "error");
         },
         finallyCallback: () => {
-          newBtn.disabled = false;
-          newBtn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.innerHTML = originalText;
         },
       });
     });
