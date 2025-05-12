@@ -8,6 +8,7 @@
  */
 import { fetchData } from "../api.js";
 import { showToast } from "../utils.js";
+import { WebSocketManager } from "../wsManager.js";
 
 let networkMapSocketManager = null;
 
