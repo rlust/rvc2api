@@ -1044,6 +1044,42 @@
     });
   }
 
+  /**
+   * Populates the area filter dropdown for lights.
+   * @param {object[]} lights - Array of light entity objects.
+   */
+  function updateAreaFilterForLights(lights) {
+    if (!areaFilter) return;
+
+    const currentSelectedValue = localStorage.getItem("lightsAreaFilter") || "All";
+    const areas = new Set(["All"]); // Always include "All"
+
+    lights.forEach(entity => {
+      if (entity.device_type === "light" && entity.suggested_area) {
+        areas.add(entity.suggested_area);
+      }
+    });
+
+    areaFilter.innerHTML = ""; // Clear existing options
+
+    Array.from(areas).sort().forEach(area => {
+      const option = document.createElement("option");
+      option.value = area;
+      option.textContent = area;
+      areaFilter.appendChild(option);
+    });
+
+    // Restore selection if possible, otherwise default to "All"
+    if (areas.has(currentSelectedValue)) {
+      areaFilter.value = currentSelectedValue;
+    } else {
+      areaFilter.value = "All";
+      localStorage.setItem("lightsAreaFilter", "All"); // Update localStorage if previous was invalid
+    }
+    // Disable filter if only "All" (or no lights which implies only "All")
+    areaFilter.disabled = areas.size <= 1;
+  }
+
   // =====================
   // WEBSOCKET HANDLERS
   // =====================
