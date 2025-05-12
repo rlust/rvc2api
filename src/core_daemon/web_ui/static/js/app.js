@@ -54,6 +54,7 @@ import {
 } from "./views/unknownPgnsView.js";
 import { renderHomeView, stopHomePolling } from "./views/homeView.js";
 import { fetchSpecView } from "./views/specView.js";
+import { renderMappingView } from "./views/mappingView.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -425,29 +426,6 @@ const fetchCanStatus = makeFetcher(
 );
 
 /**
- * Fetches and displays the device_mapping.yml content.
- * Uses /api/config/mapping and expects text, displaying it directly.
- */
-function fetchMappingContent() {
-  fetchData(`${apiBasePath}/config/mapping`, {
-    // Changed to /api/config/mapping
-    responseType: "text", // Expect text
-    successCallback: (textData) => {
-      if (mappingContent) {
-        mappingContent.textContent = textData; // Display raw text
-      }
-    },
-    errorCallback: (error) => {
-      console.error("Failed to fetch mapping content:", error);
-      if (mappingContent)
-        mappingContent.textContent = `Error loading mapping: ${error.message}`;
-      showToast("Failed to load device mapping.", "error");
-    },
-    loadingElement: mappingContent, // Use mappingContent for its loading message
-  });
-}
-
-/**
  * Fetches and displays the rvc.json specification content and metadata.
  * Fetches content from /api/config/rvc_spec (text)
  * Fetches metadata from /api/config/rvc_spec_metadata (JSON)
@@ -750,7 +728,7 @@ function navigateToView(viewName, isInitial = false) {
       handleLightsViewVisibility(true);
       break;
     case "mapping":
-      fetchMappingContent();
+      renderMappingView();
       break;
     case "spec":
       fetchSpecView();
