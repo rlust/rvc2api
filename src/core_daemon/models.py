@@ -110,6 +110,7 @@ class ControlEntityResponse(BaseModel):
     status: str
     entity_id: str
     command: str
+    state: str
     brightness: int
     action: str
 
