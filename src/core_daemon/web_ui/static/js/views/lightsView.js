@@ -46,7 +46,7 @@ function handleEntitySocketMessage(data) {
         ...updatedEntity,
       };
       if (!lightsElements.view.classList.contains(CLASS_HIDDEN)) {
-        updateLightsView();
+        updateOrInsertLightCard(entityId);
       }
     }
   } catch (error) {
@@ -57,6 +57,68 @@ function handleEntitySocketMessage(data) {
       data
     );
   }
+}
+
+/**
+ * Updates or inserts a single light card in the DOM for the given entityId.
+ * Only updates the card if it is currently visible in the filtered area.
+ */
+function updateOrInsertLightCard(entityId) {
+  const { content, areaFilter } = lightsElements;
+  if (!content || !areaFilter) return;
+  const entity = currentLightStates[entityId];
+  if (!entity || entity.device_type !== "light") return;
+  const selectedArea = areaFilter.value;
+  const entityArea = entity.suggested_area || "Unknown Area";
+  if (selectedArea !== "All" && selectedArea !== entityArea) {
+    // If the card is present but now filtered out, remove it
+    const card = content.querySelector(
+      `.entity-card[data-entity-id='${entityId}']`
+    );
+    if (card) card.remove();
+    return;
+  }
+  // Find the section for this area
+  let section = content.querySelector(
+    `.lights-area-section[data-area='${entityArea}']`
+  );
+  if (!section) {
+    // If not present, create a new section for this area
+    section = document.createElement("div");
+    section.className = "mb-8 lights-area-section";
+    section.dataset.area = entityArea;
+    const header = document.createElement("h2");
+    header.className = "text-2xl font-semibold mb-4 pb-2";
+    header.style.borderBottom = `2px solid var(--color-border-primary)`;
+    header.textContent = entityArea;
+    section.appendChild(header);
+    const grid = document.createElement("div");
+    grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
+    section.appendChild(grid);
+    // Insert in sorted order
+    const allSections = Array.from(
+      content.querySelectorAll(".lights-area-section")
+    );
+    let inserted = false;
+    for (let i = 0; i < allSections.length; i++) {
+      if (allSections[i].dataset.area > entityArea) {
+        content.insertBefore(section, allSections[i]);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) content.appendChild(section);
+  }
+  const grid = section.querySelector(".grid");
+  if (!grid) return;
+  // Remove old card if present
+  const oldCard = grid.querySelector(
+    `.entity-card[data-entity-id='${entityId}']`
+  );
+  if (oldCard) oldCard.remove();
+  // Insert new/updated card
+  const newCard = renderLightCard(entity);
+  grid.appendChild(newCard);
 }
 
 export function handleLightsViewVisibility(isVisible) {
@@ -171,7 +233,8 @@ export function renderGroupedLights() {
     .sort()
     .forEach((area) => {
       const section = document.createElement("div");
-      section.className = "mb-8";
+      section.className = "mb-8 lights-area-section";
+      section.dataset.area = area;
       const header = document.createElement("h2");
       header.className = "text-2xl font-semibold mb-4 pb-2";
       header.style.borderBottom = `2px solid var(--color-border-primary)`;

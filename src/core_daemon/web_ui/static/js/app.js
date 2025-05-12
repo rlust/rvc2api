@@ -204,40 +204,44 @@ function makeFetcher(path, onSuccess, container, opts = {}) {
 // API FETCH & RENDERING
 // =====================
 /**
- * Updates the API server status view.
- * Fetches from /api/status/server and displays status, message, and version.
+ * Updates the API server status view in-place (no full redraw).
+ * Only updates changed values.
  * @param {object} data - Data from the API.
- * @param {string} data.status - Server status (e.g., 'ok', 'error').
- * @param {string} [data.message] - Optional status message.
- * @param {string} [data.version] - Server version.
  */
 function updateApiServerView(data) {
-  try {
-    if (!apiStatusContent) return;
-    apiStatusContent.innerHTML = "";
-    const status = data.status || "unknown";
-    const message = data.message || "";
-    const version = data.version || APP_VERSION || "";
-    const statusColor =
-      status === "ok"
-        ? CLASS_TEXT_GREEN_400
-        : status === "error"
-        ? CLASS_TEXT_RED_400
-        : CLASS_TEXT_YELLOW_400;
+  if (!apiStatusContent) return;
+  // Try to find or create the status and version spans
+  let statusSpan = apiStatusContent.querySelector(".api-status-value");
+  let versionSpan = apiStatusContent.querySelector(".api-version-value");
+  let messageDiv = apiStatusContent.querySelector(".api-status-message");
+  if (!statusSpan || !versionSpan || !messageDiv) {
+    // Initial render or structure changed, re-create
     apiStatusContent.innerHTML = `
       <div class="flex items-center space-x-2">
         <span class="font-semibold">Status:</span>
-        <span class="${statusColor}">${status}</span>
+        <span class="api-status-value"></span>
         <span class="ml-4 font-semibold">Version:</span>
-        <span>${version}</span>
+        <span class="api-version-value"></span>
       </div>
-      <div class="mt-2 text-sm text-gray-400">${message}</div>
+      <div class="mt-2 text-sm text-gray-400 api-status-message"></div>
     `;
-  } catch (err) {
-    console.error("Error in updateApiServerView:", err);
-    if (apiStatusContent)
-      apiStatusContent.textContent = "Error rendering API status.";
+    statusSpan = apiStatusContent.querySelector(".api-status-value");
+    versionSpan = apiStatusContent.querySelector(".api-version-value");
+    messageDiv = apiStatusContent.querySelector(".api-status-message");
   }
+  const status = data.status || "unknown";
+  const message = data.message || "";
+  const version = data.version || APP_VERSION || "";
+  const statusColor =
+    status === "ok"
+      ? CLASS_TEXT_GREEN_400
+      : status === "error"
+      ? CLASS_TEXT_RED_400
+      : CLASS_TEXT_YELLOW_400;
+  statusSpan.textContent = status;
+  statusSpan.className = `api-status-value ${statusColor}`;
+  versionSpan.textContent = version;
+  messageDiv.textContent = message;
 }
 
 /**
@@ -265,38 +269,61 @@ function updateApplicationHealthView(data) {
 }
 
 /**
- * Updates the CAN status view.
- * Fetches from /api/can/status and displays CAN interface status.
+ * Updates the CAN status view in-place (no full redraw).
+ * Only updates changed interface rows.
  * @param {object} data - CAN status data, expected to have an 'interfaces' object.
  */
 function updateCanStatusView(data) {
-  try {
-    if (!canStatusContent) return;
-    canStatusContent.innerHTML = "";
-    if (
-      !data ||
-      !data.interfaces ||
-      Object.keys(data.interfaces).length === 0
-    ) {
-      canStatusContent.textContent = "No CAN interfaces found.";
-      return;
-    }
-    const interfaces = data.interfaces;
-    Object.entries(interfaces).forEach(([iface, stats]) => {
-      const ifaceDiv = document.createElement("div");
-      ifaceDiv.className = "mb-2";
-      ifaceDiv.innerHTML = `<span class="font-semibold">${iface}:</span> <span>${
-        stats.state || "unknown"
-      }</span> <span class="ml-2 text-xs text-gray-400">RX: ${
-        stats.rx_packets || 0
-      } / TX: ${stats.tx_packets || 0}</span>`;
-      canStatusContent.appendChild(ifaceDiv);
-    });
-  } catch (err) {
-    console.error("Error in updateCanStatusView:", err);
-    if (canStatusContent)
-      canStatusContent.textContent = "Error rendering CAN status.";
+  if (!canStatusContent) return;
+  if (!data || !data.interfaces || Object.keys(data.interfaces).length === 0) {
+    canStatusContent.textContent = "No CAN interfaces found.";
+    return;
   }
+  // Use a table for stable row updates
+  let table = canStatusContent.querySelector("table.can-status-table");
+  if (!table) {
+    table = document.createElement("table");
+    table.className =
+      "can-status-table min-w-full bg-gray-800 rounded-lg shadow text-sm";
+    table.innerHTML = `
+      <thead>
+        <tr class="text-gray-300 border-b border-gray-700">
+          <th class="px-4 py-2 text-left">Interface</th>
+          <th class="px-4 py-2 text-left">State</th>
+          <th class="px-4 py-2 text-left">RX</th>
+          <th class="px-4 py-2 text-left">TX</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    canStatusContent.innerHTML = "";
+    canStatusContent.appendChild(table);
+  }
+  const tbody = table.querySelector("tbody");
+  const interfaces = data.interfaces;
+  // Update or insert rows for each interface
+  Object.entries(interfaces).forEach(([iface, stats]) => {
+    let row = tbody.querySelector(`tr[data-iface='${iface}']`);
+    if (!row) {
+      row = document.createElement("tr");
+      row.dataset.iface = iface;
+      row.className = "border-b border-gray-700";
+      row.innerHTML = `
+        <td class="px-4 py-2 font-semibold">${iface}</td>
+        <td class="px-4 py-2 can-state"></td>
+        <td class="px-4 py-2 can-rx"></td>
+        <td class="px-4 py-2 can-tx"></td>
+      `;
+      tbody.appendChild(row);
+    }
+    row.querySelector(".can-state").textContent = stats.state || "unknown";
+    row.querySelector(".can-rx").textContent = stats.rx_packets || 0;
+    row.querySelector(".can-tx").textContent = stats.tx_packets || 0;
+  });
+  // Remove rows for interfaces no longer present
+  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
+    if (!(row.dataset.iface in interfaces)) row.remove();
+  });
 }
 
 /**
