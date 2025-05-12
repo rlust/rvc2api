@@ -8,6 +8,7 @@ This module provides FastAPI endpoints for:
 - Streaming application logs to WebSocket clients.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -193,6 +194,53 @@ async def serve_websocket_logs_endpoint(ws: WebSocket):
 @api_router_config_ws.websocket("/ws/can-sniffer")
 async def serve_can_sniffer_ws(ws: WebSocket):
     await can_sniffer_ws_endpoint(ws)
+
+
+# --- WebSocket: Home Status Updates ---
+@api_router_config_ws.websocket("/ws/status")
+async def ws_status_updates(ws: WebSocket):
+    """
+    WebSocket endpoint that pushes combined status, health, and CAN status
+    updates for the home view. Sends a JSON object with keys: server, application, can_status.
+    """
+    await ws.accept()
+    send_task = None
+    disconnect_event = asyncio.Event()
+
+    async def send_status_periodically():
+        try:
+            while not disconnect_event.is_set():
+                # Gather all three status payloads
+                server = await get_server_status()
+                application = await get_application_status()
+                # CAN status is a GET endpoint in can.py, so import and call it
+                from core_daemon.api_routers.can import get_can_status
+
+                can_status = await get_can_status()
+                # Compose and send
+                await ws.send_json(
+                    {
+                        "server": server,
+                        "application": application,
+                        "can_status": can_status,
+                    }
+                )
+                await asyncio.sleep(5)  # Adjustable interval
+        except Exception as e:
+            # Log and exit
+            logger.info(f"/ws/status send loop ended: {e}")
+
+    send_task = asyncio.create_task(send_status_periodically())
+    try:
+        while True:
+            await ws.receive_text()  # Keep alive, ignore input
+    except Exception:
+        pass
+    finally:
+        disconnect_event.set()
+        if send_task:
+            await send_task
+        logger.info("/ws/status client disconnected")
 
 
 # ── Configuration File Endpoints ───────────────────────────────────────────

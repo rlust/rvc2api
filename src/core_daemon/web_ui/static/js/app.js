@@ -52,7 +52,7 @@ import {
   fetchUnknownPgns,
   renderUnknownPgnsWithToggle,
 } from "./views/unknownPgnsView.js";
-import { renderHomeView } from "./views/homeView.js";
+import { renderHomeView, stopHomePolling } from "./views/homeView.js";
 import { fetchSpecView } from "./views/specView.js";
 
 /**
@@ -709,6 +709,10 @@ function navigateToView(viewName, isInitial = false) {
   if (currentView === "lights") {
     handleLightsViewVisibility(false);
   }
+  // Clean up home view (stop polling & WebSocket) when leaving home view
+  if (currentView === "home") {
+    if (typeof cleanupHomeView === "function") cleanupHomeView();
+  }
 
   if (targetView) {
     targetView.classList.remove(CLASS_HIDDEN);
@@ -739,7 +743,7 @@ function navigateToView(viewName, isInitial = false) {
   console.log(`Navigating to view: ${currentView}, initial: ${isInitial}`);
   switch (currentView) {
     case "home":
-      renderHomeView();
+      if (typeof renderHomeView === "function") renderHomeView();
       break;
     case "lights":
       updateLightsView();
@@ -1677,7 +1681,3 @@ function initializeApp() {
 document.addEventListener("DOMContentLoaded", () => {
   initializeApp();
 });
-
-setInterval(fetchApiStatus, API_STATUS_REFRESH_INTERVAL);
-setInterval(fetchAppHealth, APP_HEALTH_REFRESH_INTERVAL);
-setInterval(fetchCanStatus, CAN_STATUS_REFRESH_INTERVAL);
