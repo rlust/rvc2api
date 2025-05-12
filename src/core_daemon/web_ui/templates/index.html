@@ -123,9 +123,11 @@
                                         <i class="mdi mdi-access-point-network mr-2" aria-hidden="true"></i>CAN Sniffer
                                     </button>
                                     <!-- Add navigation link -->
-                                    <li>
-                                        <a href="#network-map" id="nav-network-map" class="sidebar-link">Network Map</a>
-                                    </li>
+                                    <button data-view="network-map"
+                                            class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
+                                        <i class="mdi mdi-lan mr-2" aria-hidden="true"></i>Network
+                                        Map
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -212,14 +214,6 @@
                     <!-- CAN Bus Status Section -->
                     <div class="mt-10">
                         <h2 class="text-2xl font-semibold mb-6 text-gray-300">System Status</h2>
-                        <!-- API Server Status -->
-                        <div class="mb-6">
-                            <h3 class="text-xl font-semibold mb-3 text-gray-200">API Server</h3>
-                            <div id="api-status-container" class="bg-gray-800 p-6 rounded-lg shadow">
-                                <p id="api-status-loading-message" class="text-gray-400">Loading API server status...</p>
-                                <!-- API server status will be loaded here by JavaScript -->
-                            </div>
-                        </div>
                         <!-- Application Health -->
                         <div class="mb-6">
                             <h3 class="text-xl font-semibold mb-3 text-gray-200">Application Health</h3>
@@ -400,6 +394,16 @@ Loading rvc.json...</pre>
                 </pre>
             </div>
         </div>
+        <footer class="bg-gray-900 text-gray-300 text-xs py-2 px-4 flex items-center justify-between w-full border-t border-gray-800 mt-auto"
+                id="appFooter">
+            <div>
+                <span id="footerApiServer" class="mr-4"></span>
+                <span id="footerHealthStatus" class="mr-4"></span>
+            </div>
+            <div>
+                <span id="footerAppVersion"></span>
+            </div>
+        </footer>
         <script type="module" src="{{ url_for('static', path='js/app.js') }}" defer></script>
         <!-- Changed to external script -->
     </body>

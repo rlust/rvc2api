@@ -1386,6 +1386,48 @@ if (logSearchInput)
   );
 
 // =====================
+// FOOTER STATUS RENDERING
+// =====================
+
+const footerApiServer = document.getElementById("footerApiServer");
+const footerHealthStatus = document.getElementById("footerHealthStatus");
+const footerAppVersion = document.getElementById("footerAppVersion");
+
+function updateFooterStatus({ version, status, message }) {
+  if (footerApiServer) {
+    footerApiServer.textContent = `API: ${window.location.origin}`;
+  }
+  if (footerHealthStatus) {
+    let icon = status === "ok" ? "🟢" : status === "error" ? "🔴" : "🟡";
+    let label = status || "unknown";
+    let msg = status !== "ok" && message ? ` | ${message}` : "";
+    footerHealthStatus.innerHTML = `<span>${icon} ${label}${msg}</span>`;
+    footerHealthStatus.title = status !== "ok" && message ? message : "";
+  }
+  if (footerAppVersion) {
+    footerAppVersion.textContent = version
+      ? `v${version}`
+      : APP_VERSION
+      ? `v${APP_VERSION}`
+      : "";
+  }
+}
+
+async function fetchAndUpdateFooterStatus() {
+  try {
+    const resp = await fetch(`${apiBasePath}/status/server`);
+    if (!resp.ok) throw new Error("API error");
+    const data = await resp.json();
+    updateFooterStatus(data);
+  } catch (err) {
+    updateFooterStatus({ status: "error", message: "API unreachable" });
+  }
+}
+
+setInterval(fetchAndUpdateFooterStatus, 10000);
+document.addEventListener("DOMContentLoaded", fetchAndUpdateFooterStatus);
+
+// =====================
 // APP INITIALIZATION
 // =====================
 /**
