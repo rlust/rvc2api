@@ -1690,6 +1690,9 @@
       return;
     }
 
+    // Prevent horizontal scrollbar during animation
+    sidebar.style.overflowX = "hidden";
+
     // Listener for clicking the sidebar background itself to expand it when collapsed (desktop only)
     sidebar.addEventListener("click", (e) => {
       console.log(
