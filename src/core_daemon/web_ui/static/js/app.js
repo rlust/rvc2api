@@ -52,6 +52,7 @@ import {
   fetchUnknownPgns,
   renderUnknownPgnsWithToggle,
 } from "./views/unknownPgnsView.js";
+import { renderHomeView } from "./views/homeView.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -479,25 +480,6 @@ function fetchSpecContent() {
   });
 }
 
-/**
- * Fetches and displays unknown PGNs.
- * Uses /api/unknown_pgns as per user's note.
- */
-function fetchUnknownPgns() {
-  fetchData(`${apiBasePath}/unknown_pgns`, {
-    // New endpoint (corrected)
-    successCallback: renderUnknownPgnsWithToggle,
-    errorCallback: (error) => {
-      if (unknownPgnsContent)
-        unknownPgnsContent.textContent = `Error loading unknown PGNs: ${error.message}`;
-      showToast("Failed to load unknown PGNs.", "error");
-    },
-    loadingElement:
-      unknownPgnsContent?.querySelector("#unknown-pgns-loading-message") ||
-      unknownPgnsContent,
-  });
-}
-
 // =====================
 // WEBSOCKET HANDLERS
 // =====================
@@ -757,10 +739,7 @@ function navigateToView(viewName, isInitial = false) {
   console.log(`Navigating to view: ${currentView}, initial: ${isInitial}`);
   switch (currentView) {
     case "home":
-      fetchApiStatus();
-      fetchAppHealth();
-      fetchCanStatus(); // Already exists, ensure it's called
-      // Any other home-specific fetches
+      renderHomeView();
       break;
     case "lights":
       updateLightsView();
