@@ -24,31 +24,54 @@ const canStatusContent = document.getElementById("can-status-container");
 const quickLightButtons = [
   { id: "btn-all-on", name: "All Lights On", endpoint: "/lights/all/on" },
   { id: "btn-all-off", name: "All Lights Off", endpoint: "/lights/all/off" },
-  { id: "btn-interior-on", name: "Interior Lights On", endpoint: "/lights/interior/on" },
-  { id: "btn-interior-off", name: "Interior Lights Off", endpoint: "/lights/interior/off" },
-  { id: "btn-exterior-on", name: "Exterior Lights On", endpoint: "/lights/exterior/on" },
-  { id: "btn-exterior-off", name: "Exterior Lights Off", endpoint: "/lights/exterior/off" },
+  {
+    id: "btn-interior-on",
+    name: "Interior Lights On",
+    endpoint: "/lights/interior/on",
+  },
+  {
+    id: "btn-interior-off",
+    name: "Interior Lights Off",
+    endpoint: "/lights/interior/off",
+  },
+  {
+    id: "btn-exterior-on",
+    name: "Exterior Lights On",
+    endpoint: "/lights/exterior/on",
+  },
+  {
+    id: "btn-exterior-off",
+    name: "Exterior Lights Off",
+    endpoint: "/lights/exterior/off",
+  },
 ];
 
 export function setupQuickLightControls() {
   quickLightButtons.forEach(({ id, name, endpoint }) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    btn.addEventListener("click", () => {
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
+    // Remove any previous click listeners by cloning
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener("click", () => {
+      const originalText = newBtn.innerHTML;
+      newBtn.disabled = true;
+      newBtn.innerHTML =
+        '<i class="mdi mdi-loading mdi-spin mr-2"></i>Processing...';
       fetchData(`${apiBasePath}${endpoint}`, {
         method: "POST",
         successCallback: (data) => {
-          showToast(`${name}: ${data.lights_commanded ?? "Commanded"}`, "success");
+          showToast(
+            `${name}: ${data.lights_commanded ?? "Commanded"}`,
+            "success"
+          );
         },
         errorCallback: (err) => {
           showToast(`Failed to execute ${name}: ${err.message}`, "error");
         },
         finallyCallback: () => {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
+          newBtn.disabled = false;
+          newBtn.innerHTML = originalText;
         },
       });
     });
@@ -98,7 +121,8 @@ export function fetchAndRenderAppHealth() {
         return;
       }
       const entries = Object.entries(data).map(
-        ([key, value]) => `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`
+        ([key, value]) =>
+          `<div><span class="font-semibold">${key}:</span> <span>${value}</span></div>`
       );
       appHealthContent.innerHTML = entries.join("");
     },
@@ -114,14 +138,19 @@ export function fetchAndRenderCanStatus() {
   fetchData(`${apiBasePath}/can/status`, {
     successCallback: (data) => {
       if (!canStatusContent) return;
-      if (!data || !data.interfaces || Object.keys(data.interfaces).length === 0) {
+      if (
+        !data ||
+        !data.interfaces ||
+        Object.keys(data.interfaces).length === 0
+      ) {
         canStatusContent.textContent = "No CAN interfaces found.";
         return;
       }
       let table = canStatusContent.querySelector("table.can-status-table");
       if (!table) {
         table = document.createElement("table");
-        table.className = "can-status-table min-w-full bg-gray-800 rounded-lg shadow text-sm";
+        table.className =
+          "can-status-table min-w-full bg-gray-800 rounded-lg shadow text-sm";
         table.innerHTML = `
           <thead>
             <tr class="text-gray-300 border-b border-gray-700">
