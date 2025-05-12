@@ -19,7 +19,7 @@ from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
 # Assuming UnmappedEntryModel is in core_daemon.models
 # We need to import it if it's used in type hints for unmapped_entries
 from core_daemon.models import UnknownPGNEntry, UnmappedEntryModel
-from rvc_decoder.decode import rvc_load_and_process_device_mapping  # Added import
+from rvc_decoder.decode import load_config_data  # Changed from rvc_load_and_process_device_mapping
 
 # In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
@@ -257,16 +257,30 @@ def populate_app_state(
     logger.info("Cleared existing application state.")  # Log after clearing
 
     logger.info("Attempting to load and process device mapping...")
-    processed_data = rvc_load_and_process_device_mapping(  # Renamed for clarity if you aliased it
-        rvc_spec_path, device_mapping_path
-    )
+    # Ensure this call uses the correct function name and expects the correct return structure
+    processed_data_tuple = load_config_data(rvc_spec_path, device_mapping_path)
+    # Unpack the tuple correctly based on what load_config_data returns
+    # load_config_data returns: decoder_map, device_mapping, device_lookup, status_lookup,
+    # light_entity_ids, entity_id_lookup, light_command_info, pgn_hex_to_name_map
+    # We need to map these to the structure previously assumed for processed_data or adjust
+    (
+        _decoder_map,  # We might not need all of these directly in populate_app_state
+        _device_mapping_yaml,
+        loaded_device_lookup,
+        loaded_status_lookup,
+        _light_entity_ids,  # This is a set, light_command_info keys can serve a similar purpose
+        loaded_entity_id_lookup,
+        loaded_light_command_info,
+        _pgn_hex_to_name_map,
+    ) = processed_data_tuple
 
     # Populate from processed_data
-    entity_id_lookup.update(processed_data.get("entity_id_lookup", {}))
-    device_lookup.update(processed_data.get("device_lookup", {}))
-    status_lookup.update(processed_data.get("status_lookup", {}))
-    light_command_info.update(processed_data.get("light_command_info", {}))
-    # Ensure other necessary structures from processed_data are also assigned if needed
+    entity_id_lookup.update(loaded_entity_id_lookup)
+    device_lookup.update(loaded_device_lookup)
+    status_lookup.update(loaded_status_lookup)
+    light_command_info.update(loaded_light_command_info)
+    # Note: The original `processed_data` was a dict. `load_config_data` returns a tuple.
+    # The logic here now correctly unpacks the tuple and updates the global dicts.
 
     logger.info(
         f"After rvc_load_mapping: app_state.entity_id_lookup has {len(entity_id_lookup)} entries."
