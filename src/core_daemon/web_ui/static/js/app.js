@@ -1046,7 +1046,7 @@
 
   /**
    * Populates the area filter dropdown for lights.
-   * @param {object[]} lights - Array of light entity objects.
+   * @param {object} lights - Object mapping entity IDs to light entity objects.
    */
   function updateAreaFilterForLights(lights) {
     if (!areaFilter) return;
@@ -1054,7 +1054,7 @@
     const currentSelectedValue = localStorage.getItem("lightsAreaFilter") || "All";
     const areas = new Set(["All"]); // Always include "All"
 
-    lights.forEach(entity => {
+    Object.values(lights).forEach(entity => { // Changed here
       if (entity.device_type === "light" && entity.suggested_area) {
         areas.add(entity.suggested_area);
       }
