@@ -63,16 +63,17 @@ async def list_entities(
         A dictionary of entities matching the filter criteria.
     """
 
-    def matches(eid: str) -> bool:
-        """Helper function to check if an entity matches the filter criteria."""
-        cfg = entity_id_lookup.get(eid, {})
-        if device_type and cfg.get("device_type") != device_type:
+    def matches_entity_attributes(entity_data: dict) -> bool:  # state stores dicts
+        """Helper function to check if an entity's attributes match the filter criteria."""
+        # Check device_type from the entity_data itself
+        if device_type and entity_data.get("device_type") != device_type:
             return False
-        if area and cfg.get("suggested_area") != area:
+        # Check suggested_area from the entity_data itself
+        if area and entity_data.get("suggested_area") != area:
             return False
         return True
 
-    return {eid: ent for eid, ent in state.items() if matches(eid)}
+    return {eid: ent for eid, ent in state.items() if matches_entity_attributes(ent)}
 
 
 @api_router_entities.get("/entities/ids", response_model=List[str])
