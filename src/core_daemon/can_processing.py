@@ -106,6 +106,22 @@ def process_can_message(
                 current_unknown.last_data_hex = msg.data.hex().upper()
             # --- MODIFICATION END ---
 
+            # --- NEW: Always add a sniffer entry for all RX messages ---
+            sniffer_entry = {
+                "timestamp": now_ts,
+                "direction": "rx",
+                "arbitration_id": msg.arbitration_id,
+                "data": msg.data.hex().upper(),
+                "decoded": None,
+                "raw": None,
+                "iface": iface_name,
+                "pgn": None,
+                "dgn_hex": None,
+                "name": None,
+                "instance": None,
+                "source_addr": msg.arbitration_id & 0xFF,
+            }
+            add_can_sniffer_entry(sniffer_entry)
             return  # Return after handling unknown PGN
 
         decoded, raw = decode_payload(entry, msg.data)
