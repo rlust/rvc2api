@@ -72,3 +72,26 @@ export function fetchData(url, options = {}) {
       if (typeof errorCallback === "function") errorCallback(error);
     });
 }
+
+/**
+ * Calls a light service (toggle, set_brightness, etc.) for a given entity.
+ * @param {string} entityId - The entity_id of the light.
+ * @param {string} command - The command to send (e.g., 'toggle', 'set_brightness').
+ * @param {object} [params={}] - Additional parameters for the command.
+ * @returns {Promise<any>} Resolves with the response or false on error.
+ */
+export function callLightService(entityId, command, params = {}) {
+  return fetch(`/api/entities/${entityId}/service`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command, ...params }),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .catch((err) => {
+      console.error("callLightService error:", err);
+      return false;
+    });
+}
