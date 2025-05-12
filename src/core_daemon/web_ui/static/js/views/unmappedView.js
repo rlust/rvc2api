@@ -10,7 +10,7 @@
  * Last updated: 2025-05-12
  */
 import { fetchData } from "../api.js";
-import { showToast } from "../utils.js";
+import { showToast, copyToClipboard } from "../utils.js";
 import { apiBasePath } from "../config.js";
 
 const unmappedEntriesView = document.getElementById("unmapped-view");
@@ -160,8 +160,8 @@ export function renderUnmappedEntries(data) {
         const code = btn.previousElementSibling.querySelector("code");
         if (!code) return;
         const yamlText = code.innerText;
-        navigator.clipboard
-          .writeText(yamlText)
+        btn.textContent = "Copying...";
+        copyToClipboard(yamlText)
           .then(() => {
             btn.textContent = "Copied!";
             showToast("YAML copied to clipboard!", "success");

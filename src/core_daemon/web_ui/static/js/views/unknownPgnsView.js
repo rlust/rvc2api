@@ -12,7 +12,7 @@
  */
 
 import { fetchData } from "../api.js";
-import { showToast } from "../utils.js";
+import { showToast, copyToClipboard } from "../utils.js";
 import { apiBasePath } from "../config.js";
 
 const unknownPgnsView = document.getElementById("unknown-pgns-view");
@@ -102,10 +102,38 @@ function renderUnknownPgnsCards(data) {
           item.last_data_hex || ""
         }</code></p>
       </div>
+      <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-hex-btn">Copy Hex</button>
     `;
     container.appendChild(card);
   });
   unknownPgnsContent.appendChild(container);
+  // Event delegation for copy buttons
+  if (!container.hasAttribute("data-copy-bound")) {
+    container.setAttribute("data-copy-bound", "");
+    container.addEventListener("click", (event) => {
+      const btn = event.target.closest(".copy-hex-btn");
+      if (!btn) return;
+      const code = btn.parentElement.querySelector("code");
+      if (!code) return;
+      const hexText = code.innerText;
+      btn.textContent = "Copying...";
+      copyToClipboard(hexText)
+        .then(() => {
+          btn.textContent = "Copied!";
+          showToast("Hex copied to clipboard!", "success");
+          setTimeout(() => {
+            btn.textContent = "Copy Hex";
+          }, 2000);
+        })
+        .catch(() => {
+          showToast("Failed to copy Hex.", "error");
+          btn.textContent = "Failed to copy";
+          setTimeout(() => {
+            btn.textContent = "Copy Hex";
+          }, 2000);
+        });
+    });
+  }
 }
 
 export function renderUnknownPgnsWithToggle(data) {

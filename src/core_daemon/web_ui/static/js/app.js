@@ -37,7 +37,7 @@ import {
   entitySocketUrl,
 } from "./config.js";
 import { fetchData } from "./api.js";
-import { showToast } from "./utils.js";
+import { showToast, copyToClipboard } from "./utils.js";
 import {
   handleLightsViewVisibility,
   updateLightsView,
@@ -535,8 +535,7 @@ function appendLogMessage(message) {
     attributes: { title: "Copy log message" },
   });
   copyButton.addEventListener("click", () => {
-    navigator.clipboard
-      .writeText(message)
+    copyToClipboard(message)
       .then(() => showToast("Log message copied!", "success", 1500))
       .catch((err) => {
         console.error("Failed to copy log message:", err);
