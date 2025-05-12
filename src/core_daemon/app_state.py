@@ -108,28 +108,7 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     initialize_history_deques_internal()
     preseed_light_states_internal(decode_payload_function)
 
-    # Add detailed logging for the critical dictionaries AT THE END of this function
-    logger.info(
-        f"End of initialize_app_from_config: len(entity_id_lookup) = {len(entity_id_lookup)}"
-    )
-    logger.info(f"End of initialize_app_from_config: id(entity_id_lookup) = {id(entity_id_lookup)}")
-    logger.info(
-        f"End of initialize_app_from_config: Keys in entity_id_lookup (first 5): "
-        f"{list(entity_id_lookup.keys())[:5]}"
-    )
-    logger.info(
-        f"End of initialize_app_from_config: len(light_command_info) = {len(light_command_info)}"
-    )
-    logger.info(
-        f"End of initialize_app_from_config: id(light_command_info) = {id(light_command_info)}"
-    )
-    logger.info(
-        f"End of initialize_app_from_config: Keys in light_command_info (first 5): "
-        f"{list(light_command_info.keys())[:5]}"
-    )
-    logger.info(
-        "Global app_state dictionaries populated and ID-logged from initialize_app_from_config."
-    )
+    logger.info("Global app_state dictionaries populated from initialize_app_from_config.")
 
 
 def get_last_known_brightness(entity_id: str) -> int:
@@ -380,17 +359,4 @@ def populate_app_state(
     logger.info("Finished pre-seeding light states.")
     # ... (pre-seeding for other device types if any) ...
 
-    # New logs at the very end of populate_app_state
-    logger.info(f"End of populate_app_state: len(entity_id_lookup) = {len(entity_id_lookup)}")
-    logger.info(f"End of populate_app_state: id(entity_id_lookup) = {id(entity_id_lookup)}")
-    logger.info(
-        f"End of populate_app_state: Keys in entity_id_lookup (first 5): "
-        f"{list(entity_id_lookup.keys())[:5]}"
-    )
-    logger.info(f"End of populate_app_state: len(light_command_info) = {len(light_command_info)}")
-    logger.info(f"End of populate_app_state: id(light_command_info) = {id(light_command_info)}")
-    logger.info(
-        f"End of populate_app_state: Keys in light_command_info (first 5): "
-        f"{list(light_command_info.keys())[:5]}"
-    )
-    logger.info("Application state fully populated and pre-seeded.")
+    logger.info("Application state fully populated and pre-seeded by populate_app_state.")

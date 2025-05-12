@@ -352,70 +352,21 @@ async def control_entity(
                                state, brightness, and a description of the action performed.
     """
     logger.info(f"Control endpoint called for entity_id: '{entity_id}' (type: {type(entity_id)})")
-    # New logs to check memory ID and content of the dictionaries as seen by this function
-    logger.info(f"In control_entity: id(entity_id_lookup) = {id(entity_id_lookup)}")
-    logger.info(f"In control_entity: len(entity_id_lookup) = {len(entity_id_lookup)}")
-    logger.info(
-        f"In control_entity: Keys in entity_id_lookup (first 20): "
-        f"{list(entity_id_lookup.keys())[:20]}"
-    )
-    logger.info(f"In control_entity: id(light_command_info) = {id(light_command_info)}")
-    logger.info(f"In control_entity: len(light_command_info) = {len(light_command_info)}")
-    logger.info(
-        f"In control_entity: Keys in light_command_info (first 20):"
-        f"{list(light_command_info.keys())[:20]}"
-    )
+    # Removed detailed id(), len(), and key logging for entity_id_lookup and light_command_info
 
-    logger.info(
-        f"Checking entity_id_lookup. Contains '{entity_id}'? "
-        f"{'yes' if entity_id in entity_id_lookup else 'no'}"
-    )
-    if not entity_id_lookup:
-        logger.warning("entity_id_lookup is EMPTY at control_entity!")
-    else:
-        logger.info(f"entity_id_lookup keys (first 20): {list(entity_id_lookup.keys())[:20]}")
-        if entity_id not in entity_id_lookup and "basement_cargo_light" not in entity_id_lookup:
-            logger.info(
-                f"Neither '{entity_id}' nor 'basement_cargo_light' are in entity_id_lookup."
-            )
-        elif "basement_cargo_light" in entity_id_lookup:
-            logger.info(
-                f"Data for 'basement_cargo_light' in entity_id_lookup: "
-                f"{entity_id_lookup.get('basement_cargo_light')}"
-            )
-        else:
-            logger.info(f"'{entity_id}' is in entity_id_lookup, but 'basement_cargo_light' is NOT.")
-
-    device = entity_id_lookup.get(entity_id)
-    if not device:
+    if entity_id not in entity_id_lookup:
         logger.warning(f"Device '{entity_id}' not found in entity_id_lookup. Raising 404.")
-        if len(entity_id_lookup) < 60:  # Log all keys if the dict is reasonably small
-            logger.info(f"Full entity_id_lookup keys at 404: {list(entity_id_lookup.keys())}")
-        else:
-            logger.info(f"entity_id_lookup has {len(entity_id_lookup)} keys. Not logging all.")
         raise HTTPException(status_code=404, detail="Entity not found")
 
     logger.info(
         f"Device '{entity_id}' found in entity_id_lookup. Proceeding to check light_command_info."
     )
-    logger.info(
-        f"Checking light_command_info. Contains '{entity_id}'? "
-        f"{'yes' if entity_id in light_command_info else 'no'}"
-    )
-    if not light_command_info:
-        logger.warning("light_command_info is EMPTY at control_entity!")
-    else:
-        logger.info(f"light_command_info keys (first 20): {list(light_command_info.keys())[:20]}")
 
     if entity_id not in light_command_info:
         logger.warning(
             f"Entity '{entity_id}' found in entity_id_lookup but NOT in light_command_info. "
             f"Raising 400."
         )
-        if len(light_command_info) < 60:
-            logger.info(f"Full light_command_info keys at 400: {list(light_command_info.keys())}")
-        else:
-            logger.info(f"light_command_info has {len(light_command_info)} keys. Not logging all.")
         raise HTTPException(status_code=400, detail="Entity is not controllable as a light")
 
     logger.info(f"Entity '{entity_id}' found in light_command_info. Proceeding with control logic.")
