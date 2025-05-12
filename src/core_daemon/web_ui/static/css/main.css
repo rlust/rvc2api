@@ -240,6 +240,7 @@ body {
 #sidebar {
   background-color: var(--color-bg-secondary);
   border-right: 1px solid var(--color-border-primary);
+  overflow-x: hidden; /* Prevent horizontal scrollbar when collapsed */
   /* height is managed by fixed positioning: h-[calc(100vh-4rem)] in HTML */
   /* overflow-y: auto; /* Let sidebar content scroll if it exceeds viewport height */
   /* transition for width is handled by JS to sync with mainContent margin */
