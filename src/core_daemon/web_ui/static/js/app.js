@@ -635,6 +635,7 @@
    * @returns {HTMLElement} The created card element.
    */
   function renderLightCard(entity) {
+    console.log(`[RENDER_CARD] Rendering card for entityId: ${entity.entity_id}, state: ${entity.state}, value:`, JSON.stringify(entity.value), "raw:", JSON.stringify(entity.raw), "full entity:", JSON.stringify(entity)); // MODIFIED
     const card = document.createElement("div");
     card.className = "entity-card p-4 rounded-lg shadow-md space-y-3"; // Base classes from main.css
     card.dataset.entityId = entity.entity_id;
@@ -727,15 +728,20 @@
    * @param {object[]} entities - Array of light entity objects.
    */
   function renderGroupedLights() {
-    if (!lightsContent) return;
+    console.log("[RENDER] renderGroupedLights called."); // ADDED
+    if (!lightsContent) {
+      console.error("[RENDER] lightsContent element not found in renderGroupedLights."); // ADDED
+      return;
+    }
     lightsContent.innerHTML = ""; // Clear previous content
 
     const selectedArea = areaFilter.value;
     localStorage.setItem("lightsAreaFilter", selectedArea); // Save filter choice
 
     const grouped = {};
+    console.log("[RENDER] Filtering currentLightStates for renderGroupedLights. Total states in store:", Object.keys(currentLightStates).length); // MODIFIED
     Object.values(currentLightStates).forEach((entity) => {
-      if (entity.device_type !== "light") return; // Ensure it's a light
+      if (entity.device_type !== "light") return;
       const area = entity.suggested_area || "Unknown Area";
       if (selectedArea !== "All" && selectedArea !== area) return;
 
@@ -745,11 +751,14 @@
 
     if (Object.keys(grouped).length === 0 && selectedArea === "All") {
       lightsContent.innerHTML = '<p class="text-gray-400">No lights found.</p>';
+      console.log("[RENDER] No lights found to render (All areas)."); // ADDED
       return;
     } else if (Object.keys(grouped).length === 0) {
       lightsContent.innerHTML = `<p class="text-gray-400">No lights found in area: ${selectedArea}.</p>`;
+      console.log(`[RENDER] No lights found to render in area: ${selectedArea}.`); // ADDED
       return;
     }
+    console.log("[RENDER] Grouped lights for rendering:", grouped); // ADDED
 
     Object.keys(grouped)
       .sort()
@@ -1256,45 +1265,50 @@
     entitySocket = new WebSocket(entitySocketUrl);
 
     entitySocket.onopen = () => {
-      console.log("Entity WebSocket connected.");
+      console.log("[WS_ENTITY] Entity WebSocket connected."); // MODIFIED
       // Potentially request full state if needed, or rely on initial HTTP load
     };
 
     entitySocket.onmessage = (event) => {
+      console.log("[WS_ENTITY] Raw message received:", event.data); // ADDED
       try {
-        const updatedEntity = JSON.parse(event.data); // The message IS the entity payload
+        const updatedEntity = JSON.parse(event.data);
+        console.log("[WS_ENTITY] Parsed updatedEntity:", updatedEntity); // ADDED
 
-        // Check if it's a valid entity update (must have entity_id and state)
         if (updatedEntity && updatedEntity.entity_id && typeof updatedEntity.state === 'string') {
           const entityId = updatedEntity.entity_id;
+          console.log(`[WS_ENTITY] Valid update for entityId: ${entityId}, new state: ${updatedEntity.state}, value:`, updatedEntity.value); // MODIFIED
 
-          // Update local state store
+          const oldState = currentLightStates[entityId] ? currentLightStates[entityId].state : "N/A";
+          const oldValue = currentLightStates[entityId] ? currentLightStates[entityId].value : "N/A";
+
           currentLightStates[entityId] = {
-            ...(currentLightStates[entityId] || {}), // Start with existing or empty object
-            ...updatedEntity, // Apply all fields from the WebSocket message
+            ...(currentLightStates[entityId] || {}),
+            ...updatedEntity,
           };
-          // The 'state' from updatedEntity should now be in currentLightStates[entityId]
+          console.log(`[WS_ENTITY] currentLightStates for ${entityId} updated. Old state: ${oldState}, New state: ${currentLightStates[entityId].state}. Old value:`, oldValue, "New value:", currentLightStates[entityId].value); // MODIFIED
 
-          // If the current view is 'lights', re-render
           if (currentView === "lights") {
-            // console.log(`Rerendering lights. Entity ${entityId} updated. New state: ${currentLightStates[entityId].state}, Brightness: ${currentLightStates[entityId].value?.operating_status}`);
-            renderGroupedLights(); // This re-renders all light cards based on currentLightStates
+            console.log("[WS_ENTITY] Current view is 'lights', calling renderGroupedLights()."); // ADDED
+            renderGroupedLights();
+          } else {
+            console.log(`[WS_ENTITY] Current view is '${currentView}', not rendering lights immediately.`); // ADDED
           }
         } else {
-          // console.warn("Received WebSocket message that is not a valid entity update:", updatedEntity);
+          console.warn("[WS_ENTITY] Received WebSocket message that is not a valid entity update (missing entity_id or state string):", updatedEntity); // MODIFIED
         }
       } catch (error) {
-        console.error("Error processing entity WebSocket message:", error, "Raw data:", event.data);
+        console.error("[WS_ENTITY] Error processing entity WebSocket message:", error, "Raw data:", event.data);
       }
     };
 
     entitySocket.onerror = (error) => {
-      console.error("Entity WebSocket error:", error);
+      console.error("[WS_ENTITY] Entity WebSocket error:", error); // MODIFIED
       showToast("Entity connection error.", "error");
     };
 
     entitySocket.onclose = (event) => {
-      console.log("Entity WebSocket disconnected.", event.reason);
+      console.log("[WS_ENTITY] Entity WebSocket disconnected. Code:", event.code, "Reason:", event.reason); // MODIFIED
       // Optional: implement reconnection logic if desired
       // showToast("Entity connection closed.", "warning");
     };
