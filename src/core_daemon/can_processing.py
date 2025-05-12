@@ -104,6 +104,13 @@ def process_can_message(
                 current_unknown.last_seen_timestamp = now_ts
                 current_unknown.count += 1
                 current_unknown.last_data_hex = msg.data.hex().upper()
+            # --- NEW: Track all observed source addresses ---
+            from core_daemon.app_state import notify_network_map_ws, observed_source_addresses
+
+            source_addr = msg.arbitration_id & 0xFF
+            if source_addr not in observed_source_addresses:
+                observed_source_addresses.add(source_addr)
+                notify_network_map_ws()
             # --- MODIFICATION END ---
 
             # --- NEW: Always add a sniffer entry for all RX messages ---
@@ -119,7 +126,7 @@ def process_can_message(
                 "dgn_hex": None,
                 "name": None,
                 "instance": None,
-                "source_addr": msg.arbitration_id & 0xFF,
+                "source_addr": source_addr,
             }
             add_can_sniffer_entry(sniffer_entry)
             return  # Return after handling unknown PGN
@@ -138,6 +145,12 @@ def process_can_message(
         dgn_hex = entry.get("dgn_hex")
         # Extract source address from arbitration ID (last byte for typical RV-C)
         source_addr = msg.arbitration_id & 0xFF
+        # --- NEW: Track all observed source addresses ---
+        from core_daemon.app_state import notify_network_map_ws, observed_source_addresses
+
+        if source_addr not in observed_source_addresses:
+            observed_source_addresses.add(source_addr)
+            notify_network_map_ws()
         sniffer_entry = {
             "timestamp": now,
             "direction": "rx",

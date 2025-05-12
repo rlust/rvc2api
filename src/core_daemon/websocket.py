@@ -154,3 +154,42 @@ async def broadcast_can_sniffer_group(group):
             to_remove.add(ws)
     for ws in to_remove:
         can_sniffer_ws_clients.discard(ws)
+
+
+# ── CAN Network Map WebSocket State and Endpoint ────────────────────────────────
+network_map_ws_clients: set[WebSocket] = set()
+
+
+async def broadcast_network_map():
+    from core_daemon.app_state import get_observed_source_addresses
+
+    SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
+    addresses = get_observed_source_addresses()
+    payload = [{"value": addr, "is_self": addr == SELF_SOURCE_ADDR} for addr in addresses]
+    to_remove = set()
+    for ws in network_map_ws_clients:
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            to_remove.add(ws)
+    for ws in to_remove:
+        network_map_ws_clients.discard(ws)
+
+
+async def network_map_ws_endpoint(ws: WebSocket):
+    await ws.accept()
+    network_map_ws_clients.add(ws)
+    try:
+        from core_daemon.app_state import get_observed_source_addresses
+
+        SELF_SOURCE_ADDR = 0xF9
+        # On connect, send the current list
+        addresses = get_observed_source_addresses()
+        payload = [{"value": addr, "is_self": addr == SELF_SOURCE_ADDR} for addr in addresses]
+        await ws.send_json(payload)
+        while True:
+            await ws.receive_text()  # Keep the connection open
+    except Exception:
+        pass
+    finally:
+        network_map_ws_clients.discard(ws)

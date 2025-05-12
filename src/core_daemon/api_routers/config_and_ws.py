@@ -15,7 +15,7 @@ import os
 import time  # Added for uptime
 
 from fastapi import APIRouter, HTTPException, WebSocket
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from core_daemon import app_state
@@ -241,33 +241,3 @@ async def ws_status_updates(ws: WebSocket):
         if send_task:
             await send_task
         logger.info("/ws/status client disconnected")
-
-
-# ── Configuration File Endpoints ───────────────────────────────────────────
-@api_router_config_ws.get("/config/spec", response_class=PlainTextResponse)
-async def get_rvc_spec_file_contents():
-    # ACTUAL_SPEC_PATH is now imported from config.py
-    if ACTUAL_SPEC_PATH and os.path.exists(ACTUAL_SPEC_PATH):
-        return FileResponse(ACTUAL_SPEC_PATH, media_type="text/plain")
-    raise HTTPException(status_code=404, detail="RVC Spec file not found.")
-
-
-@api_router_config_ws.get("/config/mapping", response_class=PlainTextResponse)
-async def get_device_mapping_file_contents():
-    print("ACTUAL_MAP_PATH:", ACTUAL_MAP_PATH)
-    print("Exists:", os.path.exists(ACTUAL_MAP_PATH) if ACTUAL_MAP_PATH else None)
-    # Try ACTUAL_MAP_PATH first
-    if ACTUAL_MAP_PATH and os.path.exists(ACTUAL_MAP_PATH):
-        return FileResponse(ACTUAL_MAP_PATH, media_type="text/plain")
-
-    # Fallback: try the bundled default from rvc_decoder.decode._default_paths
-    try:
-        from rvc_decoder.decode import _default_paths
-
-        _spec_path, default_mapping_path = _default_paths()
-        if os.path.exists(default_mapping_path):
-            return FileResponse(default_mapping_path, media_type="text/plain")
-    except Exception as e:
-        logger.error(f"Error loading fallback device mapping: {e}")
-
-    raise HTTPException(status_code=404, detail="Device mapping file not found.")

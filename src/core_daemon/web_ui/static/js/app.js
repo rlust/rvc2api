@@ -59,6 +59,10 @@ import {
   renderCanSnifferView,
   cleanupCanSnifferView,
 } from "./views/canSnifferView.js";
+import {
+  renderNetworkMapView,
+  cleanupNetworkMapView,
+} from "./views/networkMapView.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -589,6 +593,8 @@ function navigateToView(viewName, isInitial = false) {
   if (currentView === "can-sniffer") {
     if (typeof cleanupCanSnifferView === "function") cleanupCanSnifferView();
   }
+  // Add cleanup for network map
+  if (currentView === "network-map-view") cleanupNetworkMapView();
 
   if (targetView) {
     targetView.classList.remove(CLASS_HIDDEN);
@@ -638,6 +644,9 @@ function navigateToView(viewName, isInitial = false) {
       break;
     case "can-sniffer":
       if (typeof renderCanSnifferView === "function") renderCanSnifferView();
+      break;
+    case "network-map":
+      renderNetworkMapView();
       break;
     default:
       handleLightsViewVisibility(false);

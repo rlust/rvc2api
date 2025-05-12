@@ -79,6 +79,14 @@ pending_commands = []  # Each: {timestamp, instance, dgn, arbitration_id, data, 
 # Grouped command/response pairs
 can_sniffer_grouped = []  # Each: {command, response, confidence, reason}
 
+# Set to track all observed source addresses on the CAN bus
+observed_source_addresses: set[int] = set()
+
+
+def get_observed_source_addresses():
+    """Returns a sorted list of all observed CAN source addresses (as ints)."""
+    return sorted(observed_source_addresses)
+
 
 def add_pending_command(entry: dict):
     pending_commands.append(entry)
@@ -467,3 +475,17 @@ def populate_app_state(
     # ... (pre-seeding for other device types if any) ...
 
     logger.info("Application state fully populated and pre-seeded by populate_app_state.")
+
+
+def notify_network_map_ws():
+    """Call this after adding a new source address to broadcast to WebSocket clients."""
+    try:
+        import asyncio
+
+        from core_daemon.websocket import broadcast_network_map
+
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(broadcast_network_map())
+    except Exception:
+        pass

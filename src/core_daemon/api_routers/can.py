@@ -12,9 +12,10 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pyroute2 import IPRoute
 
-from core_daemon.app_state import get_can_sniffer_grouped
+from core_daemon.app_state import get_can_sniffer_grouped, get_observed_source_addresses
 from core_daemon.can_manager import can_tx_queue
 from core_daemon.models import AllCANStats, CANInterfaceStats
+from core_daemon.websocket import network_map_ws_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -238,3 +239,14 @@ async def get_queue_status():
 async def get_can_sniffer():
     """Returns grouped CAN command/control sniffer pairs with confidence."""
     return get_can_sniffer_grouped()
+
+
+@api_router_can.get("/network-map", response_class=JSONResponse)
+async def get_network_map():
+    """Returns all observed CAN source addresses, with a flag for 'self'."""
+    SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
+    addresses = get_observed_source_addresses()
+    return [{"value": addr, "is_self": addr == SELF_SOURCE_ADDR} for addr in addresses]
+
+
+api_router_can.add_api_websocket_route("/ws/network-map", network_map_ws_endpoint)
