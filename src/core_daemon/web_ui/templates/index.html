@@ -307,7 +307,11 @@ Loading rvc.json...</pre>
             <!-- Draggable Resize Handle -->
             <div id="pinnedLogsHeader"
                  class="flex justify-between items-center p-2 h-12 cursor-pointer hover:bg-gray-700">
-                <span class="font-semibold text-gray-300 ml-2">Logs</span>
+                <div class="flex items-center">
+                    <i class="mdi mdi-file-document-outline text-xl mr-2 text-gray-300"
+                       aria-hidden="true"></i>
+                    <span class="font-semibold text-gray-300">Logs</span>
+                </div>
                 <button id="togglePinnedLogsBtn"
                         aria-expanded="false"
                         aria-controls="pinnedLogsContent"
