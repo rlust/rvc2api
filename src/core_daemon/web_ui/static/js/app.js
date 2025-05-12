@@ -1583,16 +1583,37 @@
         "width 0.3s cubic-bezier(0.4,0,0.2,1), margin-left 0.3s cubic-bezier(0.4,0,0.2,1)",
       expanded: {
         width: "16rem", // Tailwind w-64
-        marginLeft: "16rem", // mainContent margin
+        marginLeft: "16rem", // mainContent margin for DESKTOP
         iconClass: "mdi mdi-chevron-left text-xl",
         label: "Collapse",
       },
       collapsed: {
         width: "4rem", // Tailwind w-16
-        marginLeft: "4rem", // mainContent margin
+        marginLeft: "4rem", // mainContent margin for DESKTOP
         iconClass: "mdi mdi-chevron-right text-xl",
         label: "",
       },
+    };
+
+    // Adjust mainContent marginLeft for mobile
+    let finalMainContentMarginLeftExpanded = sidebarStyles.expanded.marginLeft;
+    let finalMainContentMarginLeftCollapsed = sidebarStyles.collapsed.marginLeft;
+
+    if (window.innerWidth < MD_BREAKPOINT_PX) {
+      finalMainContentMarginLeftExpanded = "0px";
+      finalMainContentMarginLeftCollapsed = "0px";
+    }
+
+    const effectivePanelStyles = {
+        transition: sidebarStyles.transition,
+        expanded: {
+            ...sidebarStyles.expanded,
+            marginLeft: finalMainContentMarginLeftExpanded,
+        },
+        collapsed: {
+            ...sidebarStyles.collapsed,
+            marginLeft: finalMainContentMarginLeftCollapsed,
+        }
     };
 
     // Define styles for pinned logs container (specifically its 'left' property)
@@ -1612,7 +1633,7 @@
       mainContent,
       toggleButton: toggleSidebarDesktopButton,
       expanded,
-      styles: sidebarStyles,
+      styles: effectivePanelStyles, // Use the modified styles for mainContent margin
       pinnedLogsContainer,
       pinnedLogsStyles: pinnedLogsStylesDef,
       onExpand: () => {
@@ -2264,6 +2285,18 @@
     setupBulkLightControlButtons();
     setupPinnedLogsResizablePanel(); // Manages pinned logs listeners
     setupSidebarCollapseExpand(); // Handles all sidebar button listeners (desktop toggle, mobile close, background click)
+
+    // Add a global resize listener to re-evaluate sidebar and main content layout
+    window.addEventListener('resize', () => {
+        if (typeof isDesktopSidebarExpanded === 'boolean') { // Ensure state is initialized
+            // This will re-apply mainContent margins considering the current window size
+            // and also call adjustPinnedLogsLayout internally.
+            setDesktopSidebarVisible(isDesktopSidebarExpanded);
+        }
+        // Note: adjustPinnedLogsLayout also has its own resize listener for height clamping.
+        // Calling setDesktopSidebarVisible ensures its internal call to adjustPinnedLogsLayout
+        // also considers sidebar width changes affecting pinned logs' left position.
+    });
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
   }
