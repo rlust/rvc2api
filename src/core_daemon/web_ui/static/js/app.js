@@ -773,10 +773,10 @@
 
   /**
    * Fetches light entities from the API.
-   * Uses /api/entities?type=light as per user's note.
+   * Uses /api/entities?device_type=light for consistency.
    */
   function fetchLights() {
-    fetchData(`${apiBasePath}/entities?type=light`, {
+    fetchData(`${apiBasePath}/entities?device_type=light`, {
       successCallback: updateLightsView,
       errorCallback: (error) => {
         console.error("Failed to fetch lights:", error);
@@ -1876,7 +1876,7 @@
           // Fetch all lights
           let lights = null;
           await new Promise((resolve) => {
-            fetchData(`${apiBasePath}/entities?type=light`, {
+            fetchData(`${apiBasePath}/entities?device_type=light`, {
               successCallback: (resp) => {
                 lights = resp;
                 resolve();
