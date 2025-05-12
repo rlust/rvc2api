@@ -221,6 +221,8 @@ def load_config_data(
                     eid = merged.get("entity_id")
                     fname = merged.get("friendly_name")
                     if eid and fname:
+                        # Debug: Log merged config for each entity
+                        logger.debug(f"entity_id_lookup[{eid}] = {json.dumps(merged, indent=2)}")
                         key = (dgn_hex.upper(), str(inst_str))
                         device_lookup[key] = merged
                         entity_id_lookup[eid] = merged
