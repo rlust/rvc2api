@@ -147,7 +147,9 @@
   const currentLightStates = {}; // Store current states of all lights
   // Update: Use /api/ws for the entity WebSocket endpoint to match backend router prefix
   // const entitySocketUrl = `ws://${window.location.host}/api/ws`; // Original
-  const entitySocketUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws`; // More robust scheme
+  const entitySocketUrl = `${
+    window.location.protocol === "https:" ? "wss:" : "ws:"
+  }//${window.location.host}/api/ws`; // More robust scheme
 
   // =====================
   // UTILITY FUNCTIONS
@@ -660,14 +662,22 @@
 
       if (entityState === "on") {
         // Prefer value.operating_status (string "0"-"100") if available from WebSocket payload
-        if (entity.value && typeof entity.value.operating_status === 'string') {
-          currentBrightnessPercent = parseInt(entity.value.operating_status, 10);
+        if (entity.value && typeof entity.value.operating_status === "string") {
+          currentBrightnessPercent = parseInt(
+            entity.value.operating_status,
+            10
+          );
         }
         // Fallback to raw.operating_status (number, CAN level e.g. 0-200 for lights)
-        else if (entity.raw && typeof entity.raw.operating_status === 'number') {
+        else if (
+          entity.raw &&
+          typeof entity.raw.operating_status === "number"
+        ) {
           // Lights are typically 0-200 (0xC8) for 0-100% brightness.
           // Scale CAN value to percentage.
-          currentBrightnessPercent = Math.round((entity.raw.operating_status / 200.0) * 100);
+          currentBrightnessPercent = Math.round(
+            (entity.raw.operating_status / 200.0) * 100
+          );
         }
         // If state is "on" but no specific brightness value is found in value or raw,
         // default to 100% as a sensible fallback.
@@ -680,19 +690,17 @@
       }
 
       // Clamp brightness to be within 0-100 and ensure it's a valid number
-      currentBrightnessPercent = Math.max(0, Math.min(100, Number(currentBrightnessPercent) || 0));
+      currentBrightnessPercent = Math.max(
+        0,
+        Math.min(100, Number(currentBrightnessPercent) || 0)
+      );
 
       cardContent += `
         <div class="brightness-control space-y-1">
-          <label for="brightness-${
-            entity.entity_id
-          }" class="block text-sm font-medium">Brightness: <span class="brightness-value">${currentBrightnessPercent}%</span></label>
-          <input type="range" id="brightness-${
-            entity.entity_id
-          }" name="brightness"
+          <label for="brightness-${entity.entity_id}" class="block text-sm font-medium">Brightness: <span class="brightness-value">${currentBrightnessPercent}%</span></label>
+          <input type="range" id="brightness-${entity.entity_id}" name="brightness"
                  min="0" max="100" value="${currentBrightnessPercent}"
-                 class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider"
-                 ${entityState !== "on" ? "disabled" : ""}>
+                 class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer brightness-slider">
         </div>
       `;
     }
@@ -721,25 +729,47 @@
 
           // Get the most current state of the light from our central store
           const currentActualLight = currentLightStates[entityId];
-          const isCurrentlyOn = currentActualLight && currentActualLight.state === "on";
+          const isCurrentlyOn =
+            currentActualLight && currentActualLight.state === "on";
 
           if (!isCurrentlyOn) {
             // Light is currently off, turn it on AND set brightness in one command
-            showToast(`Turning on ${lightFriendlyName} and setting to ${brightness}%...`, "info", 2000);
-            const result = await callLightService(entityId, "set", { state: "on", brightness: brightness });
+            showToast(
+              `Turning on ${lightFriendlyName} and setting to ${brightness}%...`,
+              "info",
+              2000
+            );
+            const result = await callLightService(entityId, "set", {
+              state: "on",
+              brightness: brightness,
+            });
 
-            if (!result) { // callLightService resolves to null on error
-              showToast(`Failed to turn on and set brightness for ${lightFriendlyName}.`, "error");
+            if (!result) {
+              // callLightService resolves to null on error
+              showToast(
+                `Failed to turn on and set brightness for ${lightFriendlyName}.`,
+                "error"
+              );
               // The UI will eventually reflect the true state via WebSocket.
             }
             // No timeout or second command needed as it's a single combined command.
           } else {
             // Light is already on, just set brightness
-            showToast(`Setting brightness for ${lightFriendlyName} to ${brightness}%...`, "info", 1500);
-            const result = await callLightService(entityId, "set", { brightness: brightness });
-            if (!result) { // callLightService resolves to null on error
-                showToast(`Failed to set brightness for ${lightFriendlyName}.`, "error");
-                // The UI will eventually reflect the true state via WebSocket.
+            showToast(
+              `Setting brightness for ${lightFriendlyName} to ${brightness}%...`,
+              "info",
+              1500
+            );
+            const result = await callLightService(entityId, "set", {
+              brightness: brightness,
+            });
+            if (!result) {
+              // callLightService resolves to null on error
+              showToast(
+                `Failed to set brightness for ${lightFriendlyName}.`,
+                "error"
+              );
+              // The UI will eventually reflect the true state via WebSocket.
             }
           }
         });
@@ -1090,10 +1120,12 @@
   function updateAreaFilterForLights(lights) {
     if (!areaFilter) return;
 
-    const currentSelectedValue = localStorage.getItem("lightsAreaFilter") || "All";
+    const currentSelectedValue =
+      localStorage.getItem("lightsAreaFilter") || "All";
     const areas = new Set(["All"]); // Always include "All"
 
-    Object.values(lights).forEach(entity => { // Changed here
+    Object.values(lights).forEach((entity) => {
+      // Changed here
       if (entity.device_type === "light" && entity.suggested_area) {
         areas.add(entity.suggested_area);
       }
@@ -1101,12 +1133,14 @@
 
     areaFilter.innerHTML = ""; // Clear existing options
 
-    Array.from(areas).sort().forEach(area => {
-      const option = document.createElement("option");
-      option.value = area;
-      option.textContent = area;
-      areaFilter.appendChild(option);
-    });
+    Array.from(areas)
+      .sort()
+      .forEach((area) => {
+        const option = document.createElement("option");
+        option.value = area;
+        option.textContent = area;
+        areaFilter.appendChild(option);
+      });
 
     // Restore selection if possible, otherwise default to "All"
     if (areas.has(currentSelectedValue)) {
@@ -1283,7 +1317,9 @@
       return;
     }
     if (entitySocket && entitySocket.readyState === WebSocket.CONNECTING) {
-      console.log("[ENTITY_WS] WebSocket is currently connecting. Will not attempt to reconnect yet.");
+      console.log(
+        "[ENTITY_WS] WebSocket is currently connecting. Will not attempt to reconnect yet."
+      );
       return;
     }
 
@@ -1301,7 +1337,11 @@
       try {
         const updatedEntity = JSON.parse(event.data);
 
-        if (updatedEntity && updatedEntity.entity_id && typeof updatedEntity.state === 'string') {
+        if (
+          updatedEntity &&
+          updatedEntity.entity_id &&
+          typeof updatedEntity.state === "string"
+        ) {
           const entityId = updatedEntity.entity_id;
 
           // const oldState = currentLightStates[entityId] ? currentLightStates[entityId].state : "N/A";
@@ -1316,16 +1356,28 @@
           if (currentView === "lights") {
             // More targeted update instead of full re-render if possible,
             // but for now, re-rendering the lights view is acceptable.
-            console.log("[ENTITY_WS] Lights view is active, re-rendering grouped lights.");
+            console.log(
+              "[ENTITY_WS] Lights view is active, re-rendering grouped lights."
+            );
             renderGroupedLights();
           } else {
-            console.log(`[ENTITY_WS] Entity update for ${entityId} received, but current view is '${currentView}', not 'lights'. State updated in background.`);
+            console.log(
+              `[ENTITY_WS] Entity update for ${entityId} received, but current view is '${currentView}', not 'lights'. State updated in background.`
+            );
           }
         } else {
-          console.warn("[ENTITY_WS] Received WebSocket message that is not a valid entity update (missing entity_id or state string):", updatedEntity);
+          console.warn(
+            "[ENTITY_WS] Received WebSocket message that is not a valid entity update (missing entity_id or state string):",
+            updatedEntity
+          );
         }
       } catch (error) {
-        console.error("[ENTITY_WS] Error processing entity WebSocket message:", error, "Raw data:", event.data);
+        console.error(
+          "[ENTITY_WS] Error processing entity WebSocket message:",
+          error,
+          "Raw data:",
+          event.data
+        );
       }
     };
 
@@ -1333,13 +1385,18 @@
       console.error("[ENTITY_WS] WebSocket error:", error);
       // Attempt to get more details from the error event if possible
       if (error instanceof Event) {
-        console.error("[ENTITY_WS] WebSocket error event details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error(
+          "[ENTITY_WS] WebSocket error event details:",
+          JSON.stringify(error, Object.getOwnPropertyNames(error))
+        );
       }
       showToast("Real-time updates connection error.", "error");
     };
 
     entitySocket.onclose = (event) => {
-      console.log(`[ENTITY_WS] WebSocket disconnected. Code: ${event.code}, Reason: '${event.reason}', Was Clean: ${event.wasClean}`);
+      console.log(
+        `[ENTITY_WS] WebSocket disconnected. Code: ${event.code}, Reason: '${event.reason}', Was Clean: ${event.wasClean}`
+      );
       showToast("Real-time updates disconnected.", "warning");
       // Optional: implement reconnection logic if desired
       // if (!event.wasClean) {
@@ -1618,7 +1675,8 @@
 
     // Adjust mainContent marginLeft for mobile
     let finalMainContentMarginLeftExpanded = sidebarStyles.expanded.marginLeft;
-    let finalMainContentMarginLeftCollapsed = sidebarStyles.collapsed.marginLeft;
+    let finalMainContentMarginLeftCollapsed =
+      sidebarStyles.collapsed.marginLeft;
 
     if (window.innerWidth < MD_BREAKPOINT_PX) {
       finalMainContentMarginLeftExpanded = "0px";
@@ -1626,15 +1684,15 @@
     }
 
     const effectivePanelStyles = {
-        transition: sidebarStyles.transition,
-        expanded: {
-            ...sidebarStyles.expanded,
-            marginLeft: finalMainContentMarginLeftExpanded,
-        },
-        collapsed: {
-            ...sidebarStyles.collapsed,
-            marginLeft: finalMainContentMarginLeftCollapsed,
-        }
+      transition: sidebarStyles.transition,
+      expanded: {
+        ...sidebarStyles.expanded,
+        marginLeft: finalMainContentMarginLeftExpanded,
+      },
+      collapsed: {
+        ...sidebarStyles.collapsed,
+        marginLeft: finalMainContentMarginLeftCollapsed,
+      },
     };
 
     // Define styles for pinned logs container (specifically its 'left' property)
@@ -2311,15 +2369,16 @@
     setupSidebarCollapseExpand(); // Handles all sidebar button listeners (desktop toggle, mobile close, background click)
 
     // Add a global resize listener to re-evaluate sidebar and main content layout
-    window.addEventListener('resize', () => {
-        if (typeof isDesktopSidebarExpanded === 'boolean') { // Ensure state is initialized
-            // This will re-apply mainContent margins considering the current window size
-            // and also call adjustPinnedLogsLayout internally.
-            setDesktopSidebarVisible(isDesktopSidebarExpanded);
-        }
-        // Note: adjustPinnedLogsLayout also has its own resize listener for height clamping.
-        // Calling setDesktopSidebarVisible ensures its internal call to adjustPinnedLogsLayout
-        // also considers sidebar width changes affecting pinned logs' left position.
+    window.addEventListener("resize", () => {
+      if (typeof isDesktopSidebarExpanded === "boolean") {
+        // Ensure state is initialized
+        // This will re-apply mainContent margins considering the current window size
+        // and also call adjustPinnedLogsLayout internally.
+        setDesktopSidebarVisible(isDesktopSidebarExpanded);
+      }
+      // Note: adjustPinnedLogsLayout also has its own resize listener for height clamping.
+      // Calling setDesktopSidebarVisible ensures its internal call to adjustPinnedLogsLayout
+      // also considers sidebar width changes affecting pinned logs' left position.
     });
 
     console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
