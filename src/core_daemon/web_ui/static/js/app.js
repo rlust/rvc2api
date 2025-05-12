@@ -43,6 +43,10 @@ import {
   updateLightsView,
 } from "./views/lightsView.js";
 import { WebSocketManager } from "./wsManager.js";
+import {
+  fetchUnmappedEntries,
+  renderUnmappedEntries,
+} from "./views/unmappedView.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -149,38 +153,6 @@ function createDomElement(tag, options = {}) {
   }
   return el;
 }
-
-/**
- * Shows a toast notification.
- * @param {string} message - The message to display.
- * @param {'info'|'success'|'warning'|'error'} [type='info'] - The type of toast.
- * @param {number} [duration=5000] - Duration in milliseconds to show the toast.
- */
-function showToast(message, type = "info", duration = 3000) {
-  if (!toastContainer) return;
-
-  const toast = createDomElement("div", {
-    className: `toast toast-${type}`,
-    textContent: message,
-    attributes: { role: "alert" },
-  });
-
-  toastContainer.appendChild(toast);
-
-  // Animate in
-  setTimeout(() => {
-    toast.classList.add("show");
-  }, 10); // Small delay for CSS transition
-
-  // Auto remove
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => {
-      toast.remove();
-    }, 300); // Allow fade out animation
-  }, duration);
-}
-window.showToast = showToast;
 
 /**
  * Utility to debounce a function call.
@@ -368,67 +340,6 @@ function updateSpecMetadataView(metadata) {
 }
 
 /**
- * Renders unmapped CAN entries with YAML suggestion and copy-to-clipboard button.
- * @param {object} data - The unmapped entries data from the API.
- */
-function renderUnmappedEntries(data) {
-  try {
-    if (!unmappedEntriesContent) return;
-    unmappedEntriesContent.innerHTML = "";
-    if (Object.keys(data).length === 0) {
-      unmappedEntriesContent.innerHTML =
-        '<p class="text-gray-500">No unmapped entries found. Good job!</p>';
-      return;
-    }
-    for (const [key, entry] of Object.entries(data)) {
-      const entryDiv = document.createElement("div");
-      entryDiv.className = "bg-gray-800 p-4 rounded-lg shadow mb-4";
-      const yamlSuggestion = generateYamlSuggestion(entry);
-      entryDiv.innerHTML = `
-        <h3 class="text-xl font-semibold text-yellow-400 mb-2">Unmapped Key: ${key}</h3>
-        <div class="mb-3">
-          <p class="font-semibold mb-1">Suggested device_mapping.yml entry:</p>
-          <pre class="bg-gray-900 text-green-300 p-3 rounded overflow-auto text-xs whitespace-pre-wrap"><code class="language-yaml">${yamlSuggestion}</code></pre>
-          <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-yaml-btn">Copy YAML</button>
-        </div>
-      `;
-      unmappedEntriesContent.appendChild(entryDiv);
-    }
-    // Event delegation for copy buttons
-    if (!unmappedEntriesContent.hasAttribute("data-copy-bound")) {
-      unmappedEntriesContent.setAttribute("data-copy-bound", "");
-      unmappedEntriesContent.addEventListener("click", (event) => {
-        const btn = event.target.closest(".copy-yaml-btn");
-        if (!btn) return;
-        const code = btn.previousElementSibling.querySelector("code");
-        if (!code) return;
-        const yamlText = code.innerText;
-        navigator.clipboard
-          .writeText(yamlText)
-          .then(() => {
-            btn.textContent = "Copied!";
-            showToast("YAML copied to clipboard!", "success");
-            setTimeout(() => {
-              btn.textContent = "Copy YAML";
-            }, 2000);
-          })
-          .catch((err) => {
-            showToast("Failed to copy YAML.", "error");
-            btn.textContent = "Failed to copy";
-            setTimeout(() => {
-              btn.textContent = "Copy YAML";
-            }, 2000);
-          });
-      });
-    }
-  } catch (err) {
-    console.error("Error in renderUnmappedEntries:", err);
-    if (unmappedEntriesContent)
-      unmappedEntriesContent.textContent = "Error rendering unmapped entries.";
-  }
-}
-
-/**
  * Fetches and updates the API server status.
  */
 const fetchApiStatus = makeFetcher(
@@ -530,78 +441,6 @@ function fetchSpecContent() {
       // showToast("Failed to load RVC specification metadata.", "error");
     },
     // No separate loading element for metadata, or use specMetadataDiv if it has one
-  });
-}
-
-/**
- * Generates a YAML suggestion for an unmapped CAN entry.
- * @param {object} entry - The unmapped entry object.
- * @returns {string} YAML suggestion string.
- */
-function generateYamlSuggestion(entry) {
-  const dgnKey = entry.dgn_hex;
-  const instanceKey = String(entry.instance);
-  const dgnForId = dgnKey.toLowerCase();
-  const instanceForId = instanceKey.replace(/[^a-z0-9_]/g, "");
-  let suggestedEntityId = `unmapped_${dgnForId}_inst${instanceForId}`;
-  let yaml = `# Suggested entry for DGN: ${dgnKey}${
-    entry.dgn_name ? " (" + entry.dgn_name + ")" : ""
-  }, Instance: ${instanceKey}\n`;
-  if (entry.pgn_hex && entry.pgn_hex !== entry.dgn_hex) {
-    yaml += `# Original PGN from Arbitration ID: ${entry.pgn_hex}${
-      entry.pgn_name ? " (" + entry.pgn_name + ")" : ""
-    }\n`;
-  }
-  yaml += `# First seen: ${new Date(
-    entry.first_seen_timestamp * 1000
-  ).toLocaleString()}\n`;
-  yaml += `# Last seen: ${new Date(
-    entry.last_seen_timestamp * 1000
-  ).toLocaleString()}\n`;
-  yaml += `# Count: ${entry.count}\n`;
-  yaml += `# Last Data: ${entry.last_data_hex}\n`;
-  if (entry.decoded_signals && Object.keys(entry.decoded_signals).length > 0) {
-    yaml += `# Decoded Signals (from PGN ${entry.pgn_hex}):\n`;
-    for (const [key, value] of Object.entries(entry.decoded_signals)) {
-      yaml += `#   ${key}: ${value}\n`;
-    }
-  }
-  if (entry.spec_entry && entry.spec_entry.name) {
-    yaml += `# Matched Spec Entry Name (for DGN): ${entry.spec_entry.name}\n`;
-  }
-  yaml += `\n`;
-  yaml += `${dgnKey}:\n`;
-  yaml += `  ${instanceKey}:\n`;
-  yaml += `    - entity_id: "${suggestedEntityId}" # TODO: MUST be unique. Change to a descriptive name (e.g., 'living_room_thermostat')\n`;
-  yaml += `      friendly_name: "Unmapped ${
-    entry.dgn_name || dgnKey
-  } Inst ${instanceKey}" # TODO: Set a user-friendly name (e.g., 'Living Room Thermostat')\n`;
-  yaml += `      suggested_area: "Unknown Area" # TODO: Assign an area (e.g., 'Living Room', 'Bedroom')\n`;
-  yaml += `      device_type: "unknown" # TODO: Specify type (e.g., light, sensor, hvac, lock, switch, tank)\n`;
-  yaml += `      capabilities: [] # TODO: Define capabilities (e.g., [on_off], [on_off, brightness], [lock_unlock], [temperature])\n`;
-  yaml += `      # --- Optional fields based on device_type and system needs ---\n`;
-  yaml += `      # interface: canX # TODO: Specify CAN interface if known (e.g., can0, can1)\n`;
-  yaml += `      # status_dgn: '${dgnKey}' # Status DGN is typically this DGN key\n`;
-  yaml += `      # command_pgn: 'YYYYY' # TODO: If controllable and different from status DGN, specify command PGN\n`;
-  yaml += `      # group_mask: '0xXX' # TODO: If part of a command/status group\n`;
-  yaml += `      # --- Example for using a YAML template (if defined in your mapping file) ---\n`;
-  yaml += `      # <<: *switchable_light  # For on/off lights, if &switchable_light template exists\n`;
-  yaml += `      # <<: *dimmable_light   # For dimmable lights, if &dimmable_light template exists\n`;
-  return yaml;
-}
-
-// Patch fetchUnmappedEntries to use the new renderer
-function fetchUnmappedEntries() {
-  fetchData(`${apiBasePath}/unmapped_entries`, {
-    successCallback: renderUnmappedEntries,
-    errorCallback: (error) => {
-      if (unmappedEntriesContent)
-        unmappedEntriesContent.textContent = `Error loading unmapped entries: ${error.message}`;
-      showToast("Failed to load unmapped entries.", "error");
-    },
-    loadingElement:
-      unmappedEntriesContent?.querySelector("#unmapped-loading-message") ||
-      unmappedEntriesContent,
   });
 }
 
