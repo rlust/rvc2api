@@ -352,6 +352,20 @@ async def control_entity(
                                state, brightness, and a description of the action performed.
     """
     logger.info(f"Control endpoint called for entity_id: '{entity_id}' (type: {type(entity_id)})")
+    # New logs to check memory ID and content of the dictionaries as seen by this function
+    logger.info(f"In control_entity: id(entity_id_lookup) = {id(entity_id_lookup)}")
+    logger.info(f"In control_entity: len(entity_id_lookup) = {len(entity_id_lookup)}")
+    logger.info(
+        f"In control_entity: Keys in entity_id_lookup (first 20): "
+        f"{list(entity_id_lookup.keys())[:20]}"
+    )
+    logger.info(f"In control_entity: id(light_command_info) = {id(light_command_info)}")
+    logger.info(f"In control_entity: len(light_command_info) = {len(light_command_info)}")
+    logger.info(
+        f"In control_entity: Keys in light_command_info (first 20):"
+        f"{list(light_command_info.keys())[:20]}"
+    )
+
     logger.info(
         f"Checking entity_id_lookup. Contains '{entity_id}'? "
         f"{'yes' if entity_id in entity_id_lookup else 'no'}"

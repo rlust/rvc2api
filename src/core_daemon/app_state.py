@@ -9,7 +9,7 @@ It provides functions to initialize, update, and access this shared state.
 import logging
 import time
 from collections import deque
-from typing import Any, Callable, Dict, List, Set  # Added Set
+from typing import Any, Callable, Dict, List, Optional, Set  # Added Optional
 
 from fastapi import WebSocket  # Added WebSocket for type hinting
 
@@ -19,12 +19,14 @@ from core_daemon.metrics import ENTITY_COUNT, HISTORY_SIZE_GAUGE
 # Assuming UnmappedEntryModel is in core_daemon.models
 # We need to import it if it's used in type hints for unmapped_entries
 from core_daemon.models import UnknownPGNEntry, UnmappedEntryModel
+from rvc_decoder.decode import rvc_load_and_process_device_mapping  # Added import
 
 # In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
 
 # History duration
 HISTORY_DURATION: int = 24 * 3600  # seconds
+MAX_HISTORY_LENGTH: int = 1000  # Define MAX_HISTORY_LENGTH
 
 # History data structure (initialized empty, to be populated by initialize_history_deques)
 history: Dict[str, deque[Dict[str, Any]]] = {}
@@ -232,3 +234,111 @@ def preseed_light_states_internal(decode_payload_func: Callable) -> None:
         }
         update_entity_state_and_history(eid, payload)
     logger.info("Finished pre-seeding light states.")
+
+
+def populate_app_state(
+    rvc_spec_path: Optional[str] = None, device_mapping_path: Optional[str] = None
+):
+    global entity_id_lookup, device_lookup, status_lookup, light_command_info, state, history, unknown_pgns, unmapped_entries, last_known_brightness_levels  # noqa: E501
+
+    # Clear existing state
+    entity_id_lookup.clear()
+    device_lookup.clear()
+    status_lookup.clear()
+    light_command_info.clear()
+    state.clear()
+    history.clear()  # Clear history if it's a dict of deques
+    for k in list(history.keys()):  # If history is a defaultdict(deque)
+        history[k].clear()
+    unknown_pgns.clear()
+    unmapped_entries.clear()
+    last_known_brightness_levels.clear()
+
+    logger.info("Cleared existing application state.")  # Log after clearing
+
+    logger.info("Attempting to load and process device mapping...")
+    processed_data = rvc_load_and_process_device_mapping(  # Renamed for clarity if you aliased it
+        rvc_spec_path, device_mapping_path
+    )
+
+    # Populate from processed_data
+    entity_id_lookup.update(processed_data.get("entity_id_lookup", {}))
+    device_lookup.update(processed_data.get("device_lookup", {}))
+    status_lookup.update(processed_data.get("status_lookup", {}))
+    light_command_info.update(processed_data.get("light_command_info", {}))
+    # Ensure other necessary structures from processed_data are also assigned if needed
+
+    logger.info(
+        f"After rvc_load_mapping: app_state.entity_id_lookup has {len(entity_id_lookup)} entries."
+    )
+    logger.info(
+        f"After rvc_load_mapping: app_state.light_command_info has "
+        f"{len(light_command_info)} entries."
+    )
+
+    # Initialize history deques for all known entities from entity_id_lookup
+    for eid in entity_id_lookup.keys():
+        if eid not in history:  # Check if deque already exists (e.g. from previous partial load)
+            history[eid] = deque(maxlen=MAX_HISTORY_LENGTH)
+    logger.info("History deques initialized for all entities.")
+
+    # Pre-seeding states
+    startup_time = time.time()
+    logger.info(f"Pre-seeding states for {len(light_command_info)} light entities.")
+    for eid, lci_entry in light_command_info.items():
+        # ... (existing pre-seeding logic for lights)
+        # Ensure entity_id_lookup[eid] is safe to access here
+        if eid in entity_id_lookup:
+            lookup_data = entity_id_lookup[eid]
+            initial_payload_to_store = {
+                "entity_id": eid,
+                "value": {
+                    "operating_status": "0",
+                    "instance": str(lci_entry.get("instance")),
+                    "group": str(lci_entry.get("group_mask")),
+                },
+                "raw": {
+                    "operating_status": 0,
+                    "instance": lci_entry.get("instance"),
+                    "group": lci_entry.get("group_mask"),
+                },
+                "state": "off",  # Default to off
+                "timestamp": startup_time,
+                "suggested_area": lookup_data.get("suggested_area", "Unknown"),
+                "device_type": lookup_data.get("device_type", "light"),
+                "capabilities": lookup_data.get("capabilities", []),
+                "friendly_name": lookup_data.get("friendly_name", eid),
+                "groups": lookup_data.get("groups", []),
+                "interface": lookup_data.get("interface", "unknown"),  # Added interface
+                "status_dgn": lookup_data.get("status_dgn", "unknown"),  # Added status_dgn
+                "command_dgn": lci_entry.get(
+                    "dgn", "unknown"
+                ),  # Added command_dgn from light_command_info
+            }
+            state[eid] = initial_payload_to_store
+            history[eid].append(initial_payload_to_store)
+            if eid not in last_known_brightness_levels:  # Initialize last known brightness
+                set_last_known_brightness(eid, 100)  # Default to 100 when turned on
+        else:
+            logger.warning(
+                f"Pre-seeding: Entity ID '{eid}' from light_command_info not "
+                f"found in entity_id_lookup."
+            )
+
+    logger.info("Finished pre-seeding light states.")
+    # ... (pre-seeding for other device types if any) ...
+
+    # New logs at the very end of populate_app_state
+    logger.info(f"End of populate_app_state: len(entity_id_lookup) = {len(entity_id_lookup)}")
+    logger.info(f"End of populate_app_state: id(entity_id_lookup) = {id(entity_id_lookup)}")
+    logger.info(
+        f"End of populate_app_state: Keys in entity_id_lookup (first 5): "
+        f"{list(entity_id_lookup.keys())[:5]}"
+    )
+    logger.info(f"End of populate_app_state: len(light_command_info) = {len(light_command_info)}")
+    logger.info(f"End of populate_app_state: id(light_command_info) = {id(light_command_info)}")
+    logger.info(
+        f"End of populate_app_state: Keys in light_command_info (first 5): "
+        f"{list(light_command_info.keys())[:5]}"
+    )
+    logger.info("Application state fully populated and pre-seeded.")
