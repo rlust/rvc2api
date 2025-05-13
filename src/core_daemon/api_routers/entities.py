@@ -315,8 +315,13 @@ async def _send_light_can_command(
             "source_addr": msg.arbitration_id & 0xFF,
             "origin": "self",
         }
-        add_can_sniffer_entry(sniffer_entry)
-        add_pending_command(sniffer_entry)
+        logger.info(f"[DEBUG] About to add TX sniffer entry: {sniffer_entry}")
+        try:
+            add_can_sniffer_entry(sniffer_entry)
+            add_pending_command(sniffer_entry)
+            logger.info("[DEBUG] Successfully added TX sniffer entry and pending command.")
+        except Exception as e:
+            logger.error(f"[DEBUG] Failed to add TX sniffer entry: {e}")
 
         return True
     except Exception as e:
