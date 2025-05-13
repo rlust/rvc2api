@@ -1149,3 +1149,36 @@ body.theme-catppuccin-latte .entity-card.light-off {
   background: var(--color-accent-primary);
   color: var(--color-button-text);
 }
+
+/* Expandable JSON row styling for CAN Sniffer */
+.expanded-json-row td {
+  background: var(--theme-table-expanded-bg, #23272e);
+  color: var(--theme-table-expanded-fg, #e0e0e0);
+  font-family: var(--theme-mono, monospace);
+  font-size: 0.95em;
+  padding: 1em 2em;
+  border-top: 1px solid var(--theme-border, #444);
+}
+.pretty-json {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  font-size: 1em;
+  font-family: var(--theme-mono, monospace);
+}
+.expand-json-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--theme-accent, #8ec07c);
+  margin-right: 0.5em;
+  font-size: 1em;
+  vertical-align: middle;
+}
+.expand-json-btn:focus {
+  outline: 2px solid var(--theme-accent, #8ec07c);
+}
+.json-summary {
+  color: var(--theme-muted, #b0b0b0);
+  font-style: italic;
+}

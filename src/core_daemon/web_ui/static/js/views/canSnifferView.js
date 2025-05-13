@@ -33,6 +33,74 @@ function clearCanSnifferTable() {
   }
 }
 
+// Helper: Pretty-print JSON with syntax highlighting and theme support
+function prettyPrintJSON(obj) {
+  if (!obj) return "";
+  let jsonString = "";
+  try {
+    jsonString = JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
+  }
+  // Wrap in <pre> and add a class for theming
+  return `<pre class="themed-json pretty-json">${escapeHTML(jsonString)}</pre>`;
+}
+
+// Helper: Escape HTML for safe rendering
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Track expanded rows by a unique key (timestamp+dir+arb id)
+const expandedRows = new Set();
+
+function makeExpandButton(rowKey) {
+  const btn = document.createElement("button");
+  btn.className = "expand-json-btn themed-table-btn";
+  btn.title = "Show full decoded JSON";
+  btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
+  btn.setAttribute("aria-expanded", expandedRows.has(rowKey));
+  btn.onclick = function (e) {
+    e.stopPropagation();
+    toggleExpandRow(rowKey, btn);
+  };
+  return btn;
+}
+
+function toggleExpandRow(rowKey, btn) {
+  const tr = document.getElementById(rowKey);
+  if (!tr) return;
+  const expanded = expandedRows.has(rowKey);
+  if (expanded) {
+    // Collapse: remove next sibling if it's an expanded row
+    const next = tr.nextSibling;
+    if (next && next.classList.contains("expanded-json-row")) {
+      next.remove();
+    }
+    expandedRows.delete(rowKey);
+    btn.setAttribute("aria-expanded", false);
+    btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
+  } else {
+    // Expand: insert a new row below
+    const decodedData = tr.getAttribute("data-decoded-json");
+    const colCount = tr.children.length;
+    const expandedTr = document.createElement("tr");
+    expandedTr.className = "expanded-json-row themed-table-expanded";
+    const td = document.createElement("td");
+    td.colSpan = colCount;
+    td.innerHTML = decodedData;
+    expandedTr.appendChild(td);
+    tr.parentNode.insertBefore(expandedTr, tr.nextSibling);
+    expandedRows.add(rowKey);
+    btn.setAttribute("aria-expanded", true);
+    btn.innerHTML = '<span class="mdi mdi-chevron-up"></span>';
+  }
+}
+
 function addCanSnifferGroupRow(group) {
   const canSnifferTable = document.getElementById("can-sniffer-table");
   if (!canSnifferTable) return;
@@ -50,49 +118,45 @@ function addCanSnifferGroupRow(group) {
     icon =
       '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline themed-table-muted mr-1"></span>';
   }
+  // Helper to build a row (TX or RX)
+  function buildRow(entry, dir) {
+    const rowKey = `${entry.timestamp}_${dir}_${entry.arbitration_id}`;
+    const tr = document.createElement("tr");
+    tr.className = rowClass;
+    tr.id = rowKey;
+    // Store pretty JSON as attribute for expansion
+    tr.setAttribute("data-decoded-json", prettyPrintJSON(entry.decoded));
+    tr.innerHTML = `
+      <td class="px-2 py-1 font-mono">${new Date(
+        entry.timestamp * 1000
+      ).toLocaleTimeString()}</td>
+      <td class="px-2 py-1">${dir}</td>
+      <td class="px-2 py-1 font-mono">${entry.pgn || ""}</td>
+      <td class="px-2 py-1 font-mono">${entry.dgn_hex || ""}</td>
+      <td class="px-2 py-1">${icon}${entry.name || ""}</td>
+      <td class="px-2 py-1 font-mono">$${
+        entry.arbitration_id
+          ? "0x" + entry.arbitration_id.toString(16).toUpperCase()
+          : ""
+      }</td>
+      <td class="px-2 py-1 font-mono">${entry.data || ""}</td>
+      <td class="px-2 py-1 font-mono">${
+        entry.decoded ? `<span class="json-summary">{...}</span>` : ""
+      }</td>
+    `;
+    // Add expand button if decoded JSON exists
+    if (entry.decoded) {
+      const btn = makeExpandButton(rowKey);
+      const td = tr.querySelector("td:last-child");
+      td.insertBefore(btn, td.firstChild);
+    }
+    return tr;
+  }
   // Command row
-  const trCmd = document.createElement("tr");
-  trCmd.className = rowClass;
-  trCmd.innerHTML = `
-    <td class="px-2 py-1 font-mono">${new Date(
-      command.timestamp * 1000
-    ).toLocaleTimeString()}</td>
-    <td class="px-2 py-1">TX</td>
-    <td class="px-2 py-1 font-mono">${command.pgn || ""}</td>
-    <td class="px-2 py-1 font-mono">${command.dgn_hex || ""}</td>
-    <td class="px-2 py-1">${icon}${command.name || ""}</td>
-    <td class="px-2 py-1 font-mono">${
-      command.arbitration_id
-        ? "0x" + command.arbitration_id.toString(16).toUpperCase()
-        : ""
-    }</td>
-    <td class="px-2 py-1 font-mono">${command.data || ""}</td>
-    <td class="px-2 py-1 font-mono">${
-      command.decoded ? JSON.stringify(command.decoded) : ""
-    }</td>
-  `;
+  const trCmd = buildRow(command, "TX");
   tbody.appendChild(trCmd);
   // Response row
-  const trResp = document.createElement("tr");
-  trResp.className = rowClass;
-  trResp.innerHTML = `
-    <td class="px-2 py-1 font-mono">${new Date(
-      response.timestamp * 1000
-    ).toLocaleTimeString()}</td>
-    <td class="px-2 py-1">RX</td>
-    <td class="px-2 py-1 font-mono">${response.pgn || ""}</td>
-    <td class="px-2 py-1 font-mono">${response.dgn_hex || ""}</td>
-    <td class="px-2 py-1">${icon}${response.name || ""}</td>
-    <td class="px-2 py-1 font-mono">${
-      response.arbitration_id
-        ? "0x" + response.arbitration_id.toString(16).toUpperCase()
-        : ""
-    }</td>
-    <td class="px-2 py-1 font-mono">${response.data || ""}</td>
-    <td class="px-2 py-1 font-mono">${
-      response.decoded ? JSON.stringify(response.decoded) : ""
-    }</td>
-  `;
+  const trResp = buildRow(response, "RX");
   tbody.appendChild(trResp);
 }
 
