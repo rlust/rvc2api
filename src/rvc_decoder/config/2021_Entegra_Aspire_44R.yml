@@ -202,3 +202,161 @@ templates:
       <<: *dimmable_light
   39:
     - entity_id: main_ceiling_accent_light
+      friendly_name: Main Ceiling Accent Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  41:
+    - entity_id: main_driver_side_ceiling_light
+      friendly_name: Main Driver Side Ceiling Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  42:
+    - entity_id: main_passenger_side_ceiling_light
+      friendly_name: Main Passenger Side Ceiling Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  43:
+    - entity_id: main_driver_side_slide_light
+      friendly_name: Main Driver Side Slide Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  45:
+    - entity_id: main_dinette_light
+      friendly_name: Main Dinette Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  46:
+    - entity_id: main_sink_light
+      friendly_name: Main Sink Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+  47:
+    - entity_id: main_midship_light
+      friendly_name: Main Midship Light
+      suggested_area: Main Living Area
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "interior"
+      <<: *dimmable_light
+
+  # Exterior Lights (Moved from 1FEDA)
+  51:
+    - entity_id: exterior_driver_side_awning_light
+      friendly_name: Driver Side Awning Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  52:
+    - entity_id: exterior_passenger_side_awning_light
+      friendly_name: Passenger Side Awning Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  53:
+    - entity_id: basement_cargo_light
+      friendly_name: Cargo Light
+      suggested_area: Basement
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  54:
+    - entity_id: exterior_under_slide_light
+      friendly_name: Under Slide Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  57:
+    - entity_id: exterior_driver_side_security_light
+      friendly_name: Driver Side Security Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  58:
+    - entity_id: exterior_passenger_side_security_light
+      friendly_name: Passenger Side Security Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  59:
+    - entity_id: exterior_motion_light
+      friendly_name: Motion Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+  60:
+    - entity_id: exterior_porch_light
+      friendly_name: Porch Light
+      suggested_area: Exterior
+      interface: can1
+      status_dgn: "1FEDA"
+      group_mask: "0x7C"
+      groups:
+        - "exterior"
+      <<: *switchable_light
+
+# Lock Status (DGN 1FEDC likely corresponds to RVC_LOCK_STATUS)
+1FEDC:
+  default:
+    - entity_id: entrance_door_lock
+      friendly_name: Entrance Door Lock
+      suggested_area: Entrance
+      <<: *lock
