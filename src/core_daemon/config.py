@@ -38,6 +38,8 @@ module_logger = logging.getLogger(__name__)
 ACTUAL_SPEC_PATH: str | None = None  # Stores the resolved path to the RVC specification file.
 ACTUAL_MAP_PATH: str | None = None  # Stores the resolved path to the device mapping file.
 
+CONTROLLER_SOURCE_ADDR = int(os.getenv("CONTROLLER_SOURCE_ADDR", "0xF9"), 0)
+
 
 # Refactor configure_logger to properly handle logging levels and handlers
 def configure_logger():
