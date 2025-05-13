@@ -47,19 +47,19 @@ function updateNetworkMapTable(data) {
   if (!tbody) return;
   if (!Array.isArray(data) || data.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="3" class="text-center text-gray-500">No addresses observed yet.</td></tr>';
+      '<tr><td colspan="3" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
     return;
   }
   tbody.innerHTML = data
     .map((addr) => {
       const isSelf = addr.is_self;
-      return `<tr${isSelf ? ' class="bg-green-900/60"' : ""}>
-      <td class="px-2 py-1 font-mono">${addr.value}</td>
-      <td class="px-2 py-1 font-mono">0x${Number(addr.value)
+      return `<tr${isSelf ? ' class="themed-table-note"' : ""}>
+      <td class="font-mono">${addr.value}</td>
+      <td class="font-mono">0x${Number(addr.value)
         .toString(16)
         .toUpperCase()}</td>
-      <td class="px-2 py-1">${
-        isSelf ? '<span class="text-green-400">This node</span>' : ""
+      <td>${
+        isSelf ? '<span class="themed-table-note">This node</span>' : ""
       }</td>
     </tr>`;
     })
@@ -70,10 +70,10 @@ export function renderNetworkMapView() {
   const view = document.getElementById("network-map-view");
   if (!view) return;
   view.innerHTML = `<h1 class="text-3xl font-bold mb-6">CAN Network Map</h1>
-    <p class="mb-4 text-gray-400">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
+    <p class="mb-4 themed-table-muted">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
     <div id="network-map-loading" class="mb-4">Loading network map...</div>
-    <table class="min-w-full bg-gray-800 text-gray-200 rounded shadow text-xs">
-      <thead><tr><th class="px-2 py-1">Source Address</th><th class="px-2 py-1">Hex</th><th class="px-2 py-1">Notes</th></tr></thead>
+    <table class="themed-table">
+      <thead><tr><th>Source Address</th><th>Hex</th><th>Notes</th></tr></thead>
       <tbody id="network-map-table-body"></tbody>
     </table>`;
   connectNetworkMapSocket();

@@ -44,20 +44,30 @@
                 <span>rvc2api Dashboard</span>
                 <span id="appVersionDisplay" class="text-xs text-gray-400 ml-2"></span>
             </div>
-            <div class="relative">
-                <select id="themeSwitcher"
-                        class="bg-gray-700 text-gray-200 text-sm rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="default">Default Theme</option>
-                    <option value="dark">Dark Theme</option>
-                    <option value="light">Light Theme</option>
-                    <option value="catppuccin-mocha">Catppuccin Mocha</option>
-                    <option value="catppuccin-latte">Catppuccin Latte</option>
-                    <option value="nord-dark">Nord Dark</option>
-                    <option value="nord-light">Nord Light</option>
-                    <option value="gruvbox-dark">Gruvbox Dark</option>
-                    <option value="gruvbox-light">Gruvbox Light</option>
-                    <!-- Add more themes here -->
-                </select>
+            <div class="relative" id="themeDropdownContainer">
+                <button id="themeDropdownButton"
+                        class="theme-dropdown-btn"
+                        aria-haspopup="listbox"
+                        aria-expanded="false">
+                    <span id="themeDropdownLabel">Theme</span>
+                    <i class="mdi mdi-chevron-down ml-1"></i>
+                </button>
+                <ul id="themeDropdownMenu"
+                    class="theme-dropdown-menu"
+                    tabindex="-1"
+                    role="listbox"
+                    aria-labelledby="themeDropdownButton"
+                    hidden>
+                    <li role="option" data-value="default">Default Theme</li>
+                    <li role="option" data-value="dark">Dark Theme</li>
+                    <li role="option" data-value="light">Light Theme</li>
+                    <li role="option" data-value="catppuccin-mocha">Catppuccin Mocha</li>
+                    <li role="option" data-value="catppuccin-latte">Catppuccin Latte</li>
+                    <li role="option" data-value="nord-dark">Nord Dark</li>
+                    <li role="option" data-value="nord-light">Nord Light</li>
+                    <li role="option" data-value="gruvbox-dark">Gruvbox Dark</li>
+                    <li role="option" data-value="gruvbox-light">Gruvbox Light</li>
+                </ul>
             </div>
         </header>
         <div class="flex flex-1 overflow-hidden min-h-0">
@@ -302,18 +312,17 @@ Loading rvc.json...</pre>
                     <div id="can-sniffer-container" class="space-y-6">
                         <p id="can-sniffer-loading-message">Loading CAN sniffer data...</p>
                         <div class="overflow-x-auto">
-                            <table id="can-sniffer-table"
-                                   class="min-w-full bg-gray-800 text-gray-200 rounded shadow text-xs">
+                            <table id="can-sniffer-table" class="themed-table">
                                 <thead>
                                     <tr>
-                                        <th class="px-2 py-1">Time</th>
-                                        <th class="px-2 py-1">Dir</th>
-                                        <th class="px-2 py-1">PGN</th>
-                                        <th class="px-2 py-1">DGN</th>
-                                        <th class="px-2 py-1">Name</th>
-                                        <th class="px-2 py-1">Arb ID</th>
-                                        <th class="px-2 py-1">Data</th>
-                                        <th class="px-2 py-1">Decoded</th>
+                                        <th>Time</th>
+                                        <th>Dir</th>
+                                        <th>PGN</th>
+                                        <th>DGN</th>
+                                        <th>Name</th>
+                                        <th>Arb ID</th>
+                                        <th>Data</th>
+                                        <th>Decoded</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -395,8 +404,7 @@ Loading rvc.json...</pre>
                 </pre>
             </div>
         </div>
-        <footer class="fixed bottom-0 left-0 right-0 bg-gray-900 text-gray-300 text-xs py-2 px-4 flex items-center justify-between w-full border-t border-gray-800 z-[70]"
-                id="appFooter">
+        <footer class="app-footer" id="appFooter">
             <div>
                 <span id="footerApiServer" class="mr-4"></span>
                 <span id="footerHealthStatus" class="mr-4"></span>
@@ -406,6 +414,9 @@ Loading rvc.json...</pre>
                 <span id="footerVersionStatus" class="ml-2"></span>
             </div>
         </footer>
+        <script type="module"
+                src="{{ url_for('static', path='js/themeDropdown.js') }}"
+                defer></script>
         <script type="module" src="{{ url_for('static', path='js/app.js') }}" defer></script>
         <!-- Changed to external script -->
     </body>

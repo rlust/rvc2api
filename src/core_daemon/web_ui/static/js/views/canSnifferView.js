@@ -42,13 +42,13 @@ function addCanSnifferGroupRow(group) {
   let rowClass = "";
   let icon = "";
   if (confidence === "high") {
-    rowClass = "bg-green-900/60 hover:bg-green-800/80";
+    rowClass = "themed-table-note";
     icon =
-      '<span title="Mapped grouping" class="mdi mdi-link-variant text-green-400 mr-1"></span>';
+      '<span title="Mapped grouping" class="mdi mdi-link-variant themed-table-note mr-1"></span>';
   } else if (confidence === "low") {
-    rowClass = "bg-yellow-900/60 hover:bg-yellow-800/80";
+    rowClass = "themed-table-muted";
     icon =
-      '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline text-yellow-400 mr-1"></span>';
+      '<span title="Heuristic grouping" class="mdi mdi-help-circle-outline themed-table-muted mr-1"></span>';
   }
   // Command row
   const trCmd = document.createElement("tr");

@@ -26,37 +26,37 @@ function renderUnknownPgnsTable(data) {
     return;
   }
   const table = document.createElement("table");
-  table.className = "min-w-full bg-gray-800 rounded-lg shadow text-sm";
+  table.className = "themed-table";
   table.innerHTML = `
     <thead>
-      <tr class="text-gray-300 border-b border-gray-700">
-        <th class="px-4 py-2 text-left">PGN</th>
-        <th class="px-4 py-2 text-left">Count</th>
-        <th class="px-4 py-2 text-left">First Seen</th>
-        <th class="px-4 py-2 text-left">Last Seen</th>
-        <th class="px-4 py-2 text-left">Last Data</th>
+      <tr>
+        <th>PGN</th>
+        <th>Count</th>
+        <th>First Seen</th>
+        <th>Last Seen</th>
+        <th>Last Data</th>
       </tr>
     </thead>
     <tbody>
       ${Object.entries(data)
         .map(
           ([pgn, item]) => `
-            <tr class="border-b border-gray-700 hover:bg-gray-700">
-              <td class="px-4 py-2 font-mono text-blue-300">${pgn}</td>
-              <td class="px-4 py-2 text-yellow-200 font-bold">${
+            <tr>
+              <td class="font-mono themed-table-note">${pgn}</td>
+              <td class="font-bold themed-table-note">${
                 item.count?.toLocaleString?.() ?? ""
               }</td>
-              <td class="px-4 py-2 text-gray-400">${
+              <td class="themed-table-muted">${
                 item.first_seen_timestamp
                   ? new Date(item.first_seen_timestamp * 1000).toLocaleString()
                   : ""
               }</td>
-              <td class="px-4 py-2 text-gray-400">${
+              <td class="themed-table-muted">${
                 item.last_seen_timestamp
                   ? new Date(item.last_seen_timestamp * 1000).toLocaleString()
                   : ""
               }</td>
-              <td class="px-4 py-2 text-green-400 font-mono">${
+              <td class="font-mono themed-table-note">${
                 item.last_data_hex || ""
               }</td>
             </tr>
@@ -79,28 +79,28 @@ function renderUnknownPgnsCards(data) {
   container.className = "space-y-4";
   Object.entries(data).forEach(([pgn, item]) => {
     const card = document.createElement("div");
-    card.className = "bg-gray-800 rounded-lg shadow p-4";
+    card.className = "bg-[var(--color-bg-tertiary)] rounded-lg shadow p-4 mb-4";
     card.innerHTML = `
       <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-        <span class="font-mono text-blue-300 text-lg font-semibold">PGN: ${pgn}</span>
-        <span class="inline-block bg-yellow-700 text-yellow-200 text-xs font-bold px-2 py-1 rounded mt-2 md:mt-0">Count: ${
+        <span class="font-mono themed-table-note text-lg font-semibold">PGN: ${pgn}</span>
+        <span class="inline-block themed-table-note text-xs font-bold px-2 py-1 rounded mt-2 md:mt-0">Count: ${
           item.count?.toLocaleString?.() ?? ""
         }</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-2">
-        <p><strong>First Seen:</strong> ${
+        <div><strong>First Seen:</strong> <span class="themed-table-muted">${
           item.first_seen_timestamp
             ? new Date(item.first_seen_timestamp * 1000).toLocaleString()
             : ""
-        }</p>
-        <p><strong>Last Seen:</strong> ${
+        }</span></div>
+        <div><strong>Last Seen:</strong> <span class="themed-table-muted">${
           item.last_seen_timestamp
             ? new Date(item.last_seen_timestamp * 1000).toLocaleString()
             : ""
-        }</p>
-        <p class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="text-green-400">${
+        }</span></div>
+        <div class="md:col-span-2"><strong>Last Data Hex:</strong> <code class="font-mono themed-table-note">${
           item.last_data_hex || ""
-        }</code></p>
+        }</code></div>
       </div>
       <button class="mt-2 bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded text-xs copy-hex-btn">Copy Hex</button>
     `;

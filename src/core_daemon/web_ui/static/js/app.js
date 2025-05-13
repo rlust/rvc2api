@@ -63,6 +63,7 @@ import {
   renderNetworkMapView,
   cleanupNetworkMapView,
 } from "./views/networkMapView.js";
+import { initThemeDropdown } from "./themeDropdown.js";
 
 /**
  * @type {string | null} The application version, read from a data attribute on the body.
@@ -105,7 +106,6 @@ const logSearchInput = document.getElementById("log-search");
 const logPauseButton = document.getElementById("log-pause");
 const logResumeButton = document.getElementById("log-resume");
 const logClearButton = document.getElementById("log-clear");
-const themeSwitcher = document.getElementById("themeSwitcher");
 const pinnedLogsContainer = document.getElementById("pinnedLogsContainer");
 const pinnedLogsContent = document.getElementById("pinnedLogsContent");
 const pinnedLogsHeader = document.getElementById("pinnedLogsHeader");
@@ -1019,7 +1019,6 @@ function applyTheme(themeName) {
   document.body.classList.add(`theme-${themeName}`);
   localStorage.setItem(SELECTED_THEME_KEY, themeName);
   currentTheme = themeName;
-  if (themeSwitcher) themeSwitcher.value = themeName;
   console.log(`Theme applied: ${themeName}`);
 }
 
@@ -1480,9 +1479,6 @@ function initializeApp() {
 
   const savedTheme = localStorage.getItem(SELECTED_THEME_KEY);
   applyTheme(savedTheme || DEFAULT_THEME);
-  if (themeSwitcher) {
-    themeSwitcher.addEventListener("change", (e) => applyTheme(e.target.value));
-  }
 
   const savedSidebarState = localStorage.getItem(DESKTOP_SIDEBAR_EXPANDED_KEY);
   setDesktopSidebarVisible(
@@ -1542,6 +1538,15 @@ function initializeApp() {
   );
 
   console.log(`rvc2api UI Initialized. Version: ${APP_VERSION}`);
+}
+
+// Initialize custom theme dropdown
+let patchedApplyTheme = null;
+if (typeof initThemeDropdown === "function") {
+  patchedApplyTheme = initThemeDropdown(applyTheme, window.SELECTED_THEME_KEY);
+  if (patchedApplyTheme) {
+    window.applyTheme = patchedApplyTheme;
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
