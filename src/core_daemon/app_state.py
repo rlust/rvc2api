@@ -174,6 +174,8 @@ def add_can_sniffer_entry(entry: dict) -> None:
     # Optionally limit log size
     if len(can_command_sniffer_log) > 1000:
         can_command_sniffer_log.pop(0)
+    # Always notify WebSocket clients of any update (not just new addresses)
+    notify_network_map_ws()
 
 
 def get_can_sniffer_log() -> list:
