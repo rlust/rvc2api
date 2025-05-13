@@ -82,6 +82,9 @@ can_sniffer_grouped = []  # Each: {command, response, confidence, reason}
 # Set to track all observed source addresses on the CAN bus
 observed_source_addresses: set[int] = set()
 
+# For each source address, track the last-seen sniffer entry (RX or TX)
+last_seen_by_source_addr: dict[int, dict] = {}
+
 
 def get_observed_source_addresses():
     """Returns a sorted list of all observed CAN source addresses (as ints)."""
@@ -148,11 +151,26 @@ def get_can_sniffer_grouped():
     return list(can_sniffer_grouped)
 
 
+def update_last_seen_by_source_addr(entry: dict):
+    """
+    Update the mapping of source address to the last-seen CAN sniffer entry.
+    This enables richer device info in the network map and diagnostics.
+    Args:
+        entry: The CAN sniffer log entry (dict) containing at least 'source_addr'.
+    """
+    src = entry.get("source_addr")
+    if src is not None:
+        last_seen_by_source_addr[src] = entry
+
+
 def add_can_sniffer_entry(entry: dict) -> None:
     """
-    Adds a CAN command/control message entry to the sniffer log.
+    Adds a CAN command/control message entry to the sniffer log and updates last-seen info.
+    Args:
+        entry: The CAN sniffer log entry (dict).
     """
     can_command_sniffer_log.append(entry)
+    update_last_seen_by_source_addr(entry)
     # Optionally limit log size
     if len(can_command_sniffer_log) > 1000:
         can_command_sniffer_log.pop(0)

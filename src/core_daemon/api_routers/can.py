@@ -12,7 +12,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pyroute2 import IPRoute
 
-from core_daemon.app_state import get_can_sniffer_grouped, get_observed_source_addresses
+from core_daemon.app_state import get_can_sniffer_grouped
 from core_daemon.can_manager import can_tx_queue
 from core_daemon.models import AllCANStats, CANInterfaceStats
 from core_daemon.websocket import network_map_ws_endpoint
@@ -254,10 +254,46 @@ async def get_can_sniffer_log_debug():
 
 @api_router_can.get("/network-map", response_class=JSONResponse)
 async def get_network_map():
-    """Returns all observed CAN source addresses, with a flag for 'self'."""
+    """Returns all observed CAN source addresses, with decoded info if available."""
+    from core_daemon.app_state import (
+        device_lookup,
+        get_observed_source_addresses,
+        last_seen_by_source_addr,
+        status_lookup,
+    )
+
     SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
     addresses = get_observed_source_addresses()
-    return [{"value": addr, "is_self": addr == SELF_SOURCE_ADDR} for addr in addresses]
+    result = []
+    for addr in addresses:
+        entry = last_seen_by_source_addr.get(addr)
+        dgn = entry.get("dgn_hex") if entry else None
+        instance = (
+            str(entry.get("instance")) if entry and entry.get("instance") is not None else None
+        )
+        # Try to find a friendly name from device_lookup or status_lookup
+        friendly_name = None
+        area = None
+        device_type = None
+        if dgn and instance:
+            key = (dgn.upper(), instance)
+            dev = status_lookup.get(key) or device_lookup.get(key)
+            if dev:
+                friendly_name = dev.get("friendly_name")
+                area = dev.get("suggested_area")
+                device_type = dev.get("device_type")
+        result.append(
+            {
+                "value": addr,
+                "is_self": addr == SELF_SOURCE_ADDR,
+                "dgn": dgn,
+                "instance": instance,
+                "device_type": device_type,
+                "friendly_name": friendly_name,
+                "area": area,
+            }
+        )
+    return result
 
 
 api_router_can.add_api_websocket_route("/ws/network-map", network_map_ws_endpoint)
