@@ -40,7 +40,7 @@
 # This file was renamed from device_mapping.yml for model-specific mapping support.
 
 coach_info:
-  year: 2021
+  year: "2021"
   make: Entegra
   model: Aspire
   trim: 44R
