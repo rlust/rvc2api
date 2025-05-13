@@ -67,6 +67,46 @@ def mock_can_manager(mocker):
     return mock
 
 
+# --- Global state reset fixtures for test isolation ---
+
+
+@pytest.fixture(autouse=True)
+def reset_app_state_globals():
+    """
+    Automatically reset all global state variables in app_state before each test.
+    Ensures test isolation for all tests using app_state.
+    """
+    import core_daemon.app_state as app_state
+
+    app_state.state = {}
+    app_state.history = {}
+    app_state.unmapped_entries = {}
+    app_state.unknown_pgns = {}
+    app_state.last_known_brightness_levels = {}
+    app_state.entity_id_lookup = {}
+    app_state.light_entity_ids = []
+    app_state.light_command_info = {}
+    app_state.decoder_map = {}
+    app_state.raw_device_mapping = {}
+    app_state.device_lookup = {}
+    app_state.status_lookup = {}
+    app_state.pgn_hex_to_name_map = {}
+
+
+@pytest.fixture(autouse=True)
+def reset_can_manager_state():
+    """
+    Automatically reset global state in can_manager before each test.
+    Ensures test isolation for all tests using can_manager.
+    """
+    import asyncio
+
+    import core_daemon.can_manager as can_manager
+
+    can_manager.can_tx_queue = asyncio.Queue()
+    can_manager.buses = {}
+
+
 # How to use these fixtures in your tests:
 #
 # from fastapi.testclient import TestClient # If using client directly without fixture
