@@ -65,24 +65,25 @@
           format   = "pyproject";
 
           nativeBuildInputs = with pythonPackages; [ poetry-core ];
-          propagatedBuildInputs = with pythonPackages; [
-            fastapi
-            uvicorn  # Base uvicorn
-            websockets # Uvicorn standard extra
-            httptools  # Uvicorn standard extra
-            python-dotenv # Uvicorn standard extra
-            watchfiles # Uvicorn standard extra
+          propagatedBuildInputs = [
+            pythonPackages.fastapi
+            pythonPackages.uvicorn  # Base uvicorn
+            pythonPackages.websockets # Uvicorn standard extra
+            pythonPackages.httptools  # Uvicorn standard extra
+            pythonPackages.python-dotenv # Uvicorn standard extra
+            pythonPackages.watchfiles # Uvicorn standard extra
+            pythonPackages.httpx  # Added for uptimerobot feature
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
-            uvloop   # Uvicorn standard extra (conditional)
-          ] ++ (with pythonPackages; [
-            python-can
-            pydantic
-            pyyaml
-            prometheus_client
-            coloredlogs
-            jinja2
-            pyroute2
-          ]);
+            pythonPackages.uvloop   # Uvicorn standard extra (conditional)
+          ] ++ [
+            pythonPackages.python-can
+            pythonPackages.pydantic
+            pythonPackages.pyyaml
+            pythonPackages.prometheus_client
+            pythonPackages.coloredlogs
+            pythonPackages.jinja2
+            pythonPackages.pyroute2
+          ];
 
           doCheck    = true;
           checkInputs = [ pythonPackages.pytest ];
