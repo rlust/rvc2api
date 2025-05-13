@@ -1182,3 +1182,13 @@ body.theme-catppuccin-latte .entity-card.light-off {
   color: var(--theme-muted, #b0b0b0);
   font-style: italic;
 }
+
+#themeDropdownContainer {
+  position: relative;
+}
+#themeDropdownContainer .theme-dropdown-menu {
+  pointer-events: auto;
+}
+#themeDropdownContainer .theme-dropdown-menu[hidden] {
+  pointer-events: none;
+}
