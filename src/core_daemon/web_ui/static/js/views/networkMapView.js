@@ -81,6 +81,18 @@ export function renderNetworkMapView() {
       <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th></tr></thead>
       <tbody id="network-map-table-body"></tbody>
     </table>`;
+  // Fetch initial data via HTTP
+  fetchData("/api/network-map", {
+    successCallback: (data) => {
+      updateNetworkMapTable(data);
+      document.getElementById("network-map-loading")?.classList.add("hidden");
+    },
+    errorCallback: (err) => {
+      updateNetworkMapTable([]);
+      document.getElementById("network-map-loading").textContent =
+        "Failed to load network map.";
+    },
+  });
   connectNetworkMapSocket();
 }
 
