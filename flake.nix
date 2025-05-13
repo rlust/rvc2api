@@ -82,6 +82,7 @@
             pythonPackages.prometheus_client
             pythonPackages.coloredlogs
             pythonPackages.jinja2
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
             pythonPackages.pyroute2
           ];
 
@@ -105,34 +106,32 @@
             python
             pkgs.poetry
             pythonPackages.fastapi
-            pythonPackages.uvicorn # Base uvicorn
-            pythonPackages.websockets # Uvicorn standard extra
-            pythonPackages.httptools  # Uvicorn standard extra
-            pythonPackages.python-dotenv # Uvicorn standard extra
-            pythonPackages.watchfiles # Uvicorn standard extra
-          ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
-            pythonPackages.uvloop   # Uvicorn standard extra (conditional)
-          ] ++ (with pythonPackages; [
+            pythonPackages.uvicorn
+            pythonPackages.websockets
+            pythonPackages.httptools
+            pythonPackages.python-dotenv
+            pythonPackages.watchfiles
             pythonPackages."python-can"
             pythonPackages.pydantic
             pythonPackages.pyyaml
             pythonPackages.prometheus_client
             pythonPackages.coloredlogs
             pythonPackages.jinja2
-            pythonPackages.pyroute2
             pythonPackages.pytest
             pythonPackages.mypy
             pythonPackages.flake8
             pythonPackages.types-pyyaml
             pkgs.fish
-            pkgs.iproute2 # Add iproute2 to devShell for local testing of CAN status
-          ]);
+          ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
+            pythonPackages.uvloop
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            pythonPackages.pyroute2
+            pkgs.iproute2
+          ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🐚 Entered rvc2api devShell on ${pkgs.system} with Python ${python.version}"
             echo "💡 Run 'poetry install' or 'nix build .#rvc2api' to get started."
-            # Optionally, set fish as the default shell when entering nix develop
-            exec fish
           '';
         };
 
@@ -142,18 +141,18 @@
             pkgs.poetry
             pythonPackages.pytest
             pythonPackages.pyyaml
+            pythonPackages.uvicorn
+            pythonPackages.websockets
+            pythonPackages.httptools
+            pythonPackages.python-dotenv
+            pythonPackages.watchfiles
             pkgs.can-utils
-            pkgs.iproute2
-            pythonPackages.uvicorn # Base uvicorn
-            pythonPackages.websockets # Uvicorn standard extra
-            pythonPackages.httptools  # Uvicorn standard extra
-            pythonPackages.python-dotenv # Uvicorn standard extra
-            pythonPackages.watchfiles # Uvicorn standard extra
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
-            pythonPackages.uvloop   # Uvicorn standard extra (conditional)
-          ] ++ (with pythonPackages; [
-            pythonPackages.pyroute2 # Added pyroute2 for CI if needed for tests
-          ]);
+            pythonPackages.uvloop
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            pythonPackages.pyroute2
+            pkgs.iproute2
+          ];
           shellHook = ''
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🧪 Entered CI shell with vcan support"
