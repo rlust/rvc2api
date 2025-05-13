@@ -279,6 +279,7 @@ async def get_can_sniffer_log_debug():
 @api_router_can.get("/network-map", response_class=JSONResponse)
 async def get_network_map():
     """Returns all observed CAN source addresses, with decoded info if available."""
+    from core_daemon.app_state import get_controller_source_addr  # Import the getter
     from core_daemon.app_state import (
         device_lookup,
         get_observed_source_addresses,
@@ -286,7 +287,7 @@ async def get_network_map():
         status_lookup,
     )
 
-    SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
+    SELF_SOURCE_ADDR = get_controller_source_addr()  # Use global/configurable value
     addresses = get_observed_source_addresses()
     result = []
     for addr in addresses:

@@ -12,6 +12,69 @@ import { WebSocketManager } from "../wsManager.js";
 
 let networkMapSocketManager = null;
 
+// Track expanded rows for decoded/raw by address value and type
+const expandedNetworkMapRows = new Set();
+
+function prettyPrintJSON(obj) {
+  if (!obj) return "";
+  let jsonString = "";
+  try {
+    jsonString = JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
+  }
+  return `<pre class="themed-json pretty-json">${escapeHTML(jsonString)}</pre>`;
+}
+
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function makeExpandButton(rowKey, type) {
+  const btn = document.createElement("button");
+  btn.className = "expand-json-btn themed-table-btn";
+  btn.title = `Show full ${type} JSON`;
+  btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
+  btn.setAttribute("aria-expanded", expandedNetworkMapRows.has(rowKey));
+  btn.onclick = function (e) {
+    e.stopPropagation();
+    toggleExpandRow(rowKey, btn, type);
+  };
+  return btn;
+}
+
+function toggleExpandRow(rowKey, btn, type) {
+  const tr = document.getElementById(rowKey);
+  if (!tr) return;
+  const expanded = expandedNetworkMapRows.has(rowKey);
+  if (expanded) {
+    const next = tr.nextSibling;
+    if (next && next.classList.contains("expanded-json-row")) {
+      next.remove();
+    }
+    expandedNetworkMapRows.delete(rowKey);
+    btn.setAttribute("aria-expanded", false);
+    btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
+  } else {
+    const jsonData = tr.getAttribute(`data-${type}-json`);
+    const colCount = tr.children.length;
+    const expandedTr = document.createElement("tr");
+    expandedTr.className = "expanded-json-row themed-table-expanded";
+    const td = document.createElement("td");
+    td.colSpan = colCount;
+    td.innerHTML = jsonData;
+    expandedTr.appendChild(td);
+    tr.parentNode.insertBefore(expandedTr, tr.nextSibling);
+    expandedNetworkMapRows.add(rowKey);
+    btn.setAttribute("aria-expanded", true);
+    btn.innerHTML = '<span class="mdi mdi-chevron-up"></span>';
+  }
+}
+
 function connectNetworkMapSocket() {
   if (!networkMapSocketManager) {
     networkMapSocketManager = new WebSocketManager(
@@ -50,10 +113,17 @@ function updateNetworkMapTable(data) {
       '<tr><td colspan="10" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
     return;
   }
-  tbody.innerHTML = data
-    .map((addr) => {
-      const isSelf = addr.is_self;
-      return `<tr${isSelf ? ' class="themed-table-note"' : ""}>
+  tbody.innerHTML = "";
+  data.forEach((addr) => {
+    const isSelf = addr.is_self;
+    const rowKey = `networkmap_${addr.value}`;
+    const tr = document.createElement("tr");
+    if (isSelf) tr.className = "themed-table-note";
+    tr.id = rowKey;
+    // Store pretty JSON as attribute for expansion
+    tr.setAttribute("data-decoded-json", prettyPrintJSON(addr.decoded));
+    tr.setAttribute("data-raw-json", prettyPrintJSON(addr.raw));
+    tr.innerHTML = `
       <td class="font-mono">${addr.value}</td>
       <td class="font-mono">0x${Number(addr.value)
         .toString(16)
@@ -64,27 +134,22 @@ function updateNetworkMapTable(data) {
       <td>${addr.friendly_name || ""}</td>
       <td>${addr.area || ""}</td>
       <td>${addr.notes || ""}</td>
-      <td>${
-        addr.decoded
-          ? `<pre class='themed-json'>${JSON.stringify(
-              addr.decoded,
-              null,
-              2
-            )}</pre>`
-          : ""
-      }</td>
-      <td>${
-        addr.raw
-          ? `<pre class='themed-json'>${JSON.stringify(
-              addr.raw,
-              null,
-              2
-            )}</pre>`
-          : ""
-      }</td>
-    </tr>`;
-    })
-    .join("");
+      <td>${addr.decoded ? `<span class='json-summary'>{...}</span>` : ""}</td>
+      <td>${addr.raw ? `<span class='json-summary'>{...}</span>` : ""}</td>
+    `;
+    // Add expand buttons if decoded/raw exist
+    if (addr.decoded) {
+      const btn = makeExpandButton(rowKey + "_decoded", "decoded");
+      const td = tr.querySelector("td:nth-child(9)");
+      td.insertBefore(btn, td.firstChild);
+    }
+    if (addr.raw) {
+      const btn = makeExpandButton(rowKey + "_raw", "raw");
+      const td = tr.querySelector("td:nth-child(10)");
+      td.insertBefore(btn, td.firstChild);
+    }
+    tbody.appendChild(tr);
+  });
 }
 
 export function renderNetworkMapView() {

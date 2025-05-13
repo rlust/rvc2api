@@ -28,6 +28,9 @@ try:
 except ImportError:
     broadcast_can_sniffer_group = None
 
+# Import controller source address for global access
+from core_daemon.config import CONTROLLER_SOURCE_ADDR
+
 # In-memory state - holds the most recent data payload for each entity_id
 state: Dict[str, Dict[str, Any]] = {}
 
@@ -515,3 +518,8 @@ def notify_network_map_ws():
             loop.create_task(broadcast_network_map())
     except Exception:
         pass
+
+
+def get_controller_source_addr():
+    """Returns the controller's source address as an int."""
+    return CONTROLLER_SOURCE_ADDR

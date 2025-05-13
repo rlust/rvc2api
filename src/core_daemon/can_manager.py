@@ -19,6 +19,7 @@ import can  # For can.Message, can.interface.Bus
 from can.exceptions import CanInterfaceNotImplementedError  # For more specific error handling
 
 from core_daemon.app_state import add_can_sniffer_entry, add_pending_command
+from core_daemon.config import CONTROLLER_SOURCE_ADDR
 
 # Import specific metrics used by can_writer
 from core_daemon.metrics import CAN_TX_QUEUE_LENGTH
@@ -104,10 +105,9 @@ async def can_writer():
                         instance = raw.get("instance")
                 except Exception:
                     pass
-                # Determine origin (self vs other)
-                SELF_SOURCE_ADDR = 0xF9  # Update if your node uses a different source address
+                # Use configurable controller source address
                 source_addr = msg.arbitration_id & 0xFF
-                origin = "self" if source_addr == SELF_SOURCE_ADDR else "other"
+                origin = "self" if source_addr == CONTROLLER_SOURCE_ADDR else "other"
                 sniffer_entry = {
                     "timestamp": now,
                     "direction": "tx",
