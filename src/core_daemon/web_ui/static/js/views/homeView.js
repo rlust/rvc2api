@@ -152,15 +152,14 @@ export function fetchAndRenderCanStatus() {
       let table = canStatusContent.querySelector("table.can-status-table");
       if (!table) {
         table = document.createElement("table");
-        table.className =
-          "can-status-table min-w-full bg-gray-800 rounded-lg shadow text-sm";
+        table.className = "can-status-table themed-table";
         table.innerHTML = `
           <thead>
-            <tr class="text-gray-300 border-b border-gray-700">
-              <th class="px-4 py-2 text-left">Interface</th>
-              <th class="px-4 py-2 text-left">State</th>
-              <th class="px-4 py-2 text-left">RX</th>
-              <th class="px-4 py-2 text-left">TX</th>
+            <tr>
+              <th>Interface</th>
+              <th>State</th>
+              <th>RX</th>
+              <th>TX</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -175,12 +174,11 @@ export function fetchAndRenderCanStatus() {
         if (!row) {
           row = document.createElement("tr");
           row.dataset.iface = iface;
-          row.className = "border-b border-gray-700";
           row.innerHTML = `
-            <td class="px-4 py-2 font-semibold">${iface}</td>
-            <td class="px-4 py-2 can-state"></td>
-            <td class="px-4 py-2 can-rx"></td>
-            <td class="px-4 py-2 can-tx"></td>
+            <td class="font-semibold">${iface}</td>
+            <td class="can-state"></td>
+            <td class="can-rx"></td>
+            <td class="can-tx"></td>
           `;
           tbody.appendChild(row);
         }
@@ -298,15 +296,14 @@ function renderCanStatus(data) {
   let table = canStatusContent.querySelector("table.can-status-table");
   if (!table) {
     table = document.createElement("table");
-    table.className =
-      "can-status-table min-w-full bg-gray-800 rounded-lg shadow text-sm";
+    table.className = "can-status-table themed-table";
     table.innerHTML = `
       <thead>
-        <tr class="text-gray-300 border-b border-gray-700">
-          <th class="px-4 py-2 text-left">Interface</th>
-          <th class="px-4 py-2 text-left">State</th>
-          <th class="px-4 py-2 text-left">RX</th>
-          <th class="px-4 py-2 text-left">TX</th>
+        <tr>
+          <th>Interface</th>
+          <th>State</th>
+          <th>RX</th>
+          <th>TX</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -321,12 +318,11 @@ function renderCanStatus(data) {
     if (!row) {
       row = document.createElement("tr");
       row.dataset.iface = iface;
-      row.className = "border-b border-gray-700";
       row.innerHTML = `
-        <td class="px-4 py-2 font-semibold">${iface}</td>
-        <td class="px-4 py-2 can-state"></td>
-        <td class="px-4 py-2 can-rx"></td>
-        <td class="px-4 py-2 can-tx"></td>
+        <td class="font-semibold">${iface}</td>
+        <td class="can-state"></td>
+        <td class="can-rx"></td>
+        <td class="can-tx"></td>
       `;
       tbody.appendChild(row);
     }

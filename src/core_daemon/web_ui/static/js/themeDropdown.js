@@ -88,15 +88,22 @@ export function initThemeDropdown(applyTheme, SELECTED_THEME_KEY) {
       );
     });
   }
-  // On load, set label and highlight
-  const theme =
-    (SELECTED_THEME_KEY && localStorage.getItem(SELECTED_THEME_KEY)) ||
-    "default";
+  // Helper to get current theme from <body> or localStorage
+  function getCurrentTheme() {
+    const bodyClass = document.body.className.match(/theme-([\w-]+)/);
+    if (bodyClass && bodyClass[1]) return bodyClass[1];
+    if (SELECTED_THEME_KEY && localStorage.getItem(SELECTED_THEME_KEY))
+      return localStorage.getItem(SELECTED_THEME_KEY);
+    return "default";
+  }
+  // On load, set label and highlight to actual current theme
+  let theme = getCurrentTheme();
   setThemeDropdownLabel(theme);
   updateThemeDropdownUI(theme);
-  // Patch applyTheme to update dropdown label
+  // Patch applyTheme to update dropdown label and highlight
   return function patchedApplyTheme(theme) {
     applyTheme(theme);
+    setThemeDropdownLabel(theme);
     updateThemeDropdownUI(theme);
   };
 }
