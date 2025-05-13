@@ -328,8 +328,9 @@ export function renderLightCard(entity) {
         brightnessValueDisplay.textContent = `${slider.value}%`;
       });
       slider.addEventListener("change", (e) => {
-        callLightService(entity.entity_id, "set_brightness", {
-          brightness: Math.round((slider.value / 100) * 255),
+        callLightService(entity.entity_id, "set", {
+          state: "on",
+          brightness: Number(slider.value),
         }).then(() => {
           showToast(
             `Set brightness for ${friendlyName} to ${slider.value}%`,
