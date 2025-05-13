@@ -22,6 +22,7 @@
 
 import { WebSocketManager } from "../wsManager.js";
 import { showToast } from "../utils.js";
+import { fetchData } from "../api.js";
 
 let canSnifferSocketManager = null;
 
