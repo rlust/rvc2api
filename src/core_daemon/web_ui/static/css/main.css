@@ -251,6 +251,11 @@ body {
   height: 100%; /* Ensure it takes full height of the sidebar for scrolling */
 }
 
+#sidebarCollapseContainer {
+  border-top: none !important;
+  background: transparent;
+}
+
 .nav-link {
   color: var(--color-text-secondary);
 }
