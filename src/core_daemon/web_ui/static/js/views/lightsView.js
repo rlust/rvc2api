@@ -122,8 +122,11 @@ function updateOrInsertLightCard(entityId) {
 
   // --- Stable sort: ensure all cards are sorted after update ---
   // Gather all entities for this area
-  const areaEntities = Object.values(currentLightStates)
-    .filter(e => e.device_type === "light" && (e.suggested_area || "Unknown Area") === entityArea);
+  const areaEntities = Object.values(currentLightStates).filter(
+    (e) =>
+      e.device_type === "light" &&
+      (e.suggested_area || "Unknown Area") === entityArea
+  );
   areaEntities.sort((a, b) => {
     const nameA = a.friendly_name || a.entity_id;
     const nameB = b.friendly_name || b.entity_id;
@@ -134,11 +137,9 @@ function updateOrInsertLightCard(entityId) {
   });
   // Remove all cards, then re-append in sorted order
   const cards = Array.from(grid.querySelectorAll(".entity-card"));
-  cards.forEach(card => card.remove());
-  areaEntities.forEach(e => {
-    grid.appendChild(
-      e.entity_id === entityId ? newCard : renderLightCard(e)
-    );
+  cards.forEach((card) => card.remove());
+  areaEntities.forEach((e) => {
+    grid.appendChild(e.entity_id === entityId ? newCard : renderLightCard(e));
   });
 }
 
@@ -291,19 +292,18 @@ export function renderLightCard(entity) {
   const hasBrightness = capabilities.includes("brightness");
   if (hasBrightness) {
     let currentBrightnessPercent = 0;
-    if (entityState === "on") {
-      if (typeof entity.brightness === "number") {
-        currentBrightnessPercent = Math.round((entity.brightness / 255) * 100);
-      } else if (rawAttrs.brightness !== undefined) {
-        currentBrightnessPercent = Math.round(
-          (rawAttrs.brightness / 255) * 100
-        );
-      }
+    if (typeof entity.brightness === "number") {
+      currentBrightnessPercent = Math.max(0, Math.min(100, entity.brightness));
+    } else if (
+      entityState === "on" &&
+      rawAttrs.operating_status !== undefined &&
+      !isNaN(rawAttrs.operating_status)
+    ) {
+      // Fallback: convert raw.operating_status (0-200 CAN scale) to 0-100 UI
+      currentBrightnessPercent = Math.round(
+        Math.max(0, Math.min(100, (rawAttrs.operating_status / 200) * 100))
+      );
     }
-    currentBrightnessPercent = Math.max(
-      0,
-      Math.min(100, Number(currentBrightnessPercent) || 0)
-    );
     cardContent += `
       <div class="brightness-control space-y-1">
         <label for="brightness-${entity.entity_id}" class="block text-sm font-medium">Brightness: <span class="brightness-value">${currentBrightnessPercent}%</span></label>
