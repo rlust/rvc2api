@@ -3,7 +3,7 @@ import logging
 
 import httpx
 
-from core_daemon.feature_manager import Feature
+from core_daemon.feature_base import Feature
 
 logger = logging.getLogger(__name__)
 
