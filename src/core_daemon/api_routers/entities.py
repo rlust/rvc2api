@@ -326,7 +326,11 @@ async def _send_light_can_command(
             "decoded": decoded,
             "raw": raw,
             "iface": interface,
-            "pgn": entry.get("pgn") if entry else None,
+            "pgn": (
+                entry.get("pgn")
+                if entry and "pgn" in entry
+                else ((msg.arbitration_id >> 8) & 0xFFFF)
+            ),
             "dgn_hex": dgn_hex if dgn_hex else (entry.get("dgn_hex") if entry else None),
             "name": name if name else (entry.get("name") if entry else None),
             "instance": instance_str,
