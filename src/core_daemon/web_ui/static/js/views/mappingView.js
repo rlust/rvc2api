@@ -11,7 +11,7 @@ import { apiBasePath } from "../config.js";
 const mappingContent = document.getElementById("mapping-content");
 
 export function fetchAndRenderMapping() {
-  fetchData(`${apiBasePath}/config/mapping`, {
+  fetchData(`${apiBasePath}/config/device_mapping`, {
     responseType: "text",
     successCallback: (textData) => {
       if (mappingContent) {
