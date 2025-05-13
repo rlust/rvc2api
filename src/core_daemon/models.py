@@ -3,6 +3,21 @@ Defines Pydantic models for API request/response validation and serialization.
 
 These models are used throughout the FastAPI application to ensure data consistency
 and provide clear API documentation for request bodies and response payloads.
+
+Models:
+    - Entity: State and metadata of a monitored RV-C entity
+    - ControlCommand: Structure for sending control commands to an entity
+    - SuggestedMapping: Suggested mapping for an unmapped device instance
+    - UnmappedEntryModel: RV-C message not mapped to a configured entity
+    - UnknownPGNEntry: CAN message with unknown PGN
+    - BulkLightControlResponse: Response for bulk light control operations
+    - ControlEntityResponse: Response for individual entity control commands
+    - CANInterfaceStats: Statistics for a CAN interface
+    - AllCANStats: Statistics for all CAN interfaces
+    - GitHubReleaseAsset: Downloadable asset attached to a GitHub release
+    - GitHubReleaseInfo: Metadata about a GitHub release
+    - GitHubUpdateStatus: Status and metadata of the latest GitHub release
+    - CoachInfo: (re-exported from common.models)
 """
 
 from typing import Any, Dict, List, Optional
@@ -116,6 +131,8 @@ class ControlEntityResponse(BaseModel):
 
 
 class CANInterfaceStats(BaseModel):
+    """Statistics for a CAN interface."""
+
     name: str
     state: Optional[str] = None
     restart_ms: Optional[int] = None
@@ -159,6 +176,8 @@ class CANInterfaceStats(BaseModel):
 
 
 class AllCANStats(BaseModel):
+    """Statistics for all CAN interfaces."""
+
     interfaces: Dict[str, CANInterfaceStats]
 
 
@@ -199,3 +218,7 @@ class GitHubUpdateStatus(BaseModel):
     latest_release_info: Optional[GitHubReleaseInfo] = None
     repo: Optional[str] = None
     api_url: Optional[str] = None
+
+
+# CoachInfo model has been moved to src/common/models.py
+# Remove the class definition here.

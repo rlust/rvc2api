@@ -2,6 +2,16 @@
 rvc_decoder.decode
 
 Core decoding logic for RV-C CAN frames, including loading of spec and device mapping data.
+
+Functions:
+    - get_bits: Extracts a little-endian bitfield from a CAN payload
+    - decode_payload: Decodes all signals in a spec entry
+    - load_config_data: Loads and parses RVC spec and device mapping,
+    returning all lookup tables and coach metadata
+
+Notes:
+    - CoachInfo includes year, make, model, trim, filename, and notes fields.
+    - Mapping/model selection logic supports model-specific mapping files and full-path overrides.
 """
 
 import json
@@ -11,6 +21,8 @@ import sys
 from importlib import resources
 
 import yaml
+
+from common.models import CoachInfo
 
 logger = logging.getLogger(__name__)  # Added named logger
 
@@ -84,6 +96,7 @@ def load_config_data(
     dict[str, dict],
     dict[str, str],  # Added for pgn_hex_to_name_map
     dict,  # Added for dgn_pairs
+    CoachInfo,  # Return CoachInfo model instead of dict
 ]:
     """
     Load and parse:
@@ -94,6 +107,7 @@ def load_config_data(
          • entity_id_lookup (id→config)
          • light_entity_ids (set of IDs)
          • light_command_info (id→{dgn,instance,interface})
+         • coach_info (year, make, model, trim, filename, notes)
 
     Path selection logic:
       - If device_mapping_path_override is provided and valid, use it.
@@ -116,6 +130,7 @@ def load_config_data(
       light_command_info: dict[str,dict],
       pgn_hex_to_name_map: dict[str, str],
       dgn_pairs: dict,
+      coach_info: CoachInfo  # coach/model metadata (year, make, model, trim, filename, notes)
     """
     # --- MODIFICATION START: Path selection logic ---
     default_spec_path, default_mapping_path = _default_paths()
@@ -124,33 +139,81 @@ def load_config_data(
     rvc_spec_path = default_spec_path  # Default
     if rvc_spec_path_override:
         if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
+            logger.info(f"Using RVC spec override: {rvc_spec_path_override}")
             rvc_spec_path = rvc_spec_path_override
-        # else: fallback to default
+        else:
+            logger.warning(
+                f"RVC spec override path provided but not found/readable: "
+                f"{rvc_spec_path_override}. Using default: {default_spec_path}"
+            )
+    else:
+        logger.info(f"Using default RVC spec path: {default_spec_path}")
 
     # Determine final mapping path
     device_mapping_path = default_mapping_path  # Default
+    mapping_source = "default"
+    model_selector = None
+    available_mappings = []
     if device_mapping_path_override:
         if os.path.exists(device_mapping_path_override) and os.access(
             device_mapping_path_override, os.R_OK
         ):
+            logger.info(f"Using explicit device mapping override: {device_mapping_path_override}")
             device_mapping_path = device_mapping_path_override
+            mapping_source = "override"
+        else:
+            logger.warning(
+                f"Device mapping override path provided but not found/readable: "
+                f"{device_mapping_path_override}. Will check model selector or fallback."
+            )
     else:
-        # Check for CAN_MODEL_SELECTOR env var (case-insensitive, extension-flexible)
+        # Check for CAN_MODEL_SELECTOR env var
+        # (case-insensitive, extension-flexible, flexible delimiters)
         model_selector = os.getenv("CAN_MODEL_SELECTOR")
         if model_selector:
             config_dir = os.path.dirname(default_mapping_path)
-            selector_lower = model_selector.lower()
-            # List all files in config_dir and match case-insensitively, with or without .yml/.yaml
+            # Normalize selector: replace spaces with underscores,
+            # lowercase, strip extension if present
+            selector_norm = os.path.splitext(model_selector.replace(" ", "_").lower())[0]
             try:
-                for fname in os.listdir(config_dir):
+                available_mappings = [
+                    fname
+                    for fname in os.listdir(config_dir)
+                    if os.path.splitext(fname)[1].lower() in (".yml", ".yaml")
+                ]
+                found = False
+                for fname in available_mappings:
                     base, ext = os.path.splitext(fname)
-                    if ext.lower() in (".yml", ".yaml") and base.lower() == selector_lower:
+                    base_norm = base.replace(" ", "_").lower()
+                    if base_norm == selector_norm:
                         candidate = os.path.join(config_dir, fname)
                         if os.path.exists(candidate) and os.access(candidate, os.R_OK):
+                            logger.info(
+                                f"Model selector requested: '{model_selector}' "
+                                f"→ Using mapping file: {candidate}"
+                            )
                             device_mapping_path = candidate
+                            mapping_source = f"modelSelector ({model_selector})"
+                            found = True
                             break
+                if not found:
+                    logger.warning(
+                        f"Requested model mapping '{model_selector}' not found in {config_dir}."
+                    )
+                    logger.warning(f"Available mapping files: {available_mappings}")
+                    logger.warning(f"Falling back to default mapping: {default_mapping_path}")
             except Exception as e:
                 logger.warning(f"Could not scan mapping directory '{config_dir}': {e}")
+        else:
+            logger.info(
+                f"No device mapping override or model selector set. "
+                f"Using default mapping: {default_mapping_path}"
+            )
+
+    logger.info(
+        f"Device mapping file in use: {device_mapping_path} (source: "
+        f"{mapping_source if mapping_source != 'default' else 'default/fallback'})"
+    )
 
     # --- MODIFICATION END ---
 
@@ -195,12 +258,49 @@ def load_config_data(
     entity_id_lookup: dict = {}
     light_entity_ids: set = set()
     light_command_info: dict = {}
+    coach_info = {}
 
     if os.path.exists(device_mapping_path):
         with open(device_mapping_path) as f:
             raw_map = yaml.safe_load(f) or {}
         templates = raw_map.get("templates", {})
         device_mapping = raw_map
+
+        # --- Coach info extraction ---
+        if "coach_info" in raw_map and isinstance(raw_map["coach_info"], dict):
+            coach_info = dict(raw_map["coach_info"])
+            coach_info.setdefault("filename", os.path.basename(device_mapping_path))
+        else:
+            # Fallback: parse filename for year/make/model/trim (supports underscores or spaces)
+            fname = os.path.basename(device_mapping_path)
+            base, _ = os.path.splitext(fname)
+            # Try underscores first, then spaces
+            if "_" in base:
+                parts = base.split("_", 3)
+            else:
+                parts = base.split(" ", 3)
+            if len(parts) == 4 and parts[0].isdigit():
+                coach_info = {
+                    "year": parts[0],
+                    "make": parts[1],
+                    "model": parts[2],
+                    "trim": parts[3],
+                    "filename": fname,
+                    "notes": "(parsed from filename)",
+                }
+            elif len(parts) == 3 and parts[0].isdigit():
+                coach_info = {
+                    "year": parts[0],
+                    "make": parts[1],
+                    "model": parts[2],
+                    "filename": fname,
+                    "notes": "(parsed from filename)",
+                }
+            else:
+                coach_info = {
+                    "filename": fname,
+                    "notes": "No coach_info in YAML; could not parse model from filename.",
+                }
 
         # Extract dgn_pairs mapping if present
         dgn_pairs = raw_map.get("dgn_pairs", {})
@@ -265,7 +365,37 @@ def load_config_data(
         #     logger.info(f"status_lookup keys: {status_keys_to_log}")
     else:
         logger.error(f"Device mapping file NOT FOUND: {device_mapping_path}")
+        # fallback: still try to provide coach_info from path
+        fname = os.path.basename(device_mapping_path)
+        base, _ = os.path.splitext(fname)
+        if "_" in base:
+            parts = base.split("_", 3)
+        else:
+            parts = base.split(" ", 3)
+        if len(parts) == 4 and parts[0].isdigit():
+            coach_info = {
+                "year": parts[0],
+                "make": parts[1],
+                "model": parts[2],
+                "trim": parts[3],
+                "filename": fname,
+                "notes": "(parsed from filename; mapping file not found)",
+            }
+        elif len(parts) == 3 and parts[0].isdigit():
+            coach_info = {
+                "year": parts[0],
+                "make": parts[1],
+                "model": parts[2],
+                "filename": fname,
+                "notes": "(parsed from filename; mapping file not found)",
+            }
+        else:
+            coach_info = {
+                "filename": fname,
+                "notes": "Mapping file not found; no coach_info available.",
+            }
 
+    coach_info_model = CoachInfo(**coach_info)
     return (
         decoder_map,
         device_mapping,
@@ -276,4 +406,5 @@ def load_config_data(
         light_command_info,
         pgn_hex_to_name_map,  # Return the new map
         dgn_pairs,  # Return dgn_pairs as the 9th item
+        coach_info_model,  # Return as CoachInfo model
     )
