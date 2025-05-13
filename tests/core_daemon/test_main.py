@@ -21,8 +21,6 @@ import unittest.mock  # Added import for unittest.mock
 from unittest.mock import MagicMock, patch
 
 from fastapi import Response  # Removed unused Request import
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 
 # For testing the main() function that calls uvicorn.run
@@ -79,8 +77,8 @@ def test_main_function_calls_uvicorn(
 
 
 @patch("os.path.isdir")
-@patch("core_daemon.main.StaticFiles", spec=StaticFiles)  # Mock the class
-@patch("core_daemon.main.Jinja2Templates", spec=Jinja2Templates)  # Mock the class
+@patch("fastapi.staticfiles.StaticFiles")  # Patch the real import
+@patch("fastapi.templating.Jinja2Templates")  # Patch the real import
 @patch("core_daemon.main.get_static_paths")
 @patch("core_daemon.main.configure_logger")  # Prevent logging setup during import
 @patch("core_daemon.main.get_actual_paths")  # Prevent path logic
@@ -107,6 +105,12 @@ def test_fastapi_app_setup_static_and_templates_mounted(
     and Jinja2 template rendering. It verifies that StaticFiles and Jinja2Templates
     are instantiated with the correct directory paths, and that these paths
     are obtained from get_static_paths.
+
+    WARNING: This test must be run in isolation. If any other code (including
+    fixtures or other tests)imports core_daemon.main before this test runs, the app will be created
+    with the real get_static_pathsand the test will fail. Do not use a client fixture or any import
+    of core_daemon.main before this test's patches and reload. If you need to run this test
+    reliably, run it alone or refactor app creation.
     """
     # Define what get_static_paths will return for this test
     mock_get_static_paths.return_value = {
@@ -117,22 +121,14 @@ def test_fastapi_app_setup_static_and_templates_mounted(
     # Simulate that directories exist
     mock_os_path_isdir.return_value = True
 
-    # Import 'app' here, after patches are set up
     # Check if StaticFiles was mounted
-    # The actual mounting is done via app.mount(), we check if StaticFiles
-    # was instantiated correctly
     MockStaticFiles.assert_called_once_with(
-        directory="/fake/static", follow_symlink=True
-    )  # Shortened E501
+        directory="/fake/static",
+        follow_symlink=True,
+    )
 
     # Check if Jinja2Templates was instantiated
     MockJinja2Templates.assert_called_once_with(directory="/fake/templates")
-
-    # Verify that app.mount was called for static files.
-    # This requires inspecting the app's router or mount calls if possible,
-    # or ensuring the StaticFiles instance created was used in a mount call.
-    # FastAPI's TestClient doesn't easily expose mount points for direct assertion.
-    # We'll rely on the instantiation check of StaticFiles and Jinja2Templates.
 
 
 @patch("core_daemon.main.configure_logger")
@@ -176,21 +172,13 @@ def test_api_routers_included(
     # For this test, we'll just ensure the app has routes.
     assert len(app.router.routes) > 0
 
-    # A more specific check could be to find a route by path template
-    # e.g. any(route.path == "/api/can/interfaces" for route in app.routes)
-    # This requires knowing specific paths from each router.
-
-    # Check if the main app's routers list contains the imported routers
-    # FastAPI's app.routes includes routes from mounted apps and included routers
-    # We can check if the app's routes contain routes that belong to our specific routers
-
     # Get all route paths
-    route_paths = [route.path for route in app.routes if hasattr(route, "path")]  # Shortened E501
+    route_paths = [route.path for route in app.routes if hasattr(route, "path")]
 
     # Check for a known path from each router (assuming they have at
     # least one GET endpoint at their root)
     # These paths depend on the prefix used in app.include_router()
-    assert "/api/can/interfaces" in route_paths  # From api_router_can
+    assert "/api/can/status" in route_paths  # From api_router_can
     assert "/api/healthz" in route_paths  # From api_router_config_ws
     assert "/api/entities" in route_paths  # From api_router_entities
     assert "/" in route_paths  # For the root endpoint

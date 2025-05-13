@@ -25,6 +25,7 @@ import asyncio
 import functools
 import logging
 import os
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -88,151 +89,121 @@ config_data_tuple = load_config_data(
 # and the decode_payload function from rvc_decoder
 initialize_app_from_config(config_data_tuple, decode_payload)
 
-# ── FastAPI setup ──────────────────────────────────────────────────────────
-fastapi_config = get_fastapi_config()
-API_TITLE = fastapi_config["title"]
-API_SERVER_DESCRIPTION = fastapi_config["server_description"]
-API_ROOT_PATH = fastapi_config["root_path"]
 
-logger.info(f"API Title: {API_TITLE}")
-logger.info(f"API Server Description: {API_SERVER_DESCRIPTION}")
-logger.info(f"API Root Path: {API_ROOT_PATH}")
+def create_app():
+    # ── FastAPI setup ──────────────────────────────────────────────────────────
+    fastapi_config = get_fastapi_config()
+    API_TITLE = fastapi_config["title"]
+    API_SERVER_DESCRIPTION = fastapi_config["server_description"]
+    API_ROOT_PATH = fastapi_config["root_path"]
 
-app = FastAPI(
-    title=API_TITLE,
-    servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],
-    root_path=API_ROOT_PATH,
-)
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # --- Startup ---
+        initialize_can_writer_task()
+        try:
+            main_loop = asyncio.get_running_loop()
+            log_ws_handler = WebSocketLogHandler(loop=main_loop)
+            log_ws_handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+            log_ws_handler.setFormatter(formatter)
+            logging.getLogger().addHandler(log_ws_handler)
+            logger.info("WebSocketLogHandler initialized and added to the root logger.")
+        except Exception as e:
+            logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
 
-# ── Static files and templates ─────────────────────────────────────────────
-static_paths = get_static_paths()
-web_ui_dir = static_paths["web_ui_dir"]
-static_dir = static_paths["static_dir"]
-templates_dir = static_paths["templates_dir"]
+        loop = asyncio.get_running_loop()
+        canbus_config = get_canbus_config()
+        interfaces = canbus_config["channels"]
+        bustype = canbus_config["bustype"]
+        bitrate = canbus_config["bitrate"]
+        message_handler_with_args = functools.partial(
+            process_can_message,
+            loop=loop,
+            decoder_map=app_state.decoder_map,
+            device_lookup=app_state.device_lookup,
+            status_lookup=app_state.status_lookup,
+            pgn_hex_to_name_map=app_state.pgn_hex_to_name_map,
+            raw_device_mapping=app_state.raw_device_mapping,
+        )
+        initialize_can_listeners(
+            interfaces=interfaces,
+            bustype=bustype,
+            bitrate=bitrate,
+            message_handler_callback=message_handler_with_args,
+            logger_instance=logger,
+        )
+        await feature_startup_all()
+        yield
+        # --- Shutdown ---
+        await feature_shutdown_all()
+        logger.info("rvc2api shutting down...")
 
-if static_dir and os.path.isdir(static_dir):
-    app.mount(
-        "/static",
-        StaticFiles(
-            directory=static_dir,
-            follow_symlink=True,
-        ),
-        name="static",
-    )
-    logger.info(f"Successfully mounted /static to directory: {static_dir}")
-else:
-    logger.error(
-        f"Static directory ('{static_dir}') is invalid or not found;"
-        f"static files will not be served."
-    )
-
-if templates_dir and os.path.isdir(templates_dir):
-    templates = Jinja2Templates(directory=templates_dir)
-    logger.info(f"Successfully initialized Jinja2Templates with directory: {templates_dir}")
-else:
-    logger.error(
-        f"Templates directory ('{templates_dir}') is invalid or not found;"
-        f"templates will not be loaded."
-    )
-    templates = None
-
-
-# ── Middleware ─────────────────────────────────────────────────────────────
-@app.middleware("http")
-async def prometheus_middleware_handler(request, call_next):
-    """Prometheus metrics middleware for HTTP requests."""
-    return await prometheus_http_middleware(request, call_next)
-
-
-# ── Exception Handlers ─────────────────────────────────────────────────────
-@app.exception_handler(ResponseValidationError)
-async def validation_exception_handler(request, exc):
-    """Handles response validation errors with a plain text message."""
-    return PlainTextResponse(f"Validation error: {exc}", status_code=500)
-
-
-# ── Event Handlers ─────────────────────────────────────────────────────────
-@app.on_event("startup")
-async def start_can_writer():
-    """FastAPI startup event: Initializes and schedules the CAN writer task."""
-    initialize_can_writer_task()
-
-
-@app.on_event("startup")
-async def setup_websocket_logging():
-    """FastAPI startup event: Sets up the WebSocketLogHandler for live log streaming."""
-    try:
-        main_loop = asyncio.get_running_loop()
-        log_ws_handler = WebSocketLogHandler(loop=main_loop)
-        log_ws_handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-        log_ws_handler.setFormatter(formatter)
-        logging.getLogger().addHandler(log_ws_handler)
-        logger.info("WebSocketLogHandler initialized and added to the root logger.")
-    except Exception as e:
-        logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
-
-
-@app.on_event("startup")
-async def start_can_readers():
-    """
-    FastAPI startup event: Initializes and starts CAN listener
-    threads for specified interfaces.
-    """
-    loop = asyncio.get_running_loop()
-    canbus_config = get_canbus_config()
-    interfaces = canbus_config["channels"]
-    bustype = canbus_config["bustype"]
-    bitrate = canbus_config["bitrate"]
-
-    message_handler_with_args = functools.partial(
-        process_can_message,
-        loop=loop,
-        decoder_map=app_state.decoder_map,
-        device_lookup=app_state.device_lookup,
-        status_lookup=app_state.status_lookup,
-        pgn_hex_to_name_map=app_state.pgn_hex_to_name_map,
-        raw_device_mapping=app_state.raw_device_mapping,
+    app = FastAPI(
+        title=API_TITLE,
+        servers=[{"url": "/", "description": API_SERVER_DESCRIPTION}],
+        root_path=API_ROOT_PATH,
+        lifespan=lifespan,
     )
 
-    initialize_can_listeners(
-        interfaces=interfaces,
-        bustype=bustype,
-        bitrate=bitrate,
-        message_handler_callback=message_handler_with_args,
-        logger_instance=logger,
-    )
+    # ── Static files and templates ─────────────────────────────────────────────
+    static_paths = get_static_paths()
+    static_dir = static_paths["static_dir"]
+    templates_dir = static_paths["templates_dir"]
+
+    if static_dir and os.path.isdir(static_dir):
+        app.mount(
+            "/static",
+            StaticFiles(
+                directory=static_dir,
+                follow_symlink=True,
+            ),
+            name="static",
+        )
+        logger.info(f"Successfully mounted /static to directory: {static_dir}")
+    else:
+        logger.error(
+            f"Static directory ('{static_dir}') is invalid or not found;"
+            f"static files will not be served."
+        )
+
+    if templates_dir and os.path.isdir(templates_dir):
+        templates = Jinja2Templates(directory=templates_dir)
+        logger.info(f"Successfully initialized Jinja2Templates with directory: {templates_dir}")
+    else:
+        logger.error(
+            f"Templates directory ('{templates_dir}') is invalid or not found;"
+            f"templates will not be loaded."
+        )
+        templates = None
+
+    # ── Middleware ─────────────────────────────────────────────────────────────
+    @app.middleware("http")
+    async def prometheus_middleware_handler(request, call_next):
+        """Prometheus metrics middleware for HTTP requests."""
+        return await prometheus_http_middleware(request, call_next)
+
+    # ── Exception Handlers ─────────────────────────────────────────────────────
+    @app.exception_handler(ResponseValidationError)
+    async def validation_exception_handler(request, exc):
+        """Handles response validation errors with a plain text message."""
+        return PlainTextResponse(f"Validation error: {exc}", status_code=500)
+
+    # ── Top-level UI Route ─────────────────────────────────────────────────────
+    @app.get("/", response_class=HTMLResponse)
+    async def serve_home(request: Request):
+        """Serves the main UI HTML page."""
+        return templates.TemplateResponse("index.html", {"request": request})
+
+    # ── API Routers ────────────────────────────────────────────────────────────
+    app.include_router(api_router_can, prefix="/api")
+    app.include_router(api_router_config_ws, prefix="/api")
+    app.include_router(api_router_entities, prefix="/api")
+
+    return app
 
 
-@app.on_event("startup")
-async def startup_features():
-    """FastAPI startup event: Initializes all enabled optional features."""
-    await feature_startup_all()
-
-
-@app.on_event("shutdown")
-async def shutdown_features():
-    """FastAPI shutdown event: Shuts down all enabled optional features."""
-    await feature_shutdown_all()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """FastAPI shutdown event: Logs a message when the application is shutting down."""
-    logger.info("rvc2api shutting down...")
-
-
-# ── Top-level UI Route ─────────────────────────────────────────────────────
-@app.get("/", response_class=HTMLResponse)
-async def serve_home(request: Request):
-    """Serves the main UI HTML page."""
-    return templates.TemplateResponse("index.html", {"request": request})
-
-
-# ── API Routers ────────────────────────────────────────────────────────────
-app.include_router(api_router_can, prefix="/api")
-app.include_router(api_router_config_ws, prefix="/api")
-app.include_router(api_router_entities, prefix="/api")
+app = create_app()
 
 
 # ── Entrypoint ─────────────────────────────────────────────────────────────
