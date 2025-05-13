@@ -241,6 +241,17 @@ async def get_can_sniffer():
     return get_can_sniffer_grouped()
 
 
+@api_router_can.get("/can-sniffer-log-debug", response_class=JSONResponse)
+async def get_can_sniffer_log_debug():
+    """
+    Returns the last 20 entries in the raw CAN sniffer log for debugging.
+    """
+    from core_daemon.app_state import get_can_sniffer_log
+
+    log = get_can_sniffer_log()
+    return log[-20:]
+
+
 @api_router_can.get("/network-map", response_class=JSONResponse)
 async def get_network_map():
     """Returns all observed CAN source addresses, with a flag for 'self'."""
