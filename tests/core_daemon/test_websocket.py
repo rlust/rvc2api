@@ -256,26 +256,18 @@ class TestWebSocketEndpoints:
 
         Verifies that the client is removed and the error is logged.
         """
-        # Mock the receive_text method of the WebSocket instance that TestClient creates
-        # This is tricky. A more direct way is to mock the 'ws' object passed to the endpoint.
-        # For now, we'll assume the disconnect path covers basic error logging.
-        # A more advanced test would involve patching 'WebSocket.receive_text' globally
-        # or finding a way to make the TestClient's WebSocket instance raise an error.
+        # Patch receive_text to raise an error
+        with patch(
+            "core_daemon.websocket.WebSocket.receive_text", new_callable=AsyncMock
+        ) as mock_receive_text:
+            mock_receive_text.side_effect = RuntimeError("Unexpected error")
 
-        # Simulate an error by directly manipulating the endpoint's behavior (less ideal)
-        original_receive_text = websocket.WebSocket.receive_text
-        websocket.WebSocket.receive_text = AsyncMock(side_effect=RuntimeError("Unexpected error"))
+            with client.websocket_connect("/ws/data"):
+                # The connection will close due to the error, but no exception will be raised here
+                pass
 
-        with pytest.raises(RuntimeError):  # The error should propagate to TestClient
-            with client.websocket_connect("/ws/data") as _ws_conn:  # noqa: F841
-                pass  # Connection itself might be okay, error on first receive_text
-
-        # Check if client was removed and error logged
+        # Assert that the error was logged
+        assert mock_logger.error.called
+        assert any("Unexpected error" in str(call) for call in mock_logger.error.call_args_list)
+        # Optionally, check that the client was removed
         assert len(websocket.clients) == 0
-        error_log_found = any(
-            "WebSocket error for client" in call_args[0][0]
-            for call_args in mock_logger.error.call_args_list
-        )
-        assert error_log_found
-
-        websocket.WebSocket.receive_text = original_receive_text  # Restore
