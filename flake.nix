@@ -122,6 +122,7 @@
             pythonPackages.flake8
             pythonPackages.types-pyyaml
             pkgs.fish
+            pythonPackages.pytest-asyncio
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
             pythonPackages.uvloop
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
@@ -147,6 +148,7 @@
             pythonPackages.python-dotenv
             pythonPackages.watchfiles
             pkgs.can-utils
+            pythonPackages.pytest-asyncio
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
             pythonPackages.uvloop
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
