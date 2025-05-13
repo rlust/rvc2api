@@ -269,6 +269,9 @@ def load_config_data(
         # --- Coach info extraction ---
         if "coach_info" in raw_map and isinstance(raw_map["coach_info"], dict):
             coach_info = dict(raw_map["coach_info"])
+            # Normalize year to string if present
+            if "year" in coach_info and coach_info["year"] is not None:
+                coach_info["year"] = str(coach_info["year"])
             coach_info.setdefault("filename", os.path.basename(device_mapping_path))
         else:
             # Fallback: parse filename for year/make/model/trim (supports underscores or spaces)
@@ -281,7 +284,7 @@ def load_config_data(
                 parts = base.split(" ", 3)
             if len(parts) == 4 and parts[0].isdigit():
                 coach_info = {
-                    "year": parts[0],
+                    "year": str(parts[0]),
                     "make": parts[1],
                     "model": parts[2],
                     "trim": parts[3],
@@ -290,7 +293,7 @@ def load_config_data(
                 }
             elif len(parts) == 3 and parts[0].isdigit():
                 coach_info = {
-                    "year": parts[0],
+                    "year": str(parts[0]),
                     "make": parts[1],
                     "model": parts[2],
                     "filename": fname,
@@ -374,7 +377,7 @@ def load_config_data(
             parts = base.split(" ", 3)
         if len(parts) == 4 and parts[0].isdigit():
             coach_info = {
-                "year": parts[0],
+                "year": str(parts[0]),
                 "make": parts[1],
                 "model": parts[2],
                 "trim": parts[3],
@@ -383,7 +386,7 @@ def load_config_data(
             }
         elif len(parts) == 3 and parts[0].isdigit():
             coach_info = {
-                "year": parts[0],
+                "year": str(parts[0]),
                 "make": parts[1],
                 "model": parts[2],
                 "filename": fname,
