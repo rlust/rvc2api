@@ -548,7 +548,7 @@ function appendLogMessage(message) {
 function connectLogSocket() {
   if (!logSocketManager) {
     logSocketManager = new WebSocketManager(
-      `ws://${location.host}/api/ws/logs`,
+      "/api/ws/logs",
       (data) => appendLogMessage(data),
       {
         onOpen: () => showToast("Log stream connected.", "info", 2000),

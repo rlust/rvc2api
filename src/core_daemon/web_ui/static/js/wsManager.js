@@ -10,7 +10,7 @@
 
 export class WebSocketManager {
   /**
-   * @param {string} url - The WebSocket URL.
+   * @param {string} url - The WebSocket URL (can be relative, e.g. /api/ws/logs, or absolute ws(s)://...)
    * @param {function} onMessage - Handler for incoming messages (event.data).
    * @param {object} [options]
    * @param {function} [options.onOpen] - Handler for open event.
@@ -21,7 +21,16 @@ export class WebSocketManager {
    * @param {number} [options.maxRetries=Infinity] - Max reconnect attempts.
    */
   constructor(url, onMessage, options = {}) {
-    this.url = url;
+    // If url starts with ws:// or wss://, use as-is. Otherwise, build using current protocol/host.
+    if (/^ws(s)?:\/\//.test(url)) {
+      this.url = url;
+    } else {
+      const proto = window.location.protocol === "https:" ? "wss://" : "ws://";
+      const host = window.location.host;
+      // Remove leading slash if present to avoid double slash
+      const path = url.startsWith("/") ? url : `/${url}`;
+      this.url = `${proto}${host}${path}`;
+    }
     this.onMessage = onMessage;
     this.onOpen = options.onOpen || (() => {});
     this.onClose = options.onClose || (() => {});

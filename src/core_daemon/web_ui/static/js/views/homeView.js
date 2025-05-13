@@ -220,24 +220,26 @@ function handleStatusWsMessage(data) {
 
 function startStatusWebSocket() {
   if (statusWsManager) return;
-  const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${wsProto}//${window.location.host}/api/ws/status`;
-  statusWsManager = new WebSocketManager(wsUrl, handleStatusWsMessage, {
-    onOpen: () => {
-      wsActive = true;
-      stopHomePolling();
-    },
-    onClose: () => {
-      wsActive = false;
-      statusWsManager = null;
-      startHomePolling();
-    },
-    onError: () => {
-      wsActive = false;
-    },
-    autoReconnect: true,
-    reconnectInterval: 5000,
-  });
+  statusWsManager = new WebSocketManager(
+    "/api/ws/status",
+    handleStatusWsMessage,
+    {
+      onOpen: () => {
+        wsActive = true;
+        stopHomePolling();
+      },
+      onClose: () => {
+        wsActive = false;
+        statusWsManager = null;
+        startHomePolling();
+      },
+      onError: () => {
+        wsActive = false;
+      },
+      autoReconnect: true,
+      reconnectInterval: 5000,
+    }
+  );
 }
 
 function stopStatusWebSocket() {

@@ -40,9 +40,7 @@ export const ATTR_DATA_VIEW = "data-view";
 export const ARIA_HIDDEN = "aria-hidden";
 
 // WebSocket URLs
-export const entitySocketUrl = `${
-  window.location.protocol === "https:" ? "wss:" : "ws:"
-}//${window.location.host}/api/ws`;
+export const entitySocketUrl = "/api/ws";
 
 // Sidebar and transition constants
 export const SIDEBAR_WIDTH_EXPANDED = "16rem";

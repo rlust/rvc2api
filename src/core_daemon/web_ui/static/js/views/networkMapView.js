@@ -14,9 +14,8 @@ let networkMapSocketManager = null;
 
 function connectNetworkMapSocket() {
   if (!networkMapSocketManager) {
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     networkMapSocketManager = new WebSocketManager(
-      `${wsProtocol}//${window.location.host}/api/ws/network-map`,
+      "/api/ws/network-map",
       (eventData) => {
         const data = JSON.parse(eventData);
         updateNetworkMapTable(data);

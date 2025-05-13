@@ -98,9 +98,8 @@ function addCanSnifferGroupRow(group) {
 
 function connectCanSnifferSocket() {
   if (!canSnifferSocketManager) {
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     canSnifferSocketManager = new WebSocketManager(
-      `${wsProtocol}//${window.location.host}/api/ws/can-sniffer`,
+      "/api/ws/can-sniffer",
       (eventData) => {
         const group = JSON.parse(eventData);
         addCanSnifferGroupRow(group);
