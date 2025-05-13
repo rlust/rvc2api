@@ -735,8 +735,12 @@ def test_get_static_paths_importlib_resource_is_not_dir(
             mock_traversable.__str__ = MagicMock(return_value=MOCK_TEMPLATES_PATH_LIB)
             mock_traversable.is_dir.return_value = True
         elif package_path == "core_daemon.web_ui":
-            mock_traversable.__str__ = MagicMock(return_value=MOCK_WEB_UI_PATH_LIB)
-            mock_traversable.is_dir.return_value = True
+            # Simulate web_ui path itself not being a directory directly
+            mock_traversable.is_dir.return_value = False
+            # __str__ might still be called, so give it a value
+            mock_traversable.__str__ = MagicMock(return_value="dummy_web_ui_path_not_dir")
+        else:
+            raise ValueError(f"Unexpected package_path: {package_path}")
         return mock_traversable
 
     mock_importlib_files.side_effect = mock_files_side_effect
@@ -752,8 +756,9 @@ def test_get_static_paths_importlib_resource_is_not_dir(
     )
     # Also check that the fallback was triggered due to the ValueError raised internally
     mock_logger_error.assert_any_call(
-        "Error using importlib.resources (''core_daemon.web_ui.static' is not a directory "
-        "via importlib.resources'). Falling back to __file__-based path resolution.",
+        "Error using importlib.resources (''core_daemon.web_ui.static' "
+        "is not a directory via importlib.resources'). Falling back to "
+        "__file__-based path resolution.",
         exc_info=True,
     )
 

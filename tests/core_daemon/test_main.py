@@ -38,11 +38,15 @@ from fastapi.templating import Jinja2Templates
 @patch("core_daemon.main.initialize_can_writer_task")  # To prevent actual CAN setup
 @patch("core_daemon.main.setup_websocket_logging")  # To prevent actual WS logging setup
 def test_main_function_calls_uvicorn(
-    mock_initialize_app,
-    mock_load_config,
-    mock_get_paths,
+    mock_setup_websocket_logging,
+    mock_initialize_can_writer_task,
+    mock_initialize_can_listeners,
+    mock_initialize_app_from_config,
+    mock_load_config_data,
+    mock_get_actual_paths,
     mock_configure_logger,
     mock_uvicorn_run,
+    _patch_dict,
 ):
     """
     Tests that the main() function correctly initializes the application
@@ -56,9 +60,9 @@ def test_main_function_calls_uvicorn(
     main_function()
 
     mock_configure_logger.assert_called_once()
-    mock_get_paths.assert_called_once()
-    mock_load_config.assert_called_once()
-    mock_initialize_app.assert_called_once()
+    mock_get_actual_paths.assert_called_once()
+    mock_load_config_data.assert_called_once()
+    mock_initialize_app_from_config.assert_called_once()
 
     # Uvicorn should be called with the app instance from main.py
     # and host, port, log_level from patched environment variables
