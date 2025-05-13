@@ -25,9 +25,26 @@
 # Use the 'default' instance if a specific instance isn't needed.
 # YAML anchors (&) and aliases (*) are supported for templating.
 #
+# The coach_info section provides structured metadata about the coach for use in the API and UI.
+# Required fields: year, make, model, trim. Optional: notes.
+# Example:
+# coach_info:
+#   year: 2021
+#   make: Entegra
+#   model: Aspire
+#   trim: 44R
+#   notes: Luxury diesel pusher, Spartan K2 chassis
+#
 # The dgn_pairs section defines command/status DGN groupings for robust CAN sniffer logic.
 #
 # This file was renamed from device_mapping.yml for model-specific mapping support.
+
+coach_info:
+  year: 2021
+  make: Entegra
+  model: Aspire
+  trim: 44R
+  notes: Luxury diesel pusher, Spartan K2 chassis
 
 # --- Begin mapping content ---
 
