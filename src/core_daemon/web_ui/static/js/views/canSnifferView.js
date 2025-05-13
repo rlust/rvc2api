@@ -335,5 +335,4 @@ export {
   disconnectCanSnifferSocket,
   clearCanSnifferTable,
   addCanSnifferGroupRow,
-  fetchCanSnifferLog,
 };
