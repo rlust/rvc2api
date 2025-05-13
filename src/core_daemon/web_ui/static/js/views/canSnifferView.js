@@ -25,6 +25,32 @@ import { showToast } from "../utils.js";
 
 let canSnifferSocketManager = null;
 
+// Add a toggle for sniffer mode
+let snifferMode = "all"; // "all" or "control"
+
+function renderSnifferModeToggle() {
+  const container = document.getElementById("can-sniffer-toggle-container");
+  if (!container) return;
+  container.innerHTML = `
+    <div class="sniffer-toggle flex gap-2 mb-2">
+      <button id="sniffer-mode-all" class="themed-table-btn${
+        snifferMode === "all" ? " active" : ""
+      }">All CAN Messages</button>
+      <button id="sniffer-mode-control" class="themed-table-btn${
+        snifferMode === "control" ? " active" : ""
+      }">Command/Control Grouped</button>
+    </div>
+  `;
+  document.getElementById("sniffer-mode-all").onclick = () => {
+    snifferMode = "all";
+    renderCanSnifferView();
+  };
+  document.getElementById("sniffer-mode-control").onclick = () => {
+    snifferMode = "control";
+    renderCanSnifferView();
+  };
+}
+
 function clearCanSnifferTable() {
   const canSnifferTable = document.getElementById("can-sniffer-table");
   if (canSnifferTable) {
@@ -160,6 +186,43 @@ function addCanSnifferGroupRow(group) {
   tbody.appendChild(trResp);
 }
 
+function addCanSnifferRow(entry) {
+  const canSnifferTable = document.getElementById("can-sniffer-table");
+  if (!canSnifferTable) return;
+  const tbody = canSnifferTable.querySelector("tbody");
+  if (!tbody) return;
+  const dir = entry.direction ? entry.direction.toUpperCase() : "";
+  const rowKey = `${entry.timestamp}_${dir}_${entry.arbitration_id}`;
+  const tr = document.createElement("tr");
+  tr.className = "";
+  tr.id = rowKey;
+  tr.setAttribute("data-decoded-json", prettyPrintJSON(entry.decoded));
+  tr.innerHTML = `
+    <td class="px-2 py-1 font-mono">${new Date(
+      entry.timestamp * 1000
+    ).toLocaleTimeString()}</td>
+    <td class="px-2 py-1">${dir}</td>
+    <td class="px-2 py-1 font-mono">${entry.pgn || ""}</td>
+    <td class="px-2 py-1 font-mono">${entry.dgn_hex || ""}</td>
+    <td class="px-2 py-1">${entry.name || ""}</td>
+    <td class="px-2 py-1 font-mono">${
+      entry.arbitration_id
+        ? "0x" + entry.arbitration_id.toString(16).toUpperCase()
+        : ""
+    }</td>
+    <td class="px-2 py-1 font-mono">${entry.data || ""}</td>
+    <td class="px-2 py-1 font-mono">${
+      entry.decoded ? `<span class="json-summary">{...}</span>` : ""
+    }</td>
+  `;
+  if (entry.decoded) {
+    const btn = makeExpandButton(rowKey);
+    const td = tr.querySelector("td:last-child");
+    td.insertBefore(btn, td.firstChild);
+  }
+  tbody.appendChild(tr);
+}
+
 function connectCanSnifferSocket() {
   if (!canSnifferSocketManager) {
     canSnifferSocketManager = new WebSocketManager(
@@ -192,7 +255,7 @@ function disconnectCanSnifferSocket() {
   }
 }
 
-function fetchCanSnifferLog() {
+function fetchCanSnifferAll() {
   const canSnifferLoading = document.getElementById(
     "can-sniffer-loading-message"
   );
@@ -201,6 +264,36 @@ function fetchCanSnifferLog() {
   const tbody = canSnifferTable.querySelector("tbody");
   if (tbody) tbody.innerHTML = "";
   fetchData("/api/can-sniffer", {
+    successCallback: (data) => {
+      if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
+      if (!Array.isArray(data) || data.length === 0) {
+        if (tbody) tbody.innerHTML = "";
+        return;
+      }
+      data
+        .slice()
+        .reverse()
+        .forEach((entry) => {
+          addCanSnifferRow(entry);
+        });
+    },
+    errorCallback: (error) => {
+      if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
+      showToast("Failed to load CAN sniffer log.", "error");
+    },
+    loadingElement: canSnifferLoading,
+  });
+}
+
+function fetchCanSnifferControl() {
+  const canSnifferLoading = document.getElementById(
+    "can-sniffer-loading-message"
+  );
+  const canSnifferTable = document.getElementById("can-sniffer-table");
+  if (!canSnifferTable) return;
+  const tbody = canSnifferTable.querySelector("tbody");
+  if (tbody) tbody.innerHTML = "";
+  fetchData("/api/can-sniffer-control", {
     successCallback: (data) => {
       if (canSnifferLoading) canSnifferLoading.classList.add("hidden");
       if (!Array.isArray(data) || data.length === 0) {
@@ -224,7 +317,12 @@ function fetchCanSnifferLog() {
 
 export function renderCanSnifferView() {
   clearCanSnifferTable();
-  connectCanSnifferSocket();
+  renderSnifferModeToggle();
+  if (snifferMode === "all") {
+    fetchCanSnifferAll();
+  } else {
+    fetchCanSnifferControl();
+  }
 }
 
 export function cleanupCanSnifferView() {

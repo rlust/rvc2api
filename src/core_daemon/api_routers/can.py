@@ -237,7 +237,31 @@ async def get_queue_status():
 
 @api_router_can.get("/can-sniffer", response_class=JSONResponse)
 async def get_can_sniffer():
-    """Returns grouped CAN command/control sniffer pairs with confidence."""
+    """
+    Returns the latest CAN messages (RX and TX, all types, deduplicated by source/PGN/instance).
+    """
+    from core_daemon.app_state import get_can_sniffer_log
+
+    # Optionally deduplicate: only show the latest message for each
+    # (arbitration_id, direction, instance)
+    log = get_can_sniffer_log()
+    seen = set()
+    deduped = []
+    for entry in reversed(log):
+        key = (
+            entry.get("arbitration_id"),
+            entry.get("direction"),
+            entry.get("instance"),
+        )
+        if key not in seen:
+            deduped.append(entry)
+            seen.add(key)
+    return list(reversed(deduped))
+
+
+@api_router_can.get("/can-sniffer-control", response_class=JSONResponse)
+async def get_can_sniffer_control():
+    """Returns grouped CAN command/control sniffer pairs with confidence (legacy view)."""
     return get_can_sniffer_grouped()
 
 
