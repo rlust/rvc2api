@@ -95,13 +95,16 @@ def load_config_data(
          • light_entity_ids (set of IDs)
          • light_command_info (id→{dgn,instance,interface})
 
-    Uses override paths if provided and valid, otherwise falls back to bundled files.
+    Path selection logic:
+      - If device_mapping_path_override is provided and valid, use it.
+      - Else, if the CAN_MODEL_SELECTOR environment variable is set, use
+        <config_dir>/<model>.yml as the mapping file (e.g., 2021_Entegra_Aspire_44R.yml).
+      - Else, use the default device_mapping.yml.
+      - This allows flake.nix to set a model selector, but a full path can still override.
 
     Args:
         rvc_spec_path_override (str | None): Optional path to an RVC specification JSON file.
-                                             If None or invalid, uses the bundled default.
         device_mapping_path_override (str | None): Optional path to a device mapping YAML file.
-                                                   If None or invalid, uses the bundled default.
 
     Returns:
       decoder_map: dict[int,dict],
@@ -111,8 +114,8 @@ def load_config_data(
       light_entity_ids: set[str],
       entity_id_lookup: dict[str,dict],
       light_command_info: dict[str,dict],
-      pgn_hex_to_name_map: dict[str, str],  # Added for pgn_hex_to_name_map
-      dgn_pairs: dict,                      # Added for dgn_pairs
+      pgn_hex_to_name_map: dict[str, str],
+      dgn_pairs: dict,
     """
     # --- MODIFICATION START: Path selection logic ---
     default_spec_path, default_mapping_path = _default_paths()
@@ -122,15 +125,7 @@ def load_config_data(
     if rvc_spec_path_override:
         if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
             rvc_spec_path = rvc_spec_path_override
-            # logger.info(f"Using overridden RVC Spec Path: {rvc_spec_path}")
-        else:
-            # logger.warning(f"Provided override path for RVC spec is missing or unreadable:
-            # {rvc_spec_path_override}.
-            # Attempting to use bundled default: {default_spec_path}")
-            pass
-    else:
-        # logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")
-        pass
+        # else: fallback to default
 
     # Determine final mapping path
     device_mapping_path = default_mapping_path  # Default
@@ -139,15 +134,24 @@ def load_config_data(
             device_mapping_path_override, os.R_OK
         ):
             device_mapping_path = device_mapping_path_override
-            # logger.info(f"Using overridden Device Mapping Path: {device_mapping_path}")
-        else:
-            # logger.warning(f"Provided override path for device mapping is missing or unreadable:
-            # {device_mapping_path_override}.
-            # Attempting to use bundled default: {default_mapping_path}")
-            pass
     else:
-        # logger.info(f"Using default Device Mapping Path: {device_mapping_path}")
-        pass
+        # Check for CAN_MODEL_SELECTOR env var (case-insensitive, extension-flexible)
+        model_selector = os.getenv("CAN_MODEL_SELECTOR")
+        if model_selector:
+            config_dir = os.path.dirname(default_mapping_path)
+            selector_lower = model_selector.lower()
+            # List all files in config_dir and match case-insensitively, with or without .yml/.yaml
+            try:
+                for fname in os.listdir(config_dir):
+                    base, ext = os.path.splitext(fname)
+                    if ext.lower() in (".yml", ".yaml") and base.lower() == selector_lower:
+                        candidate = os.path.join(config_dir, fname)
+                        if os.path.exists(candidate) and os.access(candidate, os.R_OK):
+                            device_mapping_path = candidate
+                            break
+            except Exception as e:
+                logger.warning(f"Could not scan mapping directory '{config_dir}': {e}")
+
     # --- MODIFICATION END ---
 
     # 1) Load spec

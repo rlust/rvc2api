@@ -323,7 +323,16 @@
         deviceMappingPath = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Override path to device_mapping.yml";
+          description = "Override path to device_mapping.yml or a model-specific mapping file. If not set, uses modelSelector if provided.";
+        };
+        modelSelector = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Model selector for device mapping file. Example: "2021_Entegra_Aspire_44R" will use
+            "${config.rvc2api.package}/share/rvc2api/mappings/" + config.rvc2api.settings.modelSelector + ".yml" as the mapping file if deviceMappingPath is not set.
+            If both are unset, falls back to device_mapping.yml.
+          '';
         };
       };
       options.rvc2api.package = lib.mkOption {
@@ -361,7 +370,10 @@
             CAN_BUSTYPE = config.rvc2api.settings.canbus.bustype;
             CAN_BITRATE = toString config.rvc2api.settings.canbus.bitrate;
             CAN_SPEC_PATH = lib.mkIf (config.rvc2api.settings.rvcSpecPath != null) config.rvc2api.settings.rvcSpecPath;
-            CAN_MAP_PATH = lib.mkIf (config.rvc2api.settings.deviceMappingPath != null) config.rvc2api.settings.deviceMappingPath;
+            CAN_MAP_PATH =
+              if config.rvc2api.settings.deviceMappingPath != null then config.rvc2api.settings.deviceMappingPath
+              else if config.rvc2api.settings.modelSelector != null then "${config.rvc2api.package}/lib/python3.12/site-packages/rvc_decoder/config/" + config.rvc2api.settings.modelSelector + ".yml"
+              else "${config.rvc2api.package}/lib/python3.12/site-packages/rvc_decoder/config/device_mapping.yml";
           };
         };
       };

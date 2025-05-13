@@ -107,11 +107,12 @@
                                 <div class="space-y-1">
                                     <button data-view="mapping"
                                             class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                        <i class="mdi mdi-file-settings-outline mr-2" aria-hidden="true"></i>device_mapping.yml
+                                        <i class="mdi mdi-file-settings-outline mr-2" aria-hidden="true"></i>Device Mapping
                                     </button>
                                     <button data-view="spec"
                                             class="nav-link w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-                                        <i class="mdi mdi-code-json mr-2" aria-hidden="true"></i>rvc.json
+                                        <i class="mdi mdi-code-json mr-2" aria-hidden="true"></i>RVC
+                                        Spec
                                     </button>
                                 </div>
                             </div>
@@ -264,15 +265,15 @@
                     </div>
                 </section>
                 <section id="mapping-view" class="view-section hidden">
-                    <h1 class="text-3xl font-bold mb-6">Current device_mapping.yml</h1>
+                    <h1 class="text-3xl font-bold mb-6">Current Device Mapping</h1>
                     <pre id="mapping-content" class="bg-gray-800 text-green-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">
-Loading device_mapping.yml...</pre>
+Loading device mapping...</pre>
                 </section>
                 <section id="spec-view" class="view-section hidden">
-                    <h1 class="text-3xl font-bold mb-2">Current rvc.json</h1>
+                    <h1 class="text-3xl font-bold mb-2">Current RVC Spec</h1>
                     <div id="spec-metadata" class="mb-4 text-sm text-gray-400">Loading spec metadata...</div>
                     <pre id="spec-content" class="bg-gray-800 text-blue-300 p-4 rounded overflow-auto max-h-[70vh] font-mono text-sm whitespace-pre-wrap">
-Loading rvc.json...</pre>
+Loading RVC spec...</pre>
                 </section>
                 <!-- Unmapped Entries View -->
                 <section id="unmapped-view" class="view-section hidden">
@@ -280,8 +281,8 @@ Loading rvc.json...</pre>
                     <p class="mb-4 text-gray-400">
                         These are CAN messages received by the system that could not be
                         mapped to a known device based on your
-                        <code>device_mapping.yml</code>. Use this information to help build
-                        out your configuration.
+                        <code>Device Mapping</code>. Use this information to help build out
+                        your configuration.
                     </p>
                     <div id="unmapped-entries-container" class="space-y-6">
                         <p id="unmapped-loading-message">Loading unmapped entries...</p>
@@ -292,9 +293,7 @@ Loading rvc.json...</pre>
                     <h1 class="text-3xl font-bold mb-6">Unknown PGNs</h1>
                     <p class="mb-4">
                         These are PGNs (Parameter Group Numbers) observed on the CAN bus
-                        that are not defined in the loaded RVC specification
-                        (<code>rvc.json</code>). This might indicate a newer or custom
-                        device.
+                        that are not defined in the loaded RVC specification (<code>RVC Spec</code>). This might indicate a newer or custom device.
                     </p>
                     <div id="unknown-pgns-container" class="space-y-6">
                         <p id="unknown-pgns-loading-message" class="text-lg">Loading unknown PGNs...</p>
