@@ -20,6 +20,7 @@ classifiers = [
 
 # src layout
 packages = [
+  { include = "common", from = "src" },
   { include = "console_client", from = "src" },
   { include = "core_daemon", from = "src" },
   { include = "rvc_decoder", from = "src" },
