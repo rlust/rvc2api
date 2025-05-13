@@ -38,14 +38,21 @@ class WebSocketLogHandler(logging.Handler):
 
     def emit(self, record):
         log_entry = self.format(record)
-        # Iterate over a copy of the set for safe removal if a client disconnects
         for ws_client in list(log_ws_clients):
             try:
                 if self.loop and self.loop.is_running():
                     coro = ws_client.send_text(log_entry)
-                    asyncio.run_coroutine_threadsafe(coro, self.loop)
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.loop)
+
+                    def remove_on_fail(fut):
+                        try:
+                            fut.result()
+                        except Exception:
+                            log_ws_clients.discard(ws_client)
+
+                    fut.add_done_callback(remove_on_fail)
             except Exception:
-                log_ws_clients.discard(ws_client)  # Remove client if send fails
+                log_ws_clients.discard(ws_client)
 
 
 # ── Broadcasting ────────────────────────────────────────────────────────────

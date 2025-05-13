@@ -56,13 +56,10 @@ def mock_websocket_client():
 
 @pytest.fixture
 def mock_asyncio_loop():
-    """Provides a mock `asyncio.AbstractEventLoop`.
-
-    The mock loop has `is_running` configured to return `True` by default,
-    simulating an active event loop for the `WebSocketLogHandler` tests.
-    """
+    """Provides a mock `asyncio.AbstractEventLoop` with run_coroutine_threadsafe mocked."""
     loop = MagicMock(spec=asyncio.AbstractEventLoop)
     loop.is_running.return_value = True
+    loop.run_coroutine_threadsafe = MagicMock()
     return loop
 
 
@@ -99,7 +96,7 @@ class TestWebSocketLogHandler:
         handler = WebSocketLogHandler(loop=mock_asyncio_loop)
         websocket.log_ws_clients.add(mock_websocket_client)
 
-        # Simulate run_coroutine_threadsafe raising an error, or the coro itself
+        # Simulate run_coroutine_threadsafe raising an error
         mock_asyncio_loop.run_coroutine_threadsafe.side_effect = Exception("Send failed")
 
         record = logging.LogRecord(
@@ -113,7 +110,25 @@ class TestWebSocketLogHandler:
             func="test_func",
         )
         handler.emit(record)
+        assert mock_websocket_client not in websocket.log_ws_clients
 
+        # Simulate coroutine failure after scheduling (done callback)
+        websocket.log_ws_clients.add(mock_websocket_client)
+        # Reset side effect for scheduling
+        mock_asyncio_loop.run_coroutine_threadsafe.side_effect = None
+
+        # Create a mock future
+        class DummyFuture:
+            def add_done_callback(self, cb):
+                # Simulate a coroutine failure
+                class DummyResult:
+                    def result(self):
+                        raise Exception("Send failed in coroutine")
+
+                cb(DummyResult())
+
+        mock_asyncio_loop.run_coroutine_threadsafe.return_value = DummyFuture()
+        handler.emit(record)
         assert mock_websocket_client not in websocket.log_ws_clients
 
     def test_emit_no_clients(self, mock_asyncio_loop):

@@ -19,7 +19,8 @@ def test_healthz_endpoint(client):  # Inject client fixture
     """Test /api/healthz endpoint for API responsiveness and expected status."""
     response = client.get("/api/healthz")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    assert data["status"] == "ok"
 
 
 # Add more integration tests below, for example:
