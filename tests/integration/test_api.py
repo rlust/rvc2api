@@ -16,8 +16,8 @@ for external dependencies like actual CAN bus communication.
 
 
 def test_healthz_endpoint(client):  # Inject client fixture
-    """Test /healthz endpoint for API responsiveness and expected status."""
-    response = client.get("/healthz")
+    """Test /api/healthz endpoint for API responsiveness and expected status."""
+    response = client.get("/api/healthz")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
