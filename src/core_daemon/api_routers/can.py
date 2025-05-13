@@ -299,6 +299,7 @@ async def get_network_map():
         friendly_name = None
         area = None
         device_type = None
+        notes = None
         if dgn and instance:
             key = (dgn.upper(), instance)
             dev = status_lookup.get(key) or device_lookup.get(key)
@@ -306,6 +307,13 @@ async def get_network_map():
                 friendly_name = dev.get("friendly_name")
                 area = dev.get("suggested_area")
                 device_type = dev.get("device_type")
+                notes = dev.get("notes")
+        # Add all extra fields from the last-seen entry (decoded, raw, etc.)
+        extra_fields = {}
+        if entry:
+            for k, v in entry.items():
+                if k not in ("dgn_hex", "instance", "source_addr"):
+                    extra_fields[k] = v
         result.append(
             {
                 "value": addr,
@@ -315,6 +323,8 @@ async def get_network_map():
                 "device_type": device_type,
                 "friendly_name": friendly_name,
                 "area": area,
+                "notes": notes,
+                **extra_fields,
             }
         )
     return result

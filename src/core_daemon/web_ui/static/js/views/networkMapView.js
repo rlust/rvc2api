@@ -47,7 +47,7 @@ function updateNetworkMapTable(data) {
   if (!tbody) return;
   if (!Array.isArray(data) || data.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
+      '<tr><td colspan="10" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
     return;
   }
   tbody.innerHTML = data
@@ -63,8 +63,24 @@ function updateNetworkMapTable(data) {
       <td>${addr.device_type || ""}</td>
       <td>${addr.friendly_name || ""}</td>
       <td>${addr.area || ""}</td>
+      <td>${addr.notes || ""}</td>
       <td>${
-        isSelf ? '<span class="themed-table-note">This node</span>' : ""
+        addr.decoded
+          ? `<pre class='themed-json'>${JSON.stringify(
+              addr.decoded,
+              null,
+              2
+            )}</pre>`
+          : ""
+      }</td>
+      <td>${
+        addr.raw
+          ? `<pre class='themed-json'>${JSON.stringify(
+              addr.raw,
+              null,
+              2
+            )}</pre>`
+          : ""
       }</td>
     </tr>`;
     })
@@ -78,7 +94,7 @@ export function renderNetworkMapView() {
     <p class="mb-4 themed-table-muted">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
     <div id="network-map-loading" class="mb-4">Loading network map...</div>
     <table class="themed-table">
-      <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th></tr></thead>
+      <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th><th>Decoded</th><th>Raw</th></tr></thead>
       <tbody id="network-map-table-body"></tbody>
     </table>`;
   // Fetch initial data via HTTP
