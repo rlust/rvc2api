@@ -85,6 +85,9 @@ observed_source_addresses: set[int] = set()
 # For each source address, track the last-seen sniffer entry (RX or TX)
 last_seen_by_source_addr: dict[int, dict] = {}
 
+# Add global variable for coach_info
+coach_info = None
+
 
 def get_observed_source_addresses():
     """Returns a sorted list of all observed CAN source addresses (as ints)."""
@@ -195,6 +198,7 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     global decoder_map, raw_device_mapping, device_lookup, status_lookup
     global light_entity_ids, entity_id_lookup, light_command_info
     global pgn_hex_to_name_map, KNOWN_COMMAND_STATUS_PAIRS
+    global coach_info  # Add this global to store CoachInfo
     # Globals like state, history, etc., are modified by functions called from here (e.g., preseed)
 
     (
@@ -207,6 +211,7 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
         light_command_info_val,
         pgn_hex_to_name_map_val,
         dgn_pairs_val,  # 9th item: dgn_pairs
+        coach_info_val,  # 10th item: CoachInfo model
     ) = config_data_tuple
 
     # Clear and update global dictionaries
@@ -227,6 +232,7 @@ def initialize_app_from_config(config_data_tuple: tuple, decode_payload_function
     decoder_map = decoder_map_val
     raw_device_mapping = raw_device_mapping_val
     pgn_hex_to_name_map = pgn_hex_to_name_map_val
+    coach_info = coach_info_val  # Store the CoachInfo model globally
 
     # Convert set to sorted list for light_entity_ids, as it's typed List[str] globally
     light_entity_ids = sorted(list(light_entity_ids_set_val))
