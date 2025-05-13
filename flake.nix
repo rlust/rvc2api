@@ -295,8 +295,12 @@
         canbus = {
           channels = lib.mkOption {
             type = lib.types.listOf lib.types.str;
-            default = [ "can0" "can1" ];
-            description = "SocketCAN interfaces to listen on (comma-separated for env)";
+            default = [ "can0" ];
+            description = ''
+              SocketCAN interfaces to listen on (comma-separated for env).
+              Default is [ "can0" ].
+              To use multiple interfaces, set to e.g. [ "can0" "can1" ] in your configuration.
+            '';
           };
           bustype = lib.mkOption {
             type = lib.types.str;
@@ -321,23 +325,29 @@
         };
       };
       config = {
-        systemd.services.rvc2api.environment = {
-          # Pushover
-          ENABLE_PUSHOVER = if config.rvc2api.settings.pushover.enable then "1" else "0";
-          PUSHOVER_API_TOKEN = config.rvc2api.settings.pushover.apiToken;
-          PUSHOVER_USER_KEY = config.rvc2api.settings.pushover.userKey;
-          PUSHOVER_DEVICE = lib.mkIf (config.rvc2api.settings.pushover.device != null) config.rvc2api.settings.pushover.device;
-          PUSHOVER_PRIORITY = lib.mkIf (config.rvc2api.settings.pushover.priority != null) (toString config.rvc2api.settings.pushover.priority);
-          # UptimeRobot
-          ENABLE_UPTIMEROBOT = if config.rvc2api.settings.uptimerobot.enable then "1" else "0";
-          UPTIMEROBOT_API_KEY = config.rvc2api.settings.uptimerobot.apiKey;
-          # CAN bus config
-          CAN_CHANNELS = lib.concatStringsSep "," config.rvc2api.settings.canbus.channels;
-          CAN_BUSTYPE = config.rvc2api.settings.canbus.bustype;
-          CAN_BITRATE = toString config.rvc2api.settings.canbus.bitrate;
-          # Config file overrides
-          CAN_SPEC_PATH = lib.mkIf (config.rvc2api.settings.rvcSpecPath != null) config.rvc2api.settings.rvcSpecPath;
-          CAN_MAP_PATH = lib.mkIf (config.rvc2api.settings.deviceMappingPath != null) config.rvc2api.settings.deviceMappingPath;
+        systemd.services.rvc2api = {
+          description = "RV-C HTTP/WebSocket API";
+          after       = [ "network.target" ];
+          wantedBy    = [ "multi-user.target" ];
+          serviceConfig = {
+            ExecStart = "${config.rvc2api.package}/bin/rvc2api-daemon";
+            Restart    = "always";
+            RestartSec = 5;
+          };
+          environment = {
+            ENABLE_PUSHOVER = if config.rvc2api.settings.pushover.enable then "1" else "0";
+            PUSHOVER_API_TOKEN = config.rvc2api.settings.pushover.apiToken;
+            PUSHOVER_USER_KEY = config.rvc2api.settings.pushover.userKey;
+            PUSHOVER_DEVICE = lib.mkIf (config.rvc2api.settings.pushover.device != null) config.rvc2api.settings.pushover.device;
+            PUSHOVER_PRIORITY = lib.mkIf (config.rvc2api.settings.pushover.priority != null) (toString config.rvc2api.settings.pushover.priority);
+            ENABLE_UPTIMEROBOT = if config.rvc2api.settings.uptimerobot.enable then "1" else "0";
+            UPTIMEROBOT_API_KEY = config.rvc2api.settings.uptimerobot.apiKey;
+            CAN_CHANNELS = lib.concatStringsSep "," config.rvc2api.settings.canbus.channels;
+            CAN_BUSTYPE = config.rvc2api.settings.canbus.bustype;
+            CAN_BITRATE = toString config.rvc2api.settings.canbus.bitrate;
+            CAN_SPEC_PATH = lib.mkIf (config.rvc2api.settings.rvcSpecPath != null) config.rvc2api.settings.rvcSpecPath;
+            CAN_MAP_PATH = lib.mkIf (config.rvc2api.settings.deviceMappingPath != null) config.rvc2api.settings.deviceMappingPath;
+          };
         };
       };
     };
