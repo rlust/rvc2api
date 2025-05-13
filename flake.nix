@@ -324,6 +324,19 @@
           description = "Override path to device_mapping.yml";
         };
       };
+      options.rvc2api.package = lib.mkOption {
+        type = lib.types.package;
+        # NOTE: No default is set here because pkgs is not available in the module context.
+        # Consumers should set this to their rvc2api package, e.g. pkgs.rvc2api or inputs.rvc2api.packages.<system>.rvc2api
+        description = ''
+          The rvc2api package to run as a service.
+          You must set this in your system configuration, e.g.:
+            rvc2api.package = pkgs.rvc2api;
+          or
+            rvc2api.package = inputs.rvc2api.packages."aarch64-linux".rvc2api;
+          (replace "aarch64-linux" with your system if different)
+        '';
+      };
       config = {
         systemd.services.rvc2api = {
           description = "RV-C HTTP/WebSocket API";
