@@ -296,21 +296,39 @@ async def _send_light_can_command(
 
         # --- Fallback: Log TX sniffer entry and add to pending_commands for grouping ---
         from core_daemon.app_state import add_can_sniffer_entry, add_pending_command, decoder_map
+        from rvc_decoder.decode import decode_payload
 
         entry = decoder_map.get(msg.arbitration_id)
         now = time.time()
+        decoded = None
+        raw = None
         instance_str = str(instance)
+        dgn_hex = None
+        name = None
+        # Decode outgoing message if possible
+        if entry:
+            try:
+                decoded, raw = decode_payload(entry, msg.data)
+                # Prefer instance from raw if present
+                if raw and "instance" in raw:
+                    instance_str = str(raw["instance"])
+                dgn_hex = entry.get("dgn_hex")
+                name = entry.get("name")
+            except Exception as e:
+                logger.warning(f"Failed to decode outgoing CAN message for sniffer entry: {e}")
+                dgn_hex = entry.get("dgn_hex")
+                name = entry.get("name")
         sniffer_entry = {
             "timestamp": now,
             "direction": "tx",
             "arbitration_id": msg.arbitration_id,
             "data": msg.data.hex().upper(),
-            "decoded": None,
-            "raw": None,
+            "decoded": decoded,
+            "raw": raw,
             "iface": interface,
             "pgn": entry.get("pgn") if entry else None,
-            "dgn_hex": entry.get("dgn_hex") if entry else None,
-            "name": entry.get("name") if entry else None,
+            "dgn_hex": dgn_hex if dgn_hex else (entry.get("dgn_hex") if entry else None),
+            "name": name if name else (entry.get("name") if entry else None),
             "instance": instance_str,
             "source_addr": msg.arbitration_id & 0xFF,
             "origin": "self",
