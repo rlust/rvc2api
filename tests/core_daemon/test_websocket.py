@@ -47,10 +47,13 @@ def mock_websocket_client():
 
     The mock is an `AsyncMock` to allow awaiting its methods. It includes
     mocked `client.host` and `client.port` attributes for connection identification.
+    Ensures hashability for set operations in tests.
     """
     ws = AsyncMock(spec=WebSocket)
     ws.client.host = "127.0.0.1"
     ws.client.port = 12345
+    ws.__hash__.return_value = id(ws)
+    ws.__eq__.side_effect = lambda other: ws is other
     return ws
 
 
@@ -83,22 +86,18 @@ class TestWebSocketLogHandler:
             func="test_func",
         )
 
-        handler.emit(record)
-
-        mock_asyncio_loop.run_coroutine_threadsafe.assert_called_once()
-        # Check that send_text was part of the coroutine passed
-        coro_sent = mock_asyncio_loop.run_coroutine_threadsafe.call_args[0][0]
-        assert coro_sent.cr_frame.f_locals["self"] == mock_websocket_client
-        assert coro_sent.cr_frame.f_locals["text"] == "Test log message"
+        with patch("asyncio.run_coroutine_threadsafe") as mock_run_coroutine_threadsafe:
+            handler.emit(record)
+            mock_run_coroutine_threadsafe.assert_called_once()
+            mock_websocket_client.send_text.assert_called_once_with("Test log message")
 
     def test_emit_removes_client_on_send_failure(self, mock_asyncio_loop, mock_websocket_client):
         """Tests that a client is removed if sending a log message to it fails."""
         handler = WebSocketLogHandler(loop=mock_asyncio_loop)
         websocket.log_ws_clients.add(mock_websocket_client)
 
-        # Simulate run_coroutine_threadsafe raising an error
-        mock_asyncio_loop.run_coroutine_threadsafe.side_effect = Exception("Send failed")
-
+        # Simulate run_coroutine_threadsafe raising an error by
+        # patching asyncio.run_coroutine_threadsafe
         record = logging.LogRecord(
             name="testlogger",
             level=logging.INFO,
@@ -109,27 +108,25 @@ class TestWebSocketLogHandler:
             exc_info=None,
             func="test_func",
         )
-        handler.emit(record)
-        assert mock_websocket_client not in websocket.log_ws_clients
+        with patch("asyncio.run_coroutine_threadsafe", side_effect=Exception("Send failed")):
+            handler.emit(record)
+        # Use identity check to avoid AsyncMock hash/equality quirks
+        assert not any(ws is mock_websocket_client for ws in websocket.log_ws_clients)
 
         # Simulate coroutine failure after scheduling (done callback)
         websocket.log_ws_clients.add(mock_websocket_client)
-        # Reset side effect for scheduling
-        mock_asyncio_loop.run_coroutine_threadsafe.side_effect = None
 
-        # Create a mock future
         class DummyFuture:
             def add_done_callback(self, cb):
-                # Simulate a coroutine failure
                 class DummyResult:
                     def result(self):
                         raise Exception("Send failed in coroutine")
 
                 cb(DummyResult())
 
-        mock_asyncio_loop.run_coroutine_threadsafe.return_value = DummyFuture()
-        handler.emit(record)
-        assert mock_websocket_client not in websocket.log_ws_clients
+        with patch("asyncio.run_coroutine_threadsafe", return_value=DummyFuture()):
+            handler.emit(record)
+        assert not any(ws is mock_websocket_client for ws in websocket.log_ws_clients)
 
     def test_emit_no_clients(self, mock_asyncio_loop):
         """Tests that emit does not raise an error if no log clients are connected."""
