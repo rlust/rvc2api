@@ -1466,15 +1466,15 @@ document.addEventListener("DOMContentLoaded", fetchAndUpdateFooterStatus);
  * Sets up event listeners, loads initial state, and fetches data for the default view.
  */
 function initializeApp() {
-  APP_VERSION = document.body.dataset.appVersion || "N/A";
+  APP_VERSION = document.body.dataset.appVersion || null;
   if (appVersionDisplay) {
-    appVersionDisplay.textContent = `v${APP_VERSION}`;
-  } else if (appHeader && APP_VERSION !== "N/A") {
-    const versionSpan = createDomElement("span", {
-      className: "text-xs text-gray-500 ml-2",
-      textContent: `v${APP_VERSION}`,
-    });
-    appHeader.appendChild(versionSpan);
+    if (APP_VERSION && APP_VERSION !== "N/A") {
+      appVersionDisplay.textContent = `v${APP_VERSION}`;
+      appVersionDisplay.style.display = "inline";
+    } else {
+      appVersionDisplay.textContent = "";
+      appVersionDisplay.style.display = "none";
+    }
   }
 
   const savedTheme = localStorage.getItem(SELECTED_THEME_KEY);
@@ -1547,6 +1547,11 @@ if (typeof initThemeDropdown === "function") {
   if (patchedApplyTheme) {
     window.applyTheme = patchedApplyTheme;
   }
+}
+
+// On page load, after applying the saved theme, also update the dropdown label and highlight
+if (typeof window.applyTheme === "function") {
+  window.applyTheme(localStorage.getItem(SELECTED_THEME_KEY) || DEFAULT_THEME);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
