@@ -34,10 +34,10 @@ function renderSnifferModeToggle() {
   if (!container) return;
   container.innerHTML = `
     <div class="sniffer-toggle flex gap-2 mb-2">
-      <button id="sniffer-mode-all" class="themed-table-btn${
+      <button id="sniffer-mode-all" type="button" class="themed-table-btn${
         snifferMode === "all" ? " active" : ""
       }">All CAN Messages</button>
-      <button id="sniffer-mode-control" class="themed-table-btn${
+      <button id="sniffer-mode-control" type="button" class="themed-table-btn${
         snifferMode === "control" ? " active" : ""
       }">Command/Control Grouped</button>
     </div>
