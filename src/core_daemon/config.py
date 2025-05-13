@@ -9,6 +9,12 @@ This module is responsible for:
 - Resolving paths to static files and Jinja2 templates for the web UI,
   using importlib.resources with a fallback to __file__-based resolution.
 - Providing CAN bus configuration (channels, bustype, bitrate) from environment variables.
+- Loading user-supplied coach info from an environment variable (see load_user_coach_info_from_env).
+
+Note on *_PATH variables:
+    Variables ending with _PATH (e.g., ACTUAL_SPEC_PATH, ACTUAL_MAP_PATH) store absolute
+    filesystem pathsto configuration files. This naming convention clarifies that the
+    variable holds a path string, not file content.
 """
 
 import importlib.resources  # Added for robust path finding
@@ -16,6 +22,9 @@ import logging
 import os
 
 import coloredlogs
+import yaml
+
+from common.models import UserCoachInfo
 
 # Removed WebSocketLogHandler import as it's handled in main.py
 
@@ -320,3 +329,24 @@ def get_canbus_config():
         "bustype": os.getenv("CAN_BUSTYPE", "socketcan"),
         "bitrate": int(os.getenv("CAN_BITRATE", "500000")),
     }
+
+
+def load_user_coach_info_from_env() -> UserCoachInfo | None:
+    """
+    Loads user-supplied coach info from the path specified in the
+    RVC2API_USER_COACH_INFO_PATH environment variable.
+
+    Returns:
+        UserCoachInfo | None: An instance of UserCoachInfo if the file exists
+        and is valid, otherwise None.
+
+    The environment variable should point to a YAML file containing
+    user-supplied coach information (e.g., VIN, serial numbers, owner, etc).
+    This function parses the YAML and returns a validated model.
+    """
+    path = os.getenv("RVC2API_USER_COACH_INFO_PATH")
+    if path and os.path.exists(path):
+        with open(path, "r") as f:
+            data = yaml.safe_load(f) or {}
+        return UserCoachInfo(**data)
+    return None
