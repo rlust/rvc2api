@@ -60,13 +60,13 @@
                 </select>
             </div>
         </header>
-        <div class="flex flex-1 overflow-hidden">
+        <div class="flex flex-1 overflow-hidden min-h-0">
             <!-- Sidebar Navigation -->
             <!-- Base width, JS overrides for collapsed state. Hidden on mobile, visible on desktop by default -->
             <aside id="sidebar"
-                   class="fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 flex flex-col justify-between bg-gray-800 px-4 pt-4 pb-0 border-r border-gray-700 overflow-y-auto transition-transform duration-300 ease-in-out transform -translate-x-full md:translate-x-0"
+                   class="fixed top-16 left-0 z-40 h-[calc(100vh-4rem-2.5rem)] w-64 flex flex-col justify-between bg-gray-800 px-4 pt-4 pb-0 border-r border-gray-700 overflow-y-auto transition-transform duration-300 ease-in-out transform -translate-x-full md:translate-x-0"
                    aria-label="Sidebar">
-                <div id="sidebarNavContent" class="flex-grow overflow-y-auto">
+                <div id="sidebarNavContent" class="flex-grow overflow-y-auto min-h-0">
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-lg font-semibold">Navigation</span>
                         <button id="closeSidebarButton"
@@ -332,7 +332,7 @@ Loading rvc.json...</pre>
         <div id="pinnedLogsContainer"
              class="fixed bottom-8 left-0 right-0 z-[60] bg-gray-800 border-t border-gray-700 shadow-lg transition-all duration-300 ease-in-out"
              style="height: 3rem;
-                    margin-bottom: 2.5rem">
+                    margin-bottom: 0.5rem">
             <!-- Initial height for collapsed header -->
             <div id="pinnedLogsResizeHandle"
                  tabindex="0"
