@@ -122,18 +122,15 @@ def load_config_data(
     if rvc_spec_path_override:
         if os.path.exists(rvc_spec_path_override) and os.access(rvc_spec_path_override, os.R_OK):
             rvc_spec_path = rvc_spec_path_override
-            logger.info(
-                f"Using overridden RVC Spec Path: {rvc_spec_path}"
-            )  # Changed to logger.info
+            # logger.info(f"Using overridden RVC Spec Path: {rvc_spec_path}")
         else:
-            logger.warning(  # Changed to logger.warning
-                f"Provided override path for RVC spec is missing or unreadable: "
-                f"{rvc_spec_path_override}. "
-                f"Attempting to use bundled default: {default_spec_path}"
-            )
-            logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")  # Changed to logger.info
+            # logger.warning(f"Provided override path for RVC spec is missing or unreadable:
+            # {rvc_spec_path_override}.
+            # Attempting to use bundled default: {default_spec_path}")
+            pass
     else:
-        logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")  # Changed to logger.info
+        # logger.info(f"Using default RVC Spec Path: {rvc_spec_path}")
+        pass
 
     # Determine final mapping path
     device_mapping_path = default_mapping_path  # Default
@@ -142,22 +139,15 @@ def load_config_data(
             device_mapping_path_override, os.R_OK
         ):
             device_mapping_path = device_mapping_path_override
-            logger.info(
-                f"Using overridden Device Mapping Path: {device_mapping_path}"
-            )  # Changed to logger.info
+            # logger.info(f"Using overridden Device Mapping Path: {device_mapping_path}")
         else:
-            logger.warning(  # Changed to logger.warning
-                f"Provided override path for device mapping is missing or unreadable: "
-                f"{device_mapping_path_override}. "
-                f"Attempting to use bundled default: {default_mapping_path}"
-            )
-            logger.info(
-                f"Using default Device Mapping Path: {device_mapping_path}"
-            )  # Changed to logger.info
+            # logger.warning(f"Provided override path for device mapping is missing or unreadable:
+            # {device_mapping_path_override}.
+            # Attempting to use bundled default: {default_mapping_path}")
+            pass
     else:
-        logger.info(
-            f"Using default Device Mapping Path: {device_mapping_path}"
-        )  # Changed to logger.info
+        # logger.info(f"Using default Device Mapping Path: {device_mapping_path}")
+        pass
     # --- MODIFICATION END ---
 
     # 1) Load spec
@@ -172,16 +162,16 @@ def load_config_data(
     for entry in specs:
         sid = entry.get("id")
         if sid is None:
-            logger.warning(f"Skipping spec without 'id': {entry}")  # Changed to logger.warning
+            # logger.warning(f"Skipping spec without 'id': {entry}")
             continue
         try:
             dec_id = sid if isinstance(sid, int) else int(sid, 16)
         except ValueError:
-            logger.warning(f"Invalid 'id' in spec: {sid}")  # Changed to logger.warning
+            # logger.warning(f"Invalid 'id' in spec: {sid}")
             continue
         entry["dgn_hex"] = f"{(dec_id >> 8) & 0x3FFFF:X}"
         decoder_map[dec_id] = entry
-    logger.info(f"Loaded {len(decoder_map)} spec entries.")  # Changed to logger.info
+    # logger.info(f"Loaded {len(decoder_map)} spec entries.")
 
     # Create a map from PGN hex string to PGN name for unmapped entry enrichment
     pgn_hex_to_name_map: dict[str, str] = {}
@@ -225,19 +215,18 @@ def load_config_data(
 
                     eid = merged.get("entity_id")
                     fname = merged.get("friendly_name")
-                    # ADD THIS LOGGING
-                    log_msg_processing = (
-                        f"Processing entry: DGN={dgn_hex}, Inst={inst_str}, "
-                        f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
-                        f"Merged FName={fname}"
-                    )
-                    logger.info(log_msg_processing)
+                    # log_msg_processing = (
+                    #     f"Processing entry: DGN={dgn_hex}, Inst={inst_str}, "
+                    #     f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
+                    #     f"Merged FName={fname}"
+                    # )
+                    # logger.info(log_msg_processing)
                     if eid and fname:
-                        log_msg_adding = (
-                            f"Adding to entity_id_lookup: eid='{eid}', fname='{fname}' "
-                            f"with merged data: {json.dumps(merged, indent=2)}"
-                        )
-                        logger.info(log_msg_adding)
+                        # log_msg_adding = (
+                        #     f"Adding to entity_id_lookup: eid='{eid}', fname='{fname}' "
+                        #     f"with merged data: {json.dumps(merged, indent=2)}"
+                        # )
+                        # logger.info(log_msg_adding)
                         key = (dgn_hex.upper(), str(inst_str))
                         device_lookup[key] = merged
                         entity_id_lookup[eid] = merged
@@ -254,27 +243,24 @@ def load_config_data(
                                 "interface": merged.get("interface"),
                             }
                     else:
-                        # ADD THIS LOGGING
-                        log_msg_skipping = (
-                            f"Skipping entry for entity_id_lookup: DGN={dgn_hex}, Inst={inst_str}, "
-                            f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
-                            f"Merged FName={fname}. "
-                            "eid and fname must be present and non-empty."
-                        )
-                        logger.warning(log_msg_skipping)
-        logger.info(f"Loaded {len(device_lookup)} device_lookup entries.")  # Changed to logger.info
-        logger.info(f"Loaded {len(status_lookup)} status_lookup entries.")  # Changed to logger.info
-        status_keys_to_log = list(status_lookup.keys())
-        if len(status_keys_to_log) > 50:
-            logger.info(
-                f"status_lookup keys (first 50): {status_keys_to_log[:50]}"
-            )  # Changed to logger.info
-        else:
-            logger.info(f"status_lookup keys: {status_keys_to_log}")  # Changed to logger.info
+                        # log_msg_skipping = (
+                        #     f"Skipping entry for entity_id_lookup:
+                        #     DGN={dgn_hex}, Inst={inst_str}, "
+                        #     f"Raw Cfg EID={cfg.get('entity_id')}, Merged EID={eid}, "
+                        #     f"Merged FName={fname}. "
+                        #     "eid and fname must be present and non-empty."
+                        # )
+                        # logger.warning(log_msg_skipping)
+                        pass
+        # logger.info(f"Loaded {len(device_lookup)} device_lookup entries.")
+        # logger.info(f"Loaded {len(status_lookup)} status_lookup entries.")
+        # status_keys_to_log = list(status_lookup.keys())
+        # if len(status_keys_to_log) > 50:
+        #     logger.info(f"status_lookup keys (first 50): {status_keys_to_log[:50]}")
+        # else:
+        #     logger.info(f"status_lookup keys: {status_keys_to_log}")
     else:
-        logger.error(
-            f"Device mapping file NOT FOUND: {device_mapping_path}"
-        )  # Changed to logger.error
+        logger.error(f"Device mapping file NOT FOUND: {device_mapping_path}")
 
     return (
         decoder_map,
