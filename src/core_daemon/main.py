@@ -55,6 +55,9 @@ from core_daemon.config import (
 from core_daemon.feature_manager import shutdown_all as feature_shutdown_all
 from core_daemon.feature_manager import startup_all as feature_startup_all
 
+# Import the GitHub update checker
+from core_daemon.github_update_checker import update_checker
+
 # Import the middleware
 from core_daemon.middleware import prometheus_http_middleware
 from core_daemon.websocket import WebSocketLogHandler
@@ -111,6 +114,10 @@ def create_app():
             logger.info("WebSocketLogHandler initialized and added to the root logger.")
         except Exception as e:
             logger.error(f"Failed to setup WebSocket logging: {e}", exc_info=True)
+
+        # Start GitHub update checker
+        await update_checker.start()
+        app.state.update_checker = update_checker
 
         loop = asyncio.get_running_loop()
         canbus_config = get_canbus_config()

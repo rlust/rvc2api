@@ -1394,19 +1394,13 @@ const footerHealthStatus = document.getElementById("footerHealthStatus");
 const footerAppVersion = document.getElementById("footerAppVersion");
 const footerVersionStatus = document.getElementById("footerVersionStatus");
 
-// Simulate fetching the latest version from GitHub (replace with real fetch in production)
+// Fetch the latest version from the backend API instead of GitHub directly
 async function fetchLatestVersion() {
-  // Example: fetch from GitHub releases API or a static endpoint
-  // For now, hardcode for demo
-  // return "0.2.0";
   try {
-    const resp = await fetch(
-      "https://api.github.com/repos/carpenike/rvc2api/releases/latest"
-    );
+    const resp = await fetch(`${apiBasePath}/status/latest_release`);
     if (!resp.ok) throw new Error("Failed to fetch latest version");
     const data = await resp.json();
-    // Tag name is usually like 'v0.2.0' or '0.2.0'
-    return data.tag_name.replace(/^v/, "");
+    return data.latest_version || null;
   } catch (e) {
     return null;
   }

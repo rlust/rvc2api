@@ -9,6 +9,8 @@ import logging
 import os
 from typing import Dict, Optional
 
+from core_daemon.github_update_checker import UpdateCheckerFeature
+
 from .feature_base import Feature
 from .uptimerobot import UptimeRobotFeature
 
@@ -59,9 +61,11 @@ async def shutdown_all():
 
 # --- Feature Registration Section ---
 # Register core and optional features here.
-# Core features (always enabled):
-register_feature(Feature(name="canbus", enabled=True, core=True))
-register_feature(Feature(name="web_ui", enabled=True, core=True))
+#
+# Core features (always enabled, always present in the API):
+register_feature(Feature(name="canbus", enabled=True, core=True))  # CAN bus support
+register_feature(Feature(name="web_ui", enabled=True, core=True))  # Web UI
+register_feature(UpdateCheckerFeature())  # GitHub update checker (core background service)
 
 # Optional features (enabled via environment variable or config):
 register_feature(
@@ -85,4 +89,14 @@ register_feature(
         },
     )
 )
+
+# --- Core background services (not managed as features) ---
+# The following are always-on infrastructure/background services, not registered as features:
+# - GitHub update checker (github_update_checker.py): provides update/version info for the API/UI
+# - WebSocket/log streaming: managed as part of the core app
+# - Metrics/Prometheus: provided via middleware
+#
+# If you want to make any of these toggleable, you can refactor them as Feature subclasses
+# and register here.
+#
 # Add more features as needed following this pattern.

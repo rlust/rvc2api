@@ -6,6 +6,7 @@ This module provides FastAPI endpoints for:
 - Managing WebSocket connections for real-time updates (e.g., CAN messages, logs).
 - Providing server and application status.
 - Streaming application logs to WebSocket clients.
+- Checking for the latest GitHub release (server-side cache).
 """
 
 import asyncio
@@ -14,13 +15,14 @@ import logging
 import os
 import time  # Added for uptime
 
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from core_daemon import app_state, feature_manager
 from core_daemon._version import VERSION  # Import VERSION
 from core_daemon.config import ACTUAL_MAP_PATH, ACTUAL_SPEC_PATH, get_actual_paths
+from core_daemon.models import GitHubUpdateStatus
 from core_daemon.websocket import (
     can_sniffer_ws_endpoint,
     features_ws_endpoint,
@@ -192,6 +194,54 @@ async def get_application_status():
             ),  # Assuming 'log_ws_clients' is accessible or moved to app_state
         },
     }
+
+
+@api_router_config_ws.get("/status/latest_release", response_model=GitHubUpdateStatus)
+async def get_latest_github_release(request: Request):
+    """
+    Returns the latest GitHub release version and metadata as checked by the background task.
+
+    Response example:
+        {
+            "latest_version": "0.2.0",
+            "last_checked": 1715600000.0,
+            "last_success": 1715600000.0,
+            "error": null,
+            "latest_release_info": {
+                "tag_name": "v0.2.0",
+                "name": "Release v0.2.0",
+                "body": "Release notes...",
+                "html_url": "https://github.com/owner/repo/releases/tag/v0.2.0",
+                "published_at": "2025-05-13T12:00:00Z",
+                "created_at": "2025-05-12T18:00:00Z",
+                "assets": [
+                    {"name": "asset.zip", "browser_download_url": "...", "size": 1234,
+                    "download_count": 42}
+                ],
+                "tarball_url": "...",
+                "zipball_url": "...",
+                "prerelease": false,
+                "draft": false,
+                "author": {"login": "octocat", "html_url": "https://github.com/octocat"},
+                "discussion_url": "..."
+            }
+        }
+    """
+    checker = request.app.state.update_checker
+    # Use Pydantic model for serialization/validation
+    return GitHubUpdateStatus.parse_obj(checker.get_status())
+
+
+@api_router_config_ws.post("/status/force_update_check", response_model=GitHubUpdateStatus)
+async def force_github_update_check(request: Request, background_tasks: BackgroundTasks):
+    """
+    Forces an immediate GitHub update check and returns the new status.
+    This triggers the backend to fetch the latest release from GitHub now
+    (not waiting for the next poll).
+    """
+    checker = request.app.state.update_checker
+    await checker.force_check()
+    return GitHubUpdateStatus.parse_obj(checker.get_status())
 
 
 # --- End New Status Endpoints ---

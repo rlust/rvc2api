@@ -160,3 +160,42 @@ class CANInterfaceStats(BaseModel):
 
 class AllCANStats(BaseModel):
     interfaces: Dict[str, CANInterfaceStats]
+
+
+class GitHubReleaseAsset(BaseModel):
+    """Represents a downloadable asset attached to a GitHub release."""
+
+    name: str
+    browser_download_url: str
+    size: Optional[int] = None
+    download_count: Optional[int] = None
+
+
+class GitHubReleaseInfo(BaseModel):
+    """Represents metadata about a GitHub release for update checking."""
+
+    tag_name: Optional[str] = None
+    name: Optional[str] = None
+    body: Optional[str] = None
+    html_url: Optional[str] = None
+    published_at: Optional[str] = None
+    created_at: Optional[str] = None
+    assets: Optional[List[GitHubReleaseAsset]] = None
+    tarball_url: Optional[str] = None
+    zipball_url: Optional[str] = None
+    prerelease: Optional[bool] = None
+    draft: Optional[bool] = None
+    author: Optional[dict] = None  # login, html_url
+    discussion_url: Optional[str] = None
+
+
+class GitHubUpdateStatus(BaseModel):
+    """Represents the status and metadata of the latest GitHub release as cached by the server."""
+
+    latest_version: Optional[str] = None
+    last_checked: Optional[float] = None
+    last_success: Optional[float] = None
+    error: Optional[str] = None
+    latest_release_info: Optional[GitHubReleaseInfo] = None
+    repo: Optional[str] = None
+    api_url: Optional[str] = None
