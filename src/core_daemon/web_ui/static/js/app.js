@@ -1461,7 +1461,8 @@ async function fetchAndUpdateFooterStatus() {
   }
 }
 
-setInterval(fetchAndUpdateFooterStatus, 10000);
+// Check for updates every hour instead of every 10 seconds to avoid rate limiting
+setInterval(fetchAndUpdateFooterStatus, 3600000);
 document.addEventListener("DOMContentLoaded", fetchAndUpdateFooterStatus);
 
 // =====================
