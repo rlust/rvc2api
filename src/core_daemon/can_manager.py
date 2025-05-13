@@ -124,42 +124,8 @@ async def can_writer():
                     "origin": origin,
                 }
                 add_can_sniffer_entry(sniffer_entry)
+                add_pending_command(sniffer_entry)
                 # --- END CAN Sniffer Logging ---
-                # --- CAN Command/Control Sniffer Logging (TX) ---
-                # Heuristic: log all outgoing messages with 'command' or 'control'
-                # in the PGN name if available
-                # (If PGN name is not available, log all TX for now)
-                entry = decoder_map.get(msg.arbitration_id)
-                if entry and (
-                    entry.get("name", "").lower().find("command") != -1
-                    or entry.get("name", "").lower().find("control") != -1
-                ):
-                    now = time.time()
-                    instance = None
-                    # Try to decode instance if possible
-                    try:
-                        from rvc_decoder import decode_payload
-
-                        decoded, raw = decode_payload(entry, msg.data)
-                        instance = raw.get("instance")
-                    except Exception:
-                        pass
-                    sniffer_entry = {
-                        "timestamp": now,
-                        "direction": "tx",
-                        "arbitration_id": msg.arbitration_id,
-                        "data": msg.data.hex().upper(),
-                        "decoded": None,
-                        "raw": None,
-                        "iface": interface_name,
-                        "pgn": entry.get("pgn"),
-                        "dgn_hex": entry.get("dgn_hex"),
-                        "name": entry.get("name"),
-                        "instance": instance,
-                    }
-                    add_can_sniffer_entry(sniffer_entry)
-                    add_pending_command(sniffer_entry)
-                # --- END CAN Command/Control Sniffer Logging ---
                 await asyncio.sleep(0.05)  # RV-C spec: send commands twice
                 bus.send(msg)
                 logger.info(
