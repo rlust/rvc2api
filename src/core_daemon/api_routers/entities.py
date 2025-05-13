@@ -293,6 +293,31 @@ async def _send_light_can_command(
         update_entity_state_and_history(entity_id, optimistic_payload_to_store)
         text = json.dumps(optimistic_payload_to_store)
         await broadcast_to_clients(text)
+
+        # --- Fallback: Log TX sniffer entry and add to pending_commands for grouping ---
+        from core_daemon.app_state import add_can_sniffer_entry, add_pending_command, decoder_map
+
+        entry = decoder_map.get(msg.arbitration_id)
+        now = time.time()
+        instance_str = str(instance)
+        sniffer_entry = {
+            "timestamp": now,
+            "direction": "tx",
+            "arbitration_id": msg.arbitration_id,
+            "data": msg.data.hex().upper(),
+            "decoded": None,
+            "raw": None,
+            "iface": interface,
+            "pgn": entry.get("pgn") if entry else None,
+            "dgn_hex": entry.get("dgn_hex") if entry else None,
+            "name": entry.get("name") if entry else None,
+            "instance": instance_str,
+            "source_addr": msg.arbitration_id & 0xFF,
+            "origin": "self",
+        }
+        add_can_sniffer_entry(sniffer_entry)
+        add_pending_command(sniffer_entry)
+
         return True
     except Exception as e:
         logger.error(
