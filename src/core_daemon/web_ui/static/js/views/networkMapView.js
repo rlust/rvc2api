@@ -254,12 +254,18 @@ export function renderNetworkMapView() {
           else if (decoded.device_name) friendly = decoded.device_name;
           else if (decoded.Model) friendly = decoded.Model;
           else if (decoded.Manufacturer) friendly = decoded.Manufacturer;
+          // Show TI if present
+          let tiLine = "";
+          if (typeof dgnInfo.ti !== "undefined") {
+            tiLine = `<div class='text-xs themed-table-muted'>TI: ${escapeHTML(String(dgnInfo.ti))}</div>`;
+          }
           // Show friendly name above expand button if found
           return `<div>${
             friendly
               ? `<div class='font-semibold mb-1'>${escapeHTML(friendly)}</div>`
               : ""
           }
+          ${tiLine}
             <button class='expand-json-btn themed-table-btn' onclick="window.toggleDgnJson('${cellId}')">&#x1F50D;</button>
             <span id='${cellId}' class='hidden'>${prettyPrintJSON(
             decoded
@@ -295,6 +301,7 @@ export function renderNetworkMapView() {
         received: true,
         iface: result.iface,
         decoded: result.decoded || null,
+        ti: typeof result.ti !== "undefined" ? result.ti : undefined,
       };
     }
     renderDgnTable();

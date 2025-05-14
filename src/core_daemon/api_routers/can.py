@@ -394,8 +394,8 @@ async def run_canbus_scan_and_broadcast():
     if not interfaces:
         logger.warning("No CAN interfaces available for CANbus scan.")
         return
-    # Send requests to all addresses
-    for dest_addr in range(0x00, 0xFA):
+    # Send requests to all addresses, including broadcast (0xFF)
+    for dest_addr in list(range(0x00, 0xFA)) + [0xFF]:
         for pgn in PGNS:
             # Compose 3-byte PGN in little-endian order for data field
             pgn_bytes = pgn.to_bytes(3, "little")
@@ -410,7 +410,7 @@ async def run_canbus_scan_and_broadcast():
             msg = can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=True)
             for iface in interfaces:
                 await can_tx_queue.put((msg, iface))
-        await asyncio.sleep(0.02)  # Safer delay to avoid CAN buffer overflow
+            await asyncio.sleep(0.002)  # Small delay to avoid CAN buffer overflow
     logger.info("CANbus scan requests sent. Listening for responses...")
     # Listen for responses for a short period (e.g., 2 seconds)
     start_time = time.time()
