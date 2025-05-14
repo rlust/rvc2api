@@ -257,7 +257,9 @@ export function renderNetworkMapView() {
           // Show TI if present
           let tiLine = "";
           if (typeof dgnInfo.ti !== "undefined") {
-            tiLine = `<div class='text-xs themed-table-muted'>TI: ${escapeHTML(String(dgnInfo.ti))}</div>`;
+            tiLine = `<div class='text-xs themed-table-muted'>TI: ${escapeHTML(
+              String(dgnInfo.ti)
+            )}</div>`;
           }
           // Show friendly name above expand button if found
           return `<div>${
@@ -296,6 +298,14 @@ export function renderNetworkMapView() {
     const dgnHex = (result.dgn || result.dgn_hex || "")
       .toString()
       .toUpperCase();
+    console.log(
+      "mergeScanResult: addr",
+      addr,
+      "dgnHex",
+      dgnHex,
+      "result",
+      result
+    ); // Debug log
     if (SCAN_DGNS.map((d) => d.toString(16).toUpperCase()).includes(dgnHex)) {
       scanStatusByAddr[addr].dgns[dgnHex] = {
         received: true,
@@ -317,8 +327,11 @@ export function renderNetworkMapView() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("Scan WS received:", data); // Debug log
         mergeScanResult(data);
-      } catch (e) {}
+      } catch (e) {
+        console.error("WS parse error", e, event.data); // Debug log
+      }
     };
     ws.onopen = () => {};
     ws.onclose = () => {};
