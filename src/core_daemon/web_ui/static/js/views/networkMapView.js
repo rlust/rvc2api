@@ -16,6 +16,12 @@ let networkMapData = {};
 // Track expanded rows for decoded/raw by address value and type
 const expandedNetworkMapRows = new Set();
 
+// DGNs to track for scan responses
+const SCAN_DGNS = [0xee00, 0xfefa, 0xfefc];
+
+// Map: addr.value -> { dgns: { [dgn]: { received: true, iface: string } }, ...other addr fields }
+let scanStatusByAddr = {};
+
 function prettyPrintJSON(obj) {
   if (!obj) return "";
   let jsonString = "";
@@ -115,8 +121,9 @@ function updateNetworkMapTable(data) {
   if (!tbody) return;
   if (!Array.isArray(data) || data.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="10" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
+      '<tr><td colspan="13" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
     networkMapData = {};
+    scanStatusByAddr = {};
     return;
   }
   tbody.innerHTML = "";
@@ -131,6 +138,19 @@ function updateNetworkMapTable(data) {
     // Store pretty JSON as attribute for expansion
     tr.setAttribute("data-decoded-json", prettyPrintJSON(addr.decoded));
     tr.setAttribute("data-raw-json", prettyPrintJSON(addr.raw));
+    // DGN status summary cell
+    let dgnSummary = "";
+    if (scanStatusByAddr[addr.value]) {
+      dgnSummary = SCAN_DGNS.map((dgn) => {
+        const dgnHex = dgn.toString(16).toUpperCase();
+        const status = scanStatusByAddr[addr.value].dgns?.[dgnHex];
+        if (status) {
+          return `<span title="DGN 0x${dgnHex} via ${status.iface}" style="color:green;">&#x2714;</span>`;
+        } else {
+          return `<span title="DGN 0x${dgnHex} missing" style="color:gray;">&#x2718;</span>`;
+        }
+      }).join(" ");
+    }
     tr.innerHTML = `
       <td class="font-mono">${addr.value}</td>
       <td class="font-mono">0x${Number(addr.value)
@@ -144,6 +164,7 @@ function updateNetworkMapTable(data) {
       <td>${addr.notes || ""}</td>
       <td>${addr.decoded ? `<span class='json-summary'>{...}</span>` : ""}</td>
       <td>${addr.raw ? `<span class='json-summary'>{...}</span>` : ""}</td>
+      <td>${dgnSummary}</td>
     `;
     // Add expand buttons if decoded/raw exist
     if (addr.decoded) {
@@ -172,7 +193,7 @@ export function renderNetworkMapView() {
     </div>
     <div id="network-map-loading" class="mb-4">Loading network map...</div>
     <table class="themed-table">
-      <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th><th>Decoded</th><th>Raw</th></tr></thead>
+      <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th><th>Decoded</th><th>Raw</th><th>DGN Status</th></tr></thead>
       <tbody id="network-map-table-body"></tbody>
     </table>`;
   // Fetch initial data via HTTP
@@ -214,6 +235,22 @@ export function renderNetworkMapView() {
       networkMapData[result.value] || {},
       result
     );
+    // Track DGN/interface status
+    if (!scanStatusByAddr[result.value]) {
+      scanStatusByAddr[result.value] = { dgns: {} };
+    }
+    const dgnHex = (result.dgn || (result.dgn_hex ? result.dgn_hex : ""))
+      .toString()
+      .toUpperCase();
+    if (
+      SCAN_DGNS.map((d) => d.toString(16).toUpperCase()).includes(dgnHex) &&
+      result.iface
+    ) {
+      scanStatusByAddr[result.value].dgns[dgnHex] = {
+        received: true,
+        iface: result.iface,
+      };
+    }
     // Re-render the table with updated data
     updateNetworkMapTable(Object.values(networkMapData));
   }
