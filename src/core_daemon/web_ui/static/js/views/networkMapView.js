@@ -40,7 +40,10 @@ function makeExpandButton(rowKey, type) {
   btn.className = "expand-json-btn themed-table-btn";
   btn.title = `Show full ${type} JSON`;
   btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
-  btn.setAttribute("aria-expanded", expandedNetworkMapRows.has(rowKey));
+  btn.setAttribute(
+    "aria-expanded",
+    expandedNetworkMapRows.has(`${rowKey}_${type}`)
+  );
   btn.onclick = function (e) {
     e.stopPropagation();
     toggleExpandRow(rowKey, btn, type);
@@ -51,13 +54,14 @@ function makeExpandButton(rowKey, type) {
 function toggleExpandRow(rowKey, btn, type) {
   const tr = document.getElementById(rowKey);
   if (!tr) return;
-  const expanded = expandedNetworkMapRows.has(rowKey);
+  const expandedKey = `${rowKey}_${type}`;
+  const expanded = expandedNetworkMapRows.has(expandedKey);
   if (expanded) {
     const next = tr.nextSibling;
     if (next && next.classList.contains("expanded-json-row")) {
       next.remove();
     }
-    expandedNetworkMapRows.delete(rowKey);
+    expandedNetworkMapRows.delete(expandedKey);
     btn.setAttribute("aria-expanded", false);
     btn.innerHTML = '<span class="mdi mdi-chevron-down"></span>';
   } else {
@@ -70,7 +74,7 @@ function toggleExpandRow(rowKey, btn, type) {
     td.innerHTML = jsonData;
     expandedTr.appendChild(td);
     tr.parentNode.insertBefore(expandedTr, tr.nextSibling);
-    expandedNetworkMapRows.add(rowKey);
+    expandedNetworkMapRows.add(expandedKey);
     btn.setAttribute("aria-expanded", true);
     btn.innerHTML = '<span class="mdi mdi-chevron-up"></span>';
   }
@@ -143,12 +147,12 @@ function updateNetworkMapTable(data) {
     `;
     // Add expand buttons if decoded/raw exist
     if (addr.decoded) {
-      const btn = makeExpandButton(rowKey + "_decoded", "decoded");
+      const btn = makeExpandButton(rowKey, "decoded");
       const td = tr.querySelector("td:nth-child(9)");
       td.insertBefore(btn, td.firstChild);
     }
     if (addr.raw) {
-      const btn = makeExpandButton(rowKey + "_raw", "raw");
+      const btn = makeExpandButton(rowKey, "raw");
       const td = tr.querySelector("td:nth-child(10)");
       td.insertBefore(btn, td.firstChild);
     }
