@@ -5,10 +5,11 @@ This module includes routes to get the status of CAN interfaces,
 check the CAN transmit queue, and CAN sniffer endpoints.
 """
 
+import asyncio
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pyroute2 import IPRoute
 
@@ -20,6 +21,33 @@ from core_daemon.websocket import network_map_ws_endpoint
 logger = logging.getLogger(__name__)
 
 api_router_can = APIRouter()  # FastAPI router for CAN-related endpoints
+
+# In-memory set of WebSocket clients for scan results
+canbus_scan_ws_clients = set()
+
+
+@api_router_can.websocket("/ws/canbus-scan")
+async def canbus_scan_ws(websocket: WebSocket):
+    await websocket.accept()
+    canbus_scan_ws_clients.add(websocket)
+    try:
+        while True:
+            # Keep the connection open; actual scan results will be pushed from the scan task
+            await asyncio.sleep(60)
+    except WebSocketDisconnect:
+        canbus_scan_ws_clients.remove(websocket)
+
+
+# Utility function to broadcast scan results to all connected clients
+async def broadcast_canbus_scan_result(result):
+    to_remove = set()
+    for ws in canbus_scan_ws_clients:
+        try:
+            await ws.send_json(result)
+        except Exception:
+            to_remove.add(ws)
+    for ws in to_remove:
+        canbus_scan_ws_clients.remove(ws)
 
 
 def get_stats_from_pyroute2_link(link: Any) -> CANInterfaceStats:
@@ -329,6 +357,74 @@ async def get_network_map():
             }
         )
     return result
+
+
+@api_router_can.post("/canbus-scan", status_code=202)
+async def start_canbus_scan(background_tasks: BackgroundTasks):
+    """
+    Initiates a CANbus scan (PGN 59904 requests for Address Claimed, Product ID,
+    and Software Version).Results will be streamed to clients via WebSocket.
+    """
+    logger.info("CANbus scan requested via API endpoint.")
+    background_tasks.add_task(run_canbus_scan_and_broadcast)
+    return {"status": "scan started"}
+
+
+# Implement the scan logic (skeleton)
+async def run_canbus_scan_and_broadcast():
+    """
+    For each address (0x00–0xF9), send PGN 59904 requests for Address Claimed (0xEE00),
+    Product ID (0xFEFA), and Software Version (0xFEFC) to all CAN interfaces.
+    Listen for responses and broadcast them to WebSocket clients.
+    """
+    import time
+
+    import can
+
+    from core_daemon.can_manager import buses, can_tx_queue
+    from core_daemon.config import CONTROLLER_SOURCE_ADDR
+
+    # PGNs to request
+    PGNS = [0xEE00, 0xFEFA, 0xFEFC]
+    # PGN 59904 (Request)
+    REQUEST_PGN = 0x00EA00
+    # Get all available CAN interfaces
+    interfaces = list(buses.keys())
+    if not interfaces:
+        logger.warning("No CAN interfaces available for CANbus scan.")
+        return
+    # Send requests to all addresses
+    for dest_addr in range(0x00, 0xFA):
+        for pgn in PGNS:
+            # Compose 3-byte PGN in little-endian order for data field
+            pgn_bytes = pgn.to_bytes(3, "little")
+            data = pgn_bytes + bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+            # Compose arbitration ID for PGN 59904 (Request)
+            prio = 6
+            dp = (REQUEST_PGN >> 16) & 1
+            pf = (REQUEST_PGN >> 8) & 0xFF
+            ps = dest_addr
+            sa = CONTROLLER_SOURCE_ADDR
+            arbitration_id = (prio << 26) | (dp << 24) | (pf << 16) | (ps << 8) | sa
+            msg = can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=True)
+            for iface in interfaces:
+                await can_tx_queue.put((msg, iface))
+        await asyncio.sleep(0.002)  # Small delay to avoid flooding the bus
+    logger.info("CANbus scan requests sent. Listening for responses...")
+    # Listen for responses for a short period (e.g., 2 seconds)
+    start_time = time.time()
+    seen_addresses = set()
+    from core_daemon.app_state import last_seen_by_source_addr
+
+    while time.time() - start_time < 2.0:
+        # Check for new responses in last_seen_by_source_addr
+        for addr, entry in last_seen_by_source_addr.items():
+            if addr not in seen_addresses:
+                seen_addresses.add(addr)
+                # Broadcast the entry as a scan result
+                await broadcast_canbus_scan_result(entry)
+        await asyncio.sleep(0.1)
+    logger.info("CANbus scan complete.")
 
 
 api_router_can.add_api_websocket_route("/ws/network-map", network_map_ws_endpoint)

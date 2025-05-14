@@ -11,6 +11,7 @@ import { showToast } from "../utils.js";
 import { WebSocketManager } from "../wsManager.js";
 
 let networkMapSocketManager = null;
+let networkMapData = {};
 
 // Track expanded rows for decoded/raw by address value and type
 const expandedNetworkMapRows = new Set();
@@ -29,7 +30,7 @@ function prettyPrintJSON(obj) {
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
+    .replace(/</ / g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
@@ -111,10 +112,13 @@ function updateNetworkMapTable(data) {
   if (!Array.isArray(data) || data.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="10" class="text-center themed-table-muted">No addresses observed yet.</td></tr>';
+    networkMapData = {};
     return;
   }
   tbody.innerHTML = "";
+  networkMapData = {};
   data.forEach((addr) => {
+    networkMapData[addr.value] = addr;
     const isSelf = addr.is_self;
     const rowKey = `networkmap_${addr.value}`;
     const tr = document.createElement("tr");
@@ -156,7 +160,12 @@ export function renderNetworkMapView() {
   const view = document.getElementById("network-map-view");
   if (!view) return;
   view.innerHTML = `<h1 class="text-3xl font-bold mb-6">CAN Network Map</h1>
-    <p class="mb-4 themed-table-muted">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
+    <div class="mb-4 flex items-center gap-4">
+      <p class="themed-table-muted flex-1">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
+      <button id="btn-canbus-scan" class="themed-table-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow flex items-center gap-2">
+        <i class="mdi mdi-radar" aria-hidden="true"></i>Scan CANbus
+      </button>
+    </div>
     <div id="network-map-loading" class="mb-4">Loading network map...</div>
     <table class="themed-table">
       <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th><th>Decoded</th><th>Raw</th></tr></thead>
@@ -175,6 +184,56 @@ export function renderNetworkMapView() {
     },
   });
   connectNetworkMapSocket();
+  // Add CANbus Scan button handler
+  const scanBtn = document.getElementById("btn-canbus-scan");
+  if (scanBtn) {
+    scanBtn.onclick = () => {
+      fetchData("/api/canbus-scan", {
+        method: "POST",
+        successCallback: () =>
+          showToast(
+            "CANbus scan started. Results will appear below as devices respond."
+          ),
+        errorCallback: () => showToast("Failed to start CANbus scan.", "error"),
+      });
+    };
+  }
+  // Connect to the CANbus scan WebSocket for live scan results
+  let scanResults = [];
+  let ws;
+  function mergeScanResult(result) {
+    // If the result has a value (address), merge or add it
+    if (!result || typeof result.value === "undefined") return;
+    networkMapData[result.value] = Object.assign(
+      {},
+      networkMapData[result.value] || {},
+      result
+    );
+    // Re-render the table with updated data
+    updateNetworkMapTable(Object.values(networkMapData));
+  }
+  function connectScanWebSocket() {
+    ws = new WebSocket(
+      (window.location.protocol === "https:" ? "wss://" : "ws://") +
+        window.location.host +
+        "/api/ws/canbus-scan"
+    );
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        scanResults.push(data);
+        mergeScanResult(data);
+      } catch (e) {}
+    };
+    ws.onopen = () => {
+      // Optionally show a toast or indicator
+    };
+    ws.onclose = () => {
+      // Optionally reconnect or show a message
+    };
+    ws.onerror = () => {};
+  }
+  connectScanWebSocket();
 }
 
 export function cleanupNetworkMapView() {
