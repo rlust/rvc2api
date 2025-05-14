@@ -359,11 +359,12 @@ async def get_network_map():
     return result
 
 
+# Utilities (formerly Troubleshooting)
 @api_router_can.post("/canbus-scan", status_code=202)
 async def start_canbus_scan(background_tasks: BackgroundTasks):
     """
     Initiates a CANbus scan (PGN 59904 requests for Address Claimed, Product ID,
-    and Software Version).Results will be streamed to clients via WebSocket.
+    and Software Version). Results will be streamed to clients via WebSocket.
     """
     logger.info("CANbus scan requested via API endpoint.")
     background_tasks.add_task(run_canbus_scan_and_broadcast)
@@ -409,7 +410,7 @@ async def run_canbus_scan_and_broadcast():
             msg = can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=True)
             for iface in interfaces:
                 await can_tx_queue.put((msg, iface))
-        await asyncio.sleep(0.002)  # Small delay to avoid flooding the bus
+        await asyncio.sleep(0.02)  # Safer delay to avoid CAN buffer overflow
     logger.info("CANbus scan requests sent. Listening for responses...")
     # Listen for responses for a short period (e.g., 2 seconds)
     start_time = time.time()

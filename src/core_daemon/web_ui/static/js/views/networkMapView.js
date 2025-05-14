@@ -30,7 +30,7 @@ function prettyPrintJSON(obj) {
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, "&amp;")
-    .replace(/</ / g, "&lt;")
+    .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
@@ -174,6 +174,7 @@ export function renderNetworkMapView() {
   // Fetch initial data via HTTP
   fetchData("/api/network-map", {
     successCallback: (data) => {
+      console.log("Network map data:", data); // Debug log
       updateNetworkMapTable(data);
       document.getElementById("network-map-loading")?.classList.add("hidden");
     },
