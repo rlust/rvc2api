@@ -19,7 +19,7 @@ const expandedNetworkMapRows = new Set();
 // DGNs to track for scan responses
 const SCAN_DGNS = [0xee00, 0xfefa, 0xfefc];
 
-// Map: addr.value -> { dgns: { [dgn]: { received: true, iface: string } }, ...other addr fields }
+// Map: addr.value -> { dgns: { [dgn]: { received: true, iface: string, decoded: object } }, ...other addr fields }
 let scanStatusByAddr = {};
 
 function prettyPrintJSON(obj) {
@@ -36,7 +36,7 @@ function prettyPrintJSON(obj) {
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
+    .replace(/</ / g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
@@ -184,32 +184,35 @@ function updateNetworkMapTable(data) {
 export function renderNetworkMapView() {
   const view = document.getElementById("network-map-view");
   if (!view) return;
-  view.innerHTML = `<h1 class="text-3xl font-bold mb-6">CAN Network Map</h1>
+  // DGN labels for table header
+  const DGN_LABELS = {
+    EE00: "Address Claimed",
+    FEFA: "Product ID",
+    FEFC: "Software Version",
+  };
+  // New table for DGN responses per address
+  view.innerHTML = `<h1 class="text-3xl font-bold mb-6">CAN Network Map (DGN Responses)</h1>
     <div class="mb-4 flex items-center gap-4">
-      <p class="themed-table-muted flex-1">Observed CAN source addresses on the bus. Use this to avoid address conflicts and identify devices.</p>
+      <p class="themed-table-muted flex-1">For each source address, see the decoded response to each scanned DGN.</p>
       <button id="btn-canbus-scan" class="themed-table-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow flex items-center gap-2">
         <i class="mdi mdi-radar" aria-hidden="true"></i>Scan CANbus
       </button>
     </div>
     <div id="network-map-loading" class="mb-4">Loading network map...</div>
     <table class="themed-table">
-      <thead><tr><th>Source Address</th><th>Hex</th><th>DGN</th><th>Instance</th><th>Device Type</th><th>Friendly Name</th><th>Area</th><th>Notes</th><th>Decoded</th><th>Raw</th><th>DGN Status</th></tr></thead>
+      <thead><tr><th>Source Address</th><th>DGN 0xEE00<br><span class='text-xs themed-table-muted'>${DGN_LABELS.EE00}</span></th><th>DGN 0xFEFA<br><span class='text-xs themed-table-muted'>${DGN_LABELS.FEFA}</span></th><th>DGN 0xFEFC<br><span class='text-xs themed-table-muted'>${DGN_LABELS.FEFC}</span></th></tr></thead>
       <tbody id="network-map-table-body"></tbody>
     </table>`;
-  // Fetch initial data via HTTP
+  // Fetch initial data via HTTP (not used for this table, but keep for scan button)
   fetchData("/api/network-map", {
-    successCallback: (data) => {
-      console.log("Network map data:", data); // Debug log
-      updateNetworkMapTable(data);
+    successCallback: () => {
       document.getElementById("network-map-loading")?.classList.add("hidden");
     },
-    errorCallback: (err) => {
-      updateNetworkMapTable([]);
+    errorCallback: () => {
       document.getElementById("network-map-loading").textContent =
         "Failed to load network map.";
     },
   });
-  connectNetworkMapSocket();
   // Add CANbus Scan button handler
   const scanBtn = document.getElementById("btn-canbus-scan");
   if (scanBtn) {
@@ -224,36 +227,80 @@ export function renderNetworkMapView() {
       });
     };
   }
-  // Connect to the CANbus scan WebSocket for live scan results
-  let scanResults = [];
-  let ws;
-  function mergeScanResult(result) {
-    // If the result has a value (address), merge or add it
-    if (!result || typeof result.value === "undefined") return;
-    networkMapData[result.value] = Object.assign(
-      {},
-      networkMapData[result.value] || {},
-      result
+  // Render table rows as scan results come in
+  function renderDgnTable() {
+    const tbody = document.getElementById("network-map-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    // Get all addresses seen in scanStatusByAddr
+    const addresses = Object.keys(scanStatusByAddr).sort(
+      (a, b) => Number(a) - Number(b)
     );
-    // Track DGN/interface status
-    if (!scanStatusByAddr[result.value]) {
-      scanStatusByAddr[result.value] = { dgns: {} };
-    }
-    const dgnHex = (result.dgn || (result.dgn_hex ? result.dgn_hex : ""))
+    addresses.forEach((addr) => {
+      const dgns = scanStatusByAddr[addr].dgns || {};
+      const tr = document.createElement("tr");
+      tr.id = `networkmap_${addr}`;
+      // Helper to render a cell for a DGN
+      function dgnCell(dgnHex) {
+        const dgnInfo = dgns[dgnHex];
+        if (dgnInfo && dgnInfo.decoded) {
+          const cellId = `cell_${addr}_${dgnHex}`;
+          // Try to get friendly name from decoded JSON (common keys: friendly_name, name, product_name, etc.)
+          let friendly = "";
+          const decoded = dgnInfo.decoded;
+          if (decoded.friendly_name) friendly = decoded.friendly_name;
+          else if (decoded.name) friendly = decoded.name;
+          else if (decoded.product_name) friendly = decoded.product_name;
+          else if (decoded.device_name) friendly = decoded.device_name;
+          else if (decoded.Model) friendly = decoded.Model;
+          else if (decoded.Manufacturer) friendly = decoded.Manufacturer;
+          // Show friendly name above expand button if found
+          return `<div>${
+            friendly
+              ? `<div class='font-semibold mb-1'>${escapeHTML(friendly)}</div>`
+              : ""
+          }
+            <button class='expand-json-btn themed-table-btn' onclick="window.toggleDgnJson('${cellId}')">&#x1F50D;</button>
+            <span id='${cellId}' class='hidden'>${prettyPrintJSON(
+            decoded
+          )}</span></div>`;
+        } else {
+          return '<span class="themed-table-muted">No response</span>';
+        }
+      }
+      tr.innerHTML = `
+        <td class="font-mono">${addr}</td>
+        <td>${dgnCell("EE00")}</td>
+        <td>${dgnCell("FEFA")}</td>
+        <td>${dgnCell("FEFC")}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  // Expose a global for expand/collapse (quick hack)
+  window.toggleDgnJson = function (cellId) {
+    const el = document.getElementById(cellId);
+    if (el) el.classList.toggle("hidden");
+  };
+  // Patch mergeScanResult to store decoded per DGN
+  function mergeScanResult(result) {
+    if (!result || typeof result.value === "undefined") return;
+    const addr = result.value;
+    if (!scanStatusByAddr[addr]) scanStatusByAddr[addr] = { dgns: {} };
+    const dgnHex = (result.dgn || result.dgn_hex || "")
       .toString()
       .toUpperCase();
-    if (
-      SCAN_DGNS.map((d) => d.toString(16).toUpperCase()).includes(dgnHex) &&
-      result.iface
-    ) {
-      scanStatusByAddr[result.value].dgns[dgnHex] = {
+    if (SCAN_DGNS.map((d) => d.toString(16).toUpperCase()).includes(dgnHex)) {
+      scanStatusByAddr[addr].dgns[dgnHex] = {
         received: true,
         iface: result.iface,
+        decoded: result.decoded || null,
       };
     }
-    // Re-render the table with updated data
-    updateNetworkMapTable(Object.values(networkMapData));
+    renderDgnTable();
   }
+  // WebSocket for scan results
+  let ws;
   function connectScanWebSocket() {
     ws = new WebSocket(
       (window.location.protocol === "https:" ? "wss://" : "ws://") +
@@ -263,16 +310,11 @@ export function renderNetworkMapView() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        scanResults.push(data);
         mergeScanResult(data);
       } catch (e) {}
     };
-    ws.onopen = () => {
-      // Optionally show a toast or indicator
-    };
-    ws.onclose = () => {
-      // Optionally reconnect or show a message
-    };
+    ws.onopen = () => {};
+    ws.onclose = () => {};
     ws.onerror = () => {};
   }
   connectScanWebSocket();
