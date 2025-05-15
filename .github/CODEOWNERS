@@ -1,0 +1,31 @@
+# RVC2API CODEOWNERS file
+# For more info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+*       @carpenike
+
+# Core daemon components
+/src/core_daemon/     @carpenike
+
+# Web UI components
+/src/core_daemon/web_ui/     @carpenike
+
+# RV-C decoding logic
+/src/rvc_decoder/     @carpenike
+
+# Console client
+/src/console_client/  @carpenike
+
+# Tests
+/tests/     @carpenike
+
+# GitHub workflows and automation
+/.github/   @carpenike
+
+# Nix configuration
+flake.nix   @carpenike
+flake.lock  @carpenike
+
+# Python project configuration
+pyproject.toml   @carpenike
+poetry.lock      @carpenike
