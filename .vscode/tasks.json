@@ -1,0 +1,185 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Backend Server",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry run python src/core_daemon/main.py",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*INFO:.*Application startup complete.*",
+            "endsPattern": "^.*Error.*$"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false,
+        "focus": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Start Frontend Dev Server",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web_ui && npm run dev",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*VITE.*Local:.*",
+            "endsPattern": "^.*Error.*$"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false,
+        "focus": false
+      },
+      "group": "build"
+    },
+    {
+      "label": "Start Full Development Environment",
+      "dependsOn": ["Start Backend Server", "Start Frontend Dev Server"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry run pytest",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "focus": true
+      }
+    },
+    {
+      "label": "Format Code (Black)",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry run black src",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Lint (Ruff)",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry run ruff check .",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Build Frontend",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web_ui && npm run build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Enter Nix Development Shell",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && nix develop",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true
+      }
+    },
+    {
+      "label": "Restart MCP - context7 Server",
+      "type": "shell",
+      "command": "pkill -f context7 || true; cd ${workspaceFolder} && context7 &",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "close": true
+      }
+    },
+    {
+      "label": "Build Documentation",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && cd docs && mkdocs build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Update Poetry Dependencies",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry update",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Lock Poetry Dependencies",
+      "type": "shell",
+      "command": "cd ${workspaceFolder} && poetry lock --no-update",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "MCP Tools Status",
+      "type": "shell",
+      "command": "echo 'Checking MCP tool processes:' && ps aux | grep -E 'context7|perplexity|github' | grep -v grep || echo 'No MCP tool processes found'",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ]
+}

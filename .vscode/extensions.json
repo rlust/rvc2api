@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+
+    "jnoortheen.nix-ide",
+    "mkhl.direnv",
+
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+
+    "GitHub.copilot",
+    "GitHub.copilot-chat"
+  ]
+}
