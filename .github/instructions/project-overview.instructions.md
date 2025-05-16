@@ -5,9 +5,9 @@ applyTo: "**"
 # Project Overview
 
 `rvc2api`: Python API/WebSocket service for RV-C CANbus systems:
-- FastAPI backend daemon
+- FastAPI backend daemon with WebSocket support
+- React frontend with TypeScript and Vite
 - Console client
-- HTML web UI (future: React)
 - RV-C decoder
 
 ## Structure

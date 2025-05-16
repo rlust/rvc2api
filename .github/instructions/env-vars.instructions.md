@@ -4,6 +4,18 @@ applyTo: "**/*.py"
 
 # Environment Variables
 
+## MCP Tools for Configuration
+
+### @context7 Use Cases
+- Find configuration patterns: `@context7 environment variable loading`
+- See settings schemas: `@context7 Pydantic settings model`
+- Check YAML structures: `@context7 device_mapping.yml structure`
+- Review config access: `@context7 get_canbus_config usage`
+
+### @perplexity Use Cases
+- Research configuration best practices: `@perplexity Python environment variables best practices`
+- Learn about Pydantic settings: `@perplexity Pydantic vs python-decouple for env vars`
+
 ## CANbus Config
 - `CAN_CHANNELS`: e.g. `can0,can1`
 - `CAN_BUSTYPE`: e.g. `socketcan`

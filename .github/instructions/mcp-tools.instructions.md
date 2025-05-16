@@ -2,35 +2,65 @@
 applyTo: "**"
 ---
 
-# MCP Tools
+# Model Context Protocol (MCP) Tools
 
-## @context7
-- Project-aware code lookups
-- Python: FastAPI routes, WebSocket, YAML formats
-- Web UI: JSON schemas, WebSocket payloads, Tailwind
+> **Note**: This file provides an overview of MCP tools for the project. For domain-specific examples, see the tool recommendation sections in the respective instruction files (code-style, testing, env-vars, react-frontend).
 
-Examples:
+MCP tools provide context-aware AI assistance. They are integrated into GitHub Copilot Chat and can help you understand the codebase, research related topics, and navigate project repositories.
+
+## Overview of Available Tools
+
+### @context7
+Project-aware code lookups that analyze the rvc2api codebase:
+
+- **Core functionality**: Find implementations, understand patterns, and reference API schemas
+- **When to use**: When you need to understand existing code or find examples in the codebase
+
+### @perplexity
+External research for protocols, libraries, and best practices:
+
+- **Core functionality**: Search the web for technical information relevant to your task
+- **When to use**: When you need information not found in the codebase (protocols, libraries, techniques)
+
+### @github
+Repository and issue information queries:
+
+- **Core functionality**: Search repositories, issues, pull requests, and documentation
+- **When to use**: To find related issues, check project history, or reference GitHub resources
+
+## @github Examples
+
 ```
-@context7 send_command() usage
-@context7 /api/state schema
-@context7 device_mapping.yml fields
+# Search for issues related to WebSocket reconnection
+@github issues:rvc2api+websocket+reconnection
+
+# Find pull requests related to the React migration
+@github pr:rvc2api+react+frontend
+
+# Get repository statistics
+@github repo:rvc2api stats
+
+# Search for code examples in related repositories
+@github code:python-can+socketcan+send
 ```
 
-## @perplexity
-External research for protocols and libraries
+## Integrated Research Workflow
 
-Examples:
-```
-@perplexity RV-C PGN 0x1FEDA
-@perplexity WebSocket reconnection in React
-@perplexity Victron Modbus protocol
-```
+For most development tasks, follow this pattern:
 
-## @github
-Repository information queries
+1. **Explore the codebase**: Use `@context7` to find relevant code patterns
+   ```
+   @context7 similar functionality to what I'm building
+   ```
 
-## Research Method
-1. @context7 for existing patterns
-2. @perplexity for external protocols/libraries
-3. @github for related issues/PRs
-4. Reference findings in docs/comments
+2. **Research external information**: Use `@perplexity` to find best practices
+   ```
+   @perplexity technical approach for solving this problem
+   ```
+
+3. **Check project history**: Use `@github` to find related issues/PRs
+   ```
+   @github issues related to this component
+   ```
+
+4. **Document your sources**: Reference findings in code comments and PR descriptions

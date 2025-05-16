@@ -2,14 +2,18 @@
 applyTo: "src/core_daemon/web_ui/**"
 ---
 
-# Web UI Guidelines (Pre-Refactor)
+# Legacy Web UI Guidelines
 
-- HTML templates: `src/core_daemon/web_ui/templates/`
-- Static files: `src/core_daemon/web_ui/static/`
+> **Note**: This file describes the legacy template-based web UI.
+> The project has been refactored to use a React frontend in the `web_ui/` directory.
+> For React development, please refer to [react-frontend.instructions.md](react-frontend.instructions.md).
+
+- HTML templates: `src/core_daemon/web_ui/templates/` (legacy)
+- Static files: `src/core_daemon/web_ui/static/` (legacy)
 - Format templates with `djlint`
 - Use ES6 and JSDoc in custom JavaScript
 
-> This will later migrate to `webui/` with React + Vite.
+> This has now been migrated to `web_ui/` with React + Vite.
 
 ## JavaScript Style
 
