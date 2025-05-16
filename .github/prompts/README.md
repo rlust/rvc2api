@@ -11,45 +11,45 @@ This directory contains prompt templates to help with various aspects of rvc2api
 
 ### 📋 Planning & Specification
 
-- [**Feature Planning Guide**](feature-planning.md) - Guide for planning a new feature by breaking it down into manageable components.
+- [**Feature Planning Guide**](feature-planning.prompt.md) - Guide for planning a new feature by breaking it down into manageable components.
   - *Example scenario*: Planning a tank level monitoring feature that integrates with multiple sensor types.
   - *Example outcome*: A detailed feature plan in `/docs/specs/tank-monitoring.md` outlining data models, API endpoints, WebSocket events, and UI components needed.
 
-- [**New Service Specification**](new-service-spec.md) - Template for defining a new service or feature before implementation.
+- [**New Service Specification**](new-service-spec.prompt.md) - Template for defining a new service or feature before implementation.
   - *Example scenario*: Defining a new service to integrate with Victron Energy's Modbus protocol.
   - *Example outcome*: A comprehensive specification in `/docs/specs/victron-modbus-service.md` defining interfaces, data structures, and integration points.
 
-- [**Architectural Decision Guide**](architectural-decision.md) - Framework for making and documenting architectural decisions.
+- [**Architectural Decision Guide**](architectural-decision.prompt.md) - Framework for making and documenting architectural decisions.
   - *Example scenario*: Deciding how to handle WebSocket reconnection and state synchronization.
   - *Example outcome*: An ADR in `/docs/specs/adr-websocket-reconnection.md` analyzing options and documenting the chosen approach with implementation details.
 
 ### 🔧 Implementation & Development
 
-- [**Feature Implementation Guide**](feature-implementation.md) - Step-by-step guide for implementing a new feature following project patterns.
+- [**Feature Implementation Guide**](feature-implementation.prompt.md) - Step-by-step guide for implementing a new feature following project patterns.
   - *Example scenario*: Implementing the tank monitoring feature based on the existing specification.
   - *Example outcome*: Structured implementation with proper data models, API endpoints, and test coverage following project patterns.
 
-- [**RV-C Integration Guide**](rvc-integration.md) - Specific guidance for adding support for new RV-C DGNs and functionality.
+- [**RV-C Integration Guide**](rvc-integration.prompt.md) - Specific guidance for adding support for new RV-C DGNs and functionality.
   - *Example scenario*: Adding support for the RV-C DC Dimmer Commands (DGN 0x1FEDD).
   - *Example outcome*: A detailed implementation plan in `/docs/specs/rvc-dgn-0x1FEDD.md` that outlines decoder changes, device mapping, and API integration.
 
-- [**Code Refactoring Guide**](code-refactoring.md) - Framework for planning and executing code refactoring tasks.
+- [**Code Refactoring Guide**](code-refactoring.prompt.md) - Framework for planning and executing code refactoring tasks.
   - *Example scenario*: Refactoring the state management system to improve performance and reliability.
   - *Example outcome*: A comprehensive refactoring plan in `/docs/specs/refactor-state-management.md` with step-by-step changes and testing strategy.
 
-- [**React UI Prototype Guide**](react-ui-prototype.md) - Guide for designing and implementing React components for the web interface.
+- [**React UI Prototype Guide**](react-ui-prototype.prompt.md) - Guide for designing and implementing React components for the web interface.
   - *Example scenario*: Designing a React-based dashboard component for the new UI.
   - *Example outcome*: A detailed component specification in `/docs/specs/react-dashboard.md` with props interface, state management, API integration, and example code.
 
 ### 📝 Documentation
 
-- [**Service Documentation Template**](service-documentation.md) - Comprehensive template for documenting a service component.
+- [**Service Documentation Template**](service-documentation.prompt.md) - Comprehensive template for documenting a service component.
   - *Example scenario*: Creating thorough documentation for the HVAC control service after implementation.
   - *Example outcome*: A comprehensive documentation file that includes API details, data models, usage examples, configuration options, and troubleshooting tips.
 
 ### 🔍 Research & Exploration
 
-- [**Protocol Research Guide**](protocol-research.md) - Framework for researching RV protocols, hardware interfaces, or features.
+- [**Protocol Research Guide**](protocol-research.prompt.md) - Framework for researching RV protocols, hardware interfaces, or features.
   - *Example scenario*: Researching the Victron Energy VE.Direct protocol for potential integration.
   - *Example outcome*: A detailed research document outlining protocol specifications, message formats, hardware requirements, and implementation recommendations.
 
