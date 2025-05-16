@@ -123,6 +123,8 @@
             pythonPackages.types-pyyaml
             pkgs.fish
             pythonPackages.pytest-asyncio
+            # --- Frontend dependencies ---
+            pkgs.nodejs
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
             pythonPackages.uvloop
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
@@ -133,6 +135,7 @@
             export PYTHONPATH=$PWD/src:$PYTHONPATH
             echo "🐚 Entered rvc2api devShell on ${pkgs.system} with Python ${python.version}"
             echo "💡 Run 'poetry install' or 'nix build .#rvc2api' to get started."
+            echo "💡 For frontend: cd web_ui; npm install; npm run dev"
           '';
         };
 
