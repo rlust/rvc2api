@@ -36,7 +36,8 @@
 ### 3.1. Architectural Changes
 - Scaffold a new React app (using Vite) in a new `web_ui/` directory at the project root.
 - UI will communicate with backend via REST/WebSocket APIs (no backend modernization or FastAPI changes in this phase).
-- Decouple static asset serving from FastAPI (except for production builds, which may be served as static files).
+- Decouple static asset serving from FastAPI completely - FastAPI will provide API services only.
+- The React frontend will be served directly by Caddy (which already reverse-proxies the FastAPI service).
 - Design goal: Create a beautiful, modern UI using curved lines, contemporary themes, and visually appealing layouts. Leverage modern CSS frameworks (e.g., Tailwind CSS, Material UI) to ensure a polished, user-friendly experience.
 - Ignore authentication and backend modernization for this phase; these will be handled separately.
 
