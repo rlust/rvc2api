@@ -12,6 +12,9 @@ repos:
       - id: check-toml
       - id: check-merge-conflict
       - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-added-large-files
 
   # Code formatter
   - repo: https://github.com/psf/black
@@ -19,12 +22,13 @@ repos:
     hooks:
       - id: black
 
-  # Linting with Ruff (replacing Flake8)
+  # Modern Python linter (replacement for flake8)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.11
     hooks:
       - id: ruff
-        args: [--fix]
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
 
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -48,6 +52,23 @@ repos:
         stages: [pre-commit]
         files: ^src/core_daemon/web_ui/templates/
 
+  # Frontend linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: \.(js|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - eslint-plugin-react@7.33.2
+          - eslint-plugin-react-hooks@4.6.0
+          - eslint-plugin-react-refresh@0.4.5
+          - typescript@5.3.3
+          - typescript-eslint@7.0.1
+        exclude: ^web_ui/dist/
+
+  # Poetry check (local)
   - repo: local
     hooks:
       - id: check-poetry-lock
