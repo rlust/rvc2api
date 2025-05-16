@@ -13,6 +13,7 @@ jobs:
   ci:
     name: "Full CI (pre-commit, tests, lints, lock-check)"
     runs-on: ubuntu-latest
+    environment: default
 
     steps:
       - name: "Checkout repository"
@@ -23,6 +24,13 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+
+      - name: "Setup Nix cache"
+        uses: cachix/cachix-action@v14
+        with:
+          name: rvc2api
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ github.ref != 'refs/heads/main' }}
 
       - name: "Perform Nix flake ci"
         run: nix run .#ci
@@ -31,6 +39,7 @@ jobs:
     name: Nix flake checks & build
     needs: ci
     runs-on: ubuntu-latest
+    environment: default
 
     steps:
       - name: "Checkout repository"
@@ -41,6 +50,13 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
+
+      - name: "Setup Nix cache"
+        uses: cachix/cachix-action@v14
+        with:
+          name: rvc2api
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Run all flake checks (includes lock‑check from checks, and will build rvc2api)
         run: nix flake check

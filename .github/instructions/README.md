@@ -9,7 +9,8 @@ This directory contains modular GitHub Copilot instructions for the `rvc2api` pr
 | [project-overview.instructions.md](project-overview.instructions.md) | All files | Project architecture and structure |
 | [code-style.instructions.md](code-style.instructions.md) | Python files | Coding standards and documentation |
 | [testing.instructions.md](testing.instructions.md) | Test files | Test patterns and requirements |
-| [webui.instructions.md](webui.instructions.md) | Web UI files | Frontend template and JS standards |
+| [react-frontend.instructions.md](react-frontend.instructions.md) | React UI files | React, TypeScript, and Vite frontend standards |
+| [webui.instructions.md](webui.instructions.md) | Legacy Web UI files | Legacy HTML template and JS standards |
 | [env-vars.instructions.md](env-vars.instructions.md) | Python files | Configuration and environment setup |
 | [dev-environment.instructions.md](dev-environment.instructions.md) | All files | Setting up and using dev tools |
 | [mcp-tools.instructions.md](mcp-tools.instructions.md) | All files | Using Copilot Chat tools (@context7, etc.) |
