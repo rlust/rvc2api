@@ -28,11 +28,16 @@ packages = [
 # Explicitly include package data like templates and static files
 # Paths are relative to this pyproject.toml file.
 include = [
+    "src/core_daemon/static/**/*",
+    # Legacy web UI path kept for backward compatibility during transition
     "src/core_daemon/web_ui/static/**/*",
     "src/core_daemon/web_ui/templates/**/*",
     # Ensuring rvc_decoder config is also explicitly included, though it seemed to work by default.
     "src/rvc_decoder/config/*"
 ]
+
+# The React frontend (web_ui/) is managed separately through npm
+# See web_ui/README.md and docs/frontend-development.md for details
 
 [tool.poetry.dependencies]
 python = "^3.12.6" # Updated to avoid Python 3.12.5 issues with Black
@@ -50,7 +55,7 @@ pyroute2 = ">=0.7.10, <0.9.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 mypy   = "^1.10"
-flake8 = "^7.0"
+ruff = "^0.1.11"
 black = "^25.0.0"
 pre-commit = "^4.0.0"
 types-PyYAML = "^6.0.12.12"
@@ -65,25 +70,9 @@ Repository = "https://github.com/carpenike/rvc2api"
 [tool.poetry.scripts]
 rvc2api-daemon = "core_daemon.main:main" # Assumes main() in main.py runs the Uvicorn server
 rvc2api-console = "console_client.console:main" # Assumes main() in console.py runs the console client
+frontend-build = "scripts.build_frontend:main" # Frontend build and management utilities
 
-[tool.flake8]
-max-line-length = 100
-extend-ignore = [
-    "E203", # Whitespace before ':' (often conflicts with Black)
-    "W503"  # Line break before binary operator (PEP 8 changed, Black prefers this)
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    ".venv",
-    "build",
-    "dist",
-    "*.egg-info"
-]
-# You might want to specify which directories to check explicitly if not running on specific files
-# For example, to check only src and tests:
-# select = F,E,W,C90 # Or just let it default
-# application-import-names = rvc2api,src,tests # If you want to enforce import styles
+# Removing flake8 config as we now use Ruff exclusively for linting
 
 [tool.black]
 line-length = 100
@@ -95,3 +84,80 @@ pythonpath = ["src"]
 addopts     = ["--import-mode=importlib"]
 # 3) Tell pytest where your tests live (defaults to “tests” if omitted):
 testpaths   = ["tests"]
+
+# Ruff (Python linter) configuration - comprehensive replacement for flake8
+[tool.ruff]
+# General settings
+line-length = 100
+target-version = "py312"
+
+# Linting settings
+[tool.ruff.lint]
+# Include all the rules from flake8 plus additional ones
+select = [
+  "E",   # pycodestyle errors (equivalent to flake8 E codes)
+  "F",   # pyflakes (equivalent to flake8 F codes)
+  "I",   # isort
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "SIM", # flake8-simplify
+  "TCH", # flake8-type-checking
+  "TID", # flake8-tidy-imports
+  "UP",  # pyupgrade
+  "W",   # pycodestyle warnings (equivalent to flake8 W codes)
+  "N",   # pep8-naming
+  "C90", # mccabe complexity (equivalent to flake8 C901)
+  "RUF", # Ruff-specific rules
+]
+ignore = [
+  "E203",  # Whitespace before ':' (conflicts with Black)
+  "E501",  # Line too long (handled by Black)
+  "C901",  # Function is too complex (for complex functions like control_entity)
+]
+unfixable = [
+  # Don't let ruff auto-fix imports without considering them thoroughly
+  "F401",  # Unused imports
+  "F841",  # Unused variables
+]
+# Exclude the same directories as flake8 did
+exclude = [
+  ".git",
+  "__pycache__",
+  ".venv",
+  "build",
+  "dist",
+  "*.egg-info"
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "core_daemon", "rvc_decoder"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E501"]
+# Allow function names that don't follow snake_case for FastAPI compatibility
+# Also allow exception names without Error suffix to match FastAPI's conventions
+"typings/fastapi/__init__.py" = ["N802", "N818"]
+"typings/fastapi/__init__.pyi" = ["N802", "N818"]
+"typings/fastapi/params.py" = ["N802"]
+"typings/fastapi/params.pyi" = ["N802"]
+# Allow relative imports in the typings directory for proper type stub organization
+"typings/**/*.py" = ["TID252"]
+"typings/**/*.pyi" = ["TID252"]
+# Ignore httpx import resolution issues in specific files
+"src/core_daemon/uptimerobot.py" = ["F401", "E902"]
+
+[tool.pyright]
+# Pyright configuration aligned with pyrightconfig.json
+include = ["src"]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+pythonVersion = "3.12"
+reportIncompatibleMethodOverride = false
+reportArgumentType = "none"
+stubPath = "typings"
