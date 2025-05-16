@@ -19,12 +19,12 @@ repos:
     hooks:
       - id: black
 
-  # Linting
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0
+  # Linting with Ruff (replacing Flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.11
     hooks:
-      - id: flake8
-        args: [--max-line-length=100]
+      - id: ruff
+        args: [--fix]
 
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
