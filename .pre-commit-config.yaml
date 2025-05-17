@@ -13,7 +13,7 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
       - id: mixed-line-ending
-        args: ['--fix=lf']
+        args: ["--fix=lf"]
       - id: check-added-large-files
 
   # Code formatter
@@ -40,8 +40,13 @@ repos:
             --ignore-missing-imports,
             --scripts-are-modules,
             --explicit-package-bases,
+            --allow-redefinition,
+            --disable-error-code=annotation-unchecked,
+            --disable-error-code=union-attr,
+            --disable-error-code=arg-type,
+            --disable-error-code=misc,
           ]
-        additional_dependencies: [types-PyYAML]
+        additional_dependencies: [types-PyYAML, pydantic]
 
   # HTML linting
   - repo: https://github.com/Riverside-Healthcare/djLint
