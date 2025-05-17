@@ -43,21 +43,26 @@ poetry run ruff check --fix .
 poetry run black src tests
 ```
 
-### MyPy
+### Pyright/Pylance
 
-[MyPy](https://github.com/python/mypy) is our static type checker for Python.
+[Pyright](https://github.com/microsoft/pyright) is our static type checker for Python, used in VS Code via the Pylance extension.
 
 #### Key features
 
-- Verifies type annotations
-- Catches type errors before runtime
-- Improves code documentation
+- Fast, incremental type checking
+- Excellent IDE integration
+- Strong support for modern Python typing features
+- Better performance for larger codebases
+- Native support for FastAPI and Pydantic type annotations
 
 #### Usage
 
 ```bash
 # Type check your code
-poetry run mypy src
+npx pyright src
+
+# Or in VS Code:
+# Use the built-in type checking with Pylance
 ```
 
 ## Pre-commit Integration
@@ -111,7 +116,7 @@ For more details, see `typings/fastapi/README.md`.
 
 - **Ruff over Flake8**: Ruff is significantly faster and includes all the functionality of Flake8 plus much more. It also has better integration with modern Python tooling.
 - **Black for formatting**: Black is the industry standard for Python code formatting, offering consistent results with minimal configuration.
-- **MyPy for type checking**: Static type checking catches errors early and improves code documentation.
+- **Pyright for type checking**: Pyright offers excellent performance, strong IDE integration via VS Code's Pylance extension, and better support for modern Python typing features, especially with FastAPI and Pydantic.
 - **Custom Type Stubs**: For better IDE support and type checking with libraries like FastAPI.
 
 ## VS Code Integration
