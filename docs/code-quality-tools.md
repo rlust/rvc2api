@@ -45,7 +45,7 @@ poetry run black src tests
 
 ### Pyright/Pylance
 
-[Pyright](https://github.com/microsoft/pyright) is our static type checker for Python, used in VS Code via the Pylance extension.
+[Pyright](https://github.com/microsoft/pyright) is our standardized static type checker for Python, used in VS Code via the Pylance extension. We've standardized on Pyright as our sole type checker due to its superior performance and integration with modern Python tools.
 
 #### Key features
 
@@ -116,7 +116,7 @@ For more details, see `typings/fastapi/README.md`.
 
 - **Ruff over Flake8**: Ruff is significantly faster and includes all the functionality of Flake8 plus much more. It also has better integration with modern Python tooling.
 - **Black for formatting**: Black is the industry standard for Python code formatting, offering consistent results with minimal configuration.
-- **Pyright for type checking**: Pyright offers excellent performance, strong IDE integration via VS Code's Pylance extension, and better support for modern Python typing features, especially with FastAPI and Pydantic.
+- **Pyright over mypy for type checking**: We've standardized on Pyright because it offers excellent performance, strong IDE integration via VS Code's Pylance extension, and better support for modern Python typing features, especially with FastAPI and Pydantic. It also provides faster type checking for large codebases.
 - **Custom Type Stubs**: For better IDE support and type checking with libraries like FastAPI.
 
 ## VS Code Integration
@@ -125,3 +125,4 @@ VS Code tasks are configured for these tools:
 
 - **Format Code (Black)**: Formats Python code
 - **Lint (Ruff)**: Runs Ruff linting with fix capability
+- **Type Check (Pyright)**: Performs static type checking

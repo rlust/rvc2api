@@ -24,7 +24,7 @@ The pre-commit configuration includes:
 
    - **Black**: Code formatting
    - **Ruff**: Modern Python linting (replaces Flake8)
-   - **MyPy**: Type checking
+   - **Pyright**: Type checking (see `pyrightconfig.json` and `pyproject.toml`)
 
 3. **Frontend code quality**:
 

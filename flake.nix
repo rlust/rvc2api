@@ -1,4 +1,7 @@
-# flake.nix — Nix flake definition for rvc2api
+# flake# ▸ CLI apps (run with `nix run .#<n>`) for:
+#    - `test`     → run unit tests
+#    - `lint`     → run ruff, pyright, djlint
+#    - `format`   → run black and djlint in reformat mode — Nix flake definition for rvc2api
 #
 # This flake provides:
 #
@@ -13,7 +16,7 @@
 #    - `precommit`→ run pre-commit checks across the repo
 # ▸ Nix flake checks (via `nix flake check`) for:
 #    - pytest suite
-#    - style (ruff, mypy, djlint)
+#    - style (ruff, pyright, djlint)
 #    - lockfile validation (poetry check --lock --no-interaction)
 # ▸ Package build output under `packages.<system>.rvc2api`
 #
@@ -180,6 +183,7 @@
             pythonPackages.python-dotenv
             pythonPackages.watchfiles
             pythonPackages.pytest-asyncio
+            pkgs.pyright  # For Python type checking
           ] ++ pkgs.lib.optionals (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) [
             pythonPackages.uvloop
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
@@ -228,7 +232,7 @@
                 # Backend linting
                 poetry install --no-root
                 poetry run ruff check .
-                poetry run mypy src
+                npx pyright src
 
                 # Frontend linting (if web_ui directory exists)
                 if [ -d "web_ui" ]; then
@@ -291,6 +295,7 @@
                 poetry check --lock --no-interaction
                 poetry run pre-commit run --all-files --hook-stage commit
                 poetry run ruff check .
+                npx pyright src
                 poetry run djlint src/core_daemon/web_ui/templates --check
 
                 # Frontend checks
